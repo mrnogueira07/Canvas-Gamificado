@@ -1,20 +1,31 @@
 
 // Import the functions you need from the SDKs you need
-import firebase from "firebase/compat/app";
-import "firebase/compat/auth";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import * as firebaseAuth from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
 // Helper function to safely get environment variables
+// This handles both Vite (import.meta.env) and standard process.env scenarios
 const getEnv = (key: string, fallback: string): string => {
   try {
+    // 1. Try standard process.env (Node/Webpack)
+    if (typeof process !== 'undefined' && process && process.env && process.env[key]) {
+      return process.env[key];
+    }
+    
+    // 2. Try Vite's import.meta.env
+    // We check existence of 'import.meta' and 'import.meta.env' defensively
     // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
       // @ts-ignore
-      return import.meta.env[key];
+      const val = import.meta.env[key];
+      if (val) return val;
     }
   } catch (e) {
-    // Ignore errors
+    // Ignore errors to prevent crash
+    console.warn(`Warning: Error reading env var ${key}`, e);
   }
   return fallback;
 };
@@ -31,8 +42,12 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = !firebase.apps.length ? firebase.initializeApp(firebaseConfig) : firebase.app();
-const auth = firebase.auth();
+// Ensure we don't initialize twice in HMR or re-renders
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+// Use namespace import if getAuth is not exported directly (e.g. strict ESM/CJS interop issues)
+const auth = firebaseAuth.getAuth ? firebaseAuth.getAuth(app) : (firebaseAuth as any).default?.getAuth?.(app) || getAuth(app);
+
 const db = getFirestore(app);
 
 // Inicialização segura do Analytics para evitar erros em ambientes onde não é suportado

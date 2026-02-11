@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from './Button';
-import { AlertCircle, Eye, EyeOff, UserPlus, LogIn, Code2, ArrowLeft, CheckCircle } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Code2, ArrowLeft, CheckCircle } from 'lucide-react';
 import { auth, db } from '../firebase';
-import firebase from 'firebase/compat/app';
+// Importação via namespace para compatibilidade
+import * as firebaseAuth from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 interface LoginProps {
@@ -144,14 +145,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setApiErrorLink(null);
     setLoading(true);
     try {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      const result = await auth.signInWithPopup(provider);
+      const provider = new firebaseAuth.GoogleAuthProvider();
+      const result = await firebaseAuth.signInWithPopup(auth, provider);
       const user = result.user;
 
       // Check domain for Google Login as well
       if (user && user.email && !validateDomain(user.email)) {
          await user.delete(); // Remove user if created
-         await auth.signOut();
+         await firebaseAuth.signOut(auth);
          setError('Acesso restrito. Utilize um e-mail corporativo @innyx.com');
          setLoading(false);
          return;
@@ -208,11 +209,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         }
 
         // Sign Up
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userCredential = await firebaseAuth.createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
         if (user) {
-          await user.updateProfile({
+          await firebaseAuth.updateProfile(user, {
             displayName: name
           });
 
@@ -223,13 +224,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             createdAt: serverTimestamp(),
           });
 
-          await user.sendEmailVerification();
-          await auth.signOut();
+          await firebaseAuth.sendEmailVerification(user);
+          await firebaseAuth.signOut(auth);
           setRegistrationSuccess(true);
         }
       } else {
         // Login
-        await auth.signInWithEmailAndPassword(email, password);
+        await firebaseAuth.signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err: any) {
       console.error('Login error full:', err);

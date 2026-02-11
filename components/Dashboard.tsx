@@ -8,7 +8,6 @@ import {
   ChevronDown,
   Undo2,
   Trash,
-  Loader2,
   AlertTriangle,
   FileText,
   X
@@ -23,7 +22,6 @@ import {
   doc, 
   updateDoc, 
   deleteDoc, 
-  orderBy,
   QuerySnapshot,
   DocumentData
 } from 'firebase/firestore';
@@ -33,11 +31,13 @@ interface DashboardProps {
   onViewScript: (script: ScriptItem) => void;
 }
 
-// Helper para formatar data relativa
+// Helper para formatar data relativa de forma segura
 const formatRelativeTime = (timestamp: any) => {
   if (!timestamp) return '...';
   
+  // Trata Timestamp do Firestore ou Date objeto ou string ISO
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  
   if (isNaN(date.getTime())) return '';
 
   const now = new Date();
@@ -88,6 +88,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onCreateClick, onViewScrip
       
       // Ordenação no cliente por data de modificação (mais recente primeiro)
       fetchedScripts.sort((a, b) => {
+        // Safe access to date properties
         const dateA = a.lastModified?.toDate ? a.lastModified.toDate() : new Date(a.lastModified || 0);
         const dateB = b.lastModified?.toDate ? b.lastModified.toDate() : new Date(b.lastModified || 0);
         return dateB.getTime() - dateA.getTime();

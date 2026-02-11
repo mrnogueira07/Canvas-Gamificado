@@ -23,6 +23,16 @@ const API_KEY = getApiKey();
 // O erro só ocorrerá ao tentar gerar conteúdo.
 const ai = new GoogleGenAI({ apiKey: API_KEY || "dummy_key_to_prevent_crash" });
 
+// Helper para limpar o JSON caso a IA retorne markdown ```json ... ```
+const cleanJson = (text: string): string => {
+  if (!text) return "{}";
+  // Remove markdown code blocks
+  let cleaned = text.replace(/```json\s*/g, "").replace(/```\s*$/g, "");
+  // Remove markdown code blocks sem "json" especificado
+  cleaned = cleaned.replace(/```\s*/g, "");
+  return cleaned.trim();
+};
+
 interface GenerateParams {
   level: string;
   subject: string;
@@ -293,7 +303,10 @@ export const generateCanvasContent = async (params: GenerateParams) => {
     const text = response.text;
     if (!text) throw new Error("Sem resposta da IA");
     
-    return JSON.parse(text);
+    // Limpeza crucial para evitar erros de JSON.parse
+    const cleanedText = cleanJson(text);
+    
+    return JSON.parse(cleanedText);
   } catch (error) {
     console.error("Erro na geração de IA:", error);
     throw error;
@@ -323,7 +336,9 @@ export const generateQuiz = async (canvasData: GamifiedCanvas, questionsCount: n
     contents: prompt,
     config: { responseMimeType: "application/json", responseSchema }
   });
-  return JSON.parse(response.text || "[]") as QuizQuestion[];
+
+  const cleanedText = cleanJson(response.text || "[]");
+  return JSON.parse(cleanedText) as QuizQuestion[];
 };
 
 export const generateGameActivity = async (canvasData: GamifiedCanvas, activityType: PedagogicalActivityType): Promise<PedagogicalActivity> => {
