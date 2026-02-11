@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   ChevronLeft, 
@@ -1220,7 +1219,7 @@ export const CreateScript: React.FC<CreateScriptProps> = ({ onBack, initialData 
 
 // --- Subcomponents helper ---
 
-const SectionCard = ({ number, icon, title, children }: { number: number, icon: React.ReactNode, title: string, children: React.ReactNode }) => (
+const SectionCard = ({ number, icon, title, children }: { number: number, icon: React.ReactNode, title: string, children?: React.ReactNode }) => (
   <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 print:shadow-none print:border print:border-gray-300 print:break-inside-avoid print:mb-4">
     <div className="bg-gray-50 dark:bg-gray-700/50 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 print:bg-gray-100 print:border-gray-300">
       <div className="w-8 h-8 rounded-lg bg-[#4f46e5] text-white flex items-center justify-center shadow-sm print:bg-black print:text-white">

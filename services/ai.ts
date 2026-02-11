@@ -2,8 +2,26 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { GamifiedCanvas, QuizQuestion, PedagogicalActivity, PedagogicalActivityType } from "../types";
 
-// A API Key deve vir do environment.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// --- CORREÇÃO PARA VERCEL/VITE ---
+// No Vite (padrão do Vercel para React), usa-se import.meta.env.
+// Adicionamos verificação de segurança para não quebrar a tela (White Screen) se a chave faltar.
+const getApiKey = () => {
+  // @ts-ignore - Ignora erro de tipo se import.meta não for reconhecido pelo editor
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+    // @ts-ignore
+    return import.meta.env.VITE_API_KEY;
+  }
+  // Fallback para ambientes Node ou configurações antigas
+  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+    return process.env.API_KEY;
+  }
+  return "";
+};
+
+const API_KEY = getApiKey();
+// Inicializa com chave vazia se não existir para evitar crash imediato na carga da página
+// O erro só ocorrerá ao tentar gerar conteúdo.
+const ai = new GoogleGenAI({ apiKey: API_KEY || "dummy_key_to_prevent_crash" });
 
 interface GenerateParams {
   level: string;
@@ -18,6 +36,10 @@ interface GenerateParams {
 }
 
 export const generateCanvasContent = async (params: GenerateParams) => {
+  if (!API_KEY) {
+    throw new Error("API Key não configurada. Adicione VITE_API_KEY nas variáveis de ambiente do Vercel.");
+  }
+
   const modelId = "gemini-2.0-flash";
   const gameTypeLower = params.gameType.toLowerCase();
   const isTargetShooting = gameTypeLower.includes("tiro ao alvo");
