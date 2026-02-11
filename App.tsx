@@ -7,7 +7,6 @@ import { CreateScript } from './components/CreateScript';
 import { CanvasView } from './components/CanvasView';
 import { User, AppView, ScriptItem } from './types';
 import { auth } from './firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -27,7 +26,7 @@ const App: React.FC = () => {
 
   // Listen for Auth Changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         setCurrentUser({
           uid: user.uid,
@@ -65,7 +64,7 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await auth.signOut();
       setCurrentView('dashboard');
       setSelectedScript(null);
     } catch (error) {

@@ -3,15 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from './Button';
 import { AlertCircle, Eye, EyeOff, UserPlus, LogIn, Code2, ArrowLeft, CheckCircle } from 'lucide-react';
 import { auth, db } from '../firebase';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  updateProfile, 
-  sendEmailVerification, 
-  signOut,
-  GoogleAuthProvider,
-  signInWithPopup
-} from 'firebase/auth';
+import firebase from 'firebase/compat/app';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 interface LoginProps {
@@ -152,30 +144,32 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setApiErrorLink(null);
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      const provider = new firebase.auth.GoogleAuthProvider();
+      const result = await auth.signInWithPopup(provider);
       const user = result.user;
 
       // Check domain for Google Login as well
-      if (user.email && !validateDomain(user.email)) {
+      if (user && user.email && !validateDomain(user.email)) {
          await user.delete(); // Remove user if created
-         await signOut(auth);
+         await auth.signOut();
          setError('Acesso restrito. Utilize um e-mail corporativo @innyx.com');
          setLoading(false);
          return;
       }
 
-      // Check if user exists in Firestore, if not create
-      const docRef = doc(db, "users", user.uid);
-      const docSnap = await getDoc(docRef);
+      if (user) {
+        // Check if user exists in Firestore, if not create
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
 
-      if (!docSnap.exists()) {
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          name: user.displayName,
-          email: user.email,
-          createdAt: serverTimestamp(),
-        });
+        if (!docSnap.exists()) {
+          await setDoc(doc(db, "users", user.uid), {
+            uid: user.uid,
+            name: user.displayName,
+            email: user.email,
+            createdAt: serverTimestamp(),
+          });
+        }
       }
       // Auth listener in App.tsx handles the rest
     } catch (err: any) {
@@ -214,26 +208,28 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         }
 
         // Sign Up
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
         
-        await updateProfile(user, {
-          displayName: name
-        });
+        if (user) {
+          await user.updateProfile({
+            displayName: name
+          });
 
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          name: name,
-          email: email,
-          createdAt: serverTimestamp(),
-        });
+          await setDoc(doc(db, "users", user.uid), {
+            uid: user.uid,
+            name: name,
+            email: email,
+            createdAt: serverTimestamp(),
+          });
 
-        await sendEmailVerification(user);
-        await signOut(auth);
-        setRegistrationSuccess(true);
+          await user.sendEmailVerification();
+          await auth.signOut();
+          setRegistrationSuccess(true);
+        }
       } else {
         // Login
-        await signInWithEmailAndPassword(auth, email, password);
+        await auth.signInWithEmailAndPassword(email, password);
       }
     } catch (err: any) {
       console.error('Login error full:', err);
