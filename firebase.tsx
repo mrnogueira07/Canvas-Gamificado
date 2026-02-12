@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
-// Configuração direta para evitar erros de leitura de variáveis de ambiente
+// Configuração do Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyBxur8AAtN5iBc2izHrA-bECaxqAX51atc",
   authDomain: "canvas-gamificado.firebaseapp.com",

@@ -1,37 +1,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { GamifiedCanvas, QuizQuestion, PedagogicalActivity, PedagogicalActivityType } from "../types";
 
-// Helper function to safely get API Key
+// Helper function to safely get API Key using Vite standard
 const getApiKey = () => {
-  // 1. Try Vite Static Replacement safely
-  try {
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
-      // @ts-ignore
-      const viteKey = import.meta.env.VITE_API_KEY;
-      if (viteKey) return viteKey;
-    }
-  } catch (e) {
-    // ignore error accessing import.meta
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+    return import.meta.env.VITE_API_KEY;
   }
-
-  // 2. Try process.env fallback (for node/other envs)
-  try {
-    // @ts-ignore
-    if (typeof process !== 'undefined' && process.env) {
-      // @ts-ignore
-      return process.env.VITE_API_KEY || process.env.API_KEY || '';
-    }
-  } catch (e) {
-    // ignore
-  }
-
-  return '';
+  return 'AIzaSyCGrutvte9LiXdhC0UOxBaD02Wa8qUM4A8';
 };
 
-// Initialize the client with process.env.API_KEY as per strict guidelines.
-// If not found, use a placeholder to avoid immediate crash, though API calls will fail.
-const apiKey = getApiKey() || process.env.API_KEY || "dummy_key";
+// Initialize the client
+const apiKey = getApiKey();
 const ai = new GoogleGenAI({ apiKey });
 
 const cleanJson = (text: string): string => {
@@ -54,8 +33,9 @@ interface GenerateParams {
 }
 
 export const generateCanvasContent = async (params: GenerateParams) => {
-  if (apiKey === "dummy_key" && !process.env.API_KEY) {
-     console.warn("API Key do Gemini não encontrada. Verifique VITE_API_KEY ou API_KEY.");
+  if (!apiKey) {
+     console.error("API Key do Gemini não encontrada. Configure VITE_API_KEY nas variáveis de ambiente.");
+     throw new Error("API Key do Gemini ausente.");
   }
 
   // Using gemini-3-pro-preview for complex text tasks (generating educational content)
@@ -156,7 +136,6 @@ export const generateCanvasContent = async (params: GenerateParams) => {
 };
 
 export const generateQuiz = async (canvasData: GamifiedCanvas, questionsCount: number) => {
-    // Implementação simplificada mantendo a interface
     return [];
 };
 

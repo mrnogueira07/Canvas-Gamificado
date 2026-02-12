@@ -20,7 +20,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [resetSent, setResetSent] = useState(false);
 
-  const validateDomain = (email: string) => email.toLowerCase().endsWith('@innyx.com');
+  // Removido validação de domínio para permitir acesso geral durante testes/demo
+  const validateDomain = (email: string) => true; // email.toLowerCase().endsWith('@innyx.com');
 
   const handleGoogleLogin = async () => {
     if (!auth) { setError("Firebase não inicializado."); return; }
@@ -31,6 +32,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
+      /* Validação removida temporariamente
       if (user && user.email && !validateDomain(user.email)) {
          await user.delete();
          await signOut(auth);
@@ -38,6 +40,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
          setLoading(false);
          return;
       }
+      */
+
       if (user && db) {
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
@@ -64,11 +68,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     try {
       if (isRegistering) {
+        /* Validação removida temporariamente
         if (!validateDomain(email)) {
            setError('Cadastro restrito a @innyx.com');
            setLoading(false);
            return;
         }
+        */
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         if (user && db) {
@@ -79,12 +85,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             email: email,
             createdAt: serverTimestamp(),
           });
-          await sendEmailVerification(user);
-          await signOut(auth);
-          setResetSent(true); // Reusing state for success message
-          setError('');
-          alert("Conta criada! Verifique seu email antes de entrar.");
-          setIsRegistering(false);
+          // await sendEmailVerification(user); // Opcional para demo
+          // await signOut(auth);
+          // setResetSent(true); 
+          // setError('');
+          // alert("Conta criada! Verifique seu email antes de entrar.");
+          // setIsRegistering(false);
         }
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -119,7 +125,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
 
         {/* Brand Content */}
-        <div className="relative z-10">
+        <div className="relative z-10 animate-fade-in">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-900/50">
               <Code2 className="text-white" size={20} strokeWidth={2.5} />
@@ -136,7 +142,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
 
         {/* Footer/Testimonial Placeholder */}
-        <div className="relative z-10">
+        <div className="relative z-10 animate-fade-in-up">
            <div className="flex -space-x-3 mb-4">
               {[1,2,3].map(i => (
                 <div key={i} className={`w-10 h-10 rounded-full border-2 border-[#0f172a] bg-gray-700 flex items-center justify-center text-xs overflow-hidden`}>
@@ -228,12 +234,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   )}
 
                   <div className="space-y-1.5">
-                     <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Email Profissional</label>
+                     <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Email</label>
                      <div className="relative group">
                         <Mail className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
                         <input 
                           type="email" 
-                          placeholder="nome@innyx.com" 
+                          placeholder="nome@email.com" 
                           value={email} 
                           onChange={e => setEmail(e.target.value)} 
                           className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all" 

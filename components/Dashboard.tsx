@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { EducationLevel, Bimester, ScriptItem } from '../types';
 import { auth, db } from '../firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, QuerySnapshot, DocumentData } from 'firebase/firestore';
 
 interface DashboardProps {
   onCreateClick: () => void;
@@ -94,7 +94,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onCreateClick, onViewScrip
       where("userId", "==", user.uid)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
       const fetchedScripts = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
