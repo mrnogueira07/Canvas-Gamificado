@@ -390,21 +390,14 @@ const GeneratorPage: React.FC = () => {
         const hasPdf = !!capturedPdf;
         const hasContext = toStr(capturedContext).trim().length > 0;
 
-        // Validação estrita
-        const missing = [];
-        if (!capturedGradeLevel.trim()) missing.push('Nível de Ensino');
-        if (!capturedSubject.trim()) missing.push('Matéria');
-        if (!capturedYear.trim()) missing.push('Ano/Série');
-        if (!capturedQuarter.trim()) missing.push('Bimestre');
-        if (!capturedGameType.trim()) missing.push('Tipo de Jogo');
-
-        if (missing.length > 0) {
-            alert(`Por favor, preencha os campos: ${missing.join(', ')}`);
+        // Validação mínima (segurança extra - o botão já deve estar desabilitado se faltam campos)
+        if (!capturedGameType || !capturedGradeLevel || !capturedSubject || !capturedYear || !capturedQuarter) {
+            console.warn('handleGenerate chamado com campos vazios (botão deveria estar desabilitado):',
+                { capturedGameType, capturedGradeLevel, capturedSubject, capturedYear, capturedQuarter });
             return;
         }
 
         if (!hasPdf && !hasContext) {
-            alert('Por favor, envie um PDF de apoio ou preencha o campo "Objetivo / Contexto".');
             return;
         }
 
@@ -806,7 +799,6 @@ Retorne APENAS um JSON válido com esta estrutura:
                             userHasModifiedRef.current = true;
                             setFormData(prev => {
                                 const next = typeof updater === 'function' ? updater(prev) : updater;
-                                // SINCRONIZAÇÃO FORÇADA: Garante que o Ref mude no mesmo instante do estado
                                 formDataRef.current = next;
                                 return next;
                             });
@@ -815,6 +807,7 @@ Retorne APENAS um JSON válido com esta estrutura:
                         isGenerating={isGenerating}
                         onPdfChange={handlePdfChange}
                         pdfFileName={pdfFileName}
+                        hasPdf={!!pdfBase64}
                         viewOnly={isViewMode}
                         onRecreate={handleRecreate}
                     />

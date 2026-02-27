@@ -11,6 +11,7 @@ interface GeneratorSidebarProps {
     isGenerating: boolean;
     onPdfChange: (base64: string | null, fileName: string | null) => void;
     pdfFileName: string | null;
+    hasPdf: boolean;
     viewOnly?: boolean;
     onRecreate?: () => void;
 }
@@ -41,6 +42,7 @@ export const GeneratorSidebar: React.FC<GeneratorSidebarProps> = ({
     isGenerating,
     onPdfChange,
     pdfFileName,
+    hasPdf,
     viewOnly = false,
     onRecreate,
 }) => {
@@ -101,7 +103,17 @@ export const GeneratorSidebar: React.FC<GeneratorSidebarProps> = ({
 
     const removePdf = () => { onPdfChange(null, null); setPdfError(null); };
 
-    const hasPdf = !!pdfFileName;
+    // VALIDAÇÃO VISUAL: botão só ativa quando todos os campos obrigatórios estão preenchidos
+    const hasContext = (formData.additionalContext || '').trim().length > 0;
+    const missingFields: string[] = [];
+    if (!formData.gradeLevel) missingFields.push('Nível de Ensino');
+    if (!formData.subject) missingFields.push('Matéria');
+    if (!formData.year) missingFields.push('Ano/Série');
+    if (!formData.quarter) missingFields.push('Bimestre');
+    if (!formData.gameType) missingFields.push('Tipo de Jogo');
+    if (!hasPdf && !hasContext) missingFields.push('Objetivo ou PDF');
+
+    const isFormReady = missingFields.length === 0;
 
     const inputWrapperClasses = `relative group gradient-border`;
     const innerInputClasses = `w-full p-4 bg-transparent text-slate-800 text-sm font-bold outline-none transition-all disabled:opacity-50 appearance-none`;
@@ -298,14 +310,25 @@ export const GeneratorSidebar: React.FC<GeneratorSidebarProps> = ({
             </div>
 
             <div className="p-8 pb-10 border-t border-indigo-100/50 bg-white/80 backdrop-blur-xl shadow-[0_-20px_50px_rgba(79,70,229,0.05)] rounded-t-[2.5rem]">
+                {/* Informação sobre campos faltando */}
+                {!viewOnly && !isFormReady && (
+                    <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200/60 rounded-2xl">
+                        <p className="text-[9px] text-amber-600 font-black uppercase tracking-wider text-center leading-relaxed">
+                            Preencha: {missingFields.join(' • ')}
+                        </p>
+                    </div>
+                )}
                 <button
                     onClick={viewOnly ? onRecreate : onGenerate}
-                    disabled={isGenerating}
-                    className={`group relative w-full py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.25em] flex items-center justify-center gap-3 transition-all duration-500 shadow-2xl active:scale-95 cursor-pointer ${isGenerating
-                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-                        : viewOnly
-                            ? 'bg-slate-900 text-white shadow-slate-900/10 hover:shadow-slate-900/20'
-                            : 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-indigo-600/30 hover:scale-[1.02]'
+                    disabled={isGenerating || (!viewOnly && !isFormReady)}
+                    title={!viewOnly && !isFormReady ? `Faltam: ${missingFields.join(', ')}` : ''}
+                    className={`group relative w-full py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.25em] flex items-center justify-center gap-3 transition-all duration-500 shadow-2xl active:scale-95 ${isGenerating
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
+                            : (!viewOnly && !isFormReady)
+                                ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                                : viewOnly
+                                    ? 'bg-slate-900 text-white shadow-slate-900/10 hover:shadow-slate-900/20 cursor-pointer'
+                                    : 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-indigo-600/30 hover:scale-[1.02] cursor-pointer'
                         }`}
                 >
                     {isGenerating ? (
