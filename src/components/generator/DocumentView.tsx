@@ -122,15 +122,20 @@ const GAME_ILLUSTRATIONS: Record<string, GameIllustrationConfig> = {
  * Utilitário de segurança para garantir que NUNCA passamos um objeto (como o SyntheticEvent) como filho do React.
  * Se o valor for um objeto, ele será convertido em string vazia para evitar o erro #31.
  */
-const safeString = (value: any): string => {
-    if (value === null || value === undefined) return '';
-    if (typeof value === 'string') return value;
-    if (typeof value === 'object') {
-        // Se for um objeto (como o erro de evento), retornamos string vazia para não crashar o JSX
-        return '';
-    }
-    return String(value);
+const toStr = (v: unknown): string => {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'string') return v;
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+    if (Array.isArray(v)) return v.map(toStr).join(', ');
+    try { return JSON.stringify(v); } catch { return ''; }
 };
+const toStrArr = (v: unknown): string[] => {
+    if (!v) return [];
+    if (Array.isArray(v)) return v.map(toStr);
+    if (typeof v === 'string') return v.split('\n').filter(Boolean);
+    return [];
+};
+const safeString = toStr; // Alias para manter compatibilidade
 
 /**
  * Componente que exibe a ilustração do topo do card de lógica baseada no tipo de jogo.
@@ -226,9 +231,9 @@ export const DocumentView: React.FC<DocumentViewProps> = ({ content, title: proj
                         </p>
                         <div className="flex items-center gap-3 text-indigo-300/60 font-bold text-[9px] uppercase tracking-[0.3em]">
                             {/* Dividimos o ano/bimestre em duas partes com proteção extra */}
-                            <span>{safeString((content.curriculumRelation.yearAndQuarter || '')).split(' - ')[0]}</span>
+                            <span>{toStr(content.curriculumRelation.yearAndQuarter).split(' - ')[0] || ''}</span>
                             <div className="w-1 h-1 rounded-full bg-indigo-500/30" />
-                            <span>{safeString((content.curriculumRelation.yearAndQuarter || '')).split(' - ')[1]}</span>
+                            <span>{toStr(content.curriculumRelation.yearAndQuarter).split(' - ')[1] || ''}</span>
                         </div>
                     </div>
                 </div>
@@ -274,7 +279,7 @@ export const DocumentView: React.FC<DocumentViewProps> = ({ content, title: proj
                     <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100/50 mb-6">
                         <Field
                             label="INTRODUÇÃO"
-                            value={(content.programmaticContent?.intro || '').replace(/^\s*GUIA DE IMPLEMENTAÇÃO PARA O DESENVOLVEDOR:?\s*/i, '').trim()}
+                            value={toStr(content.programmaticContent?.intro).replace(/^\s*GUIA DE IMPLEMENTAÇÃO PARA O DESENVOLVEDOR:?\s*/i, '').trim()}
                             onChange={(val) => onEdit('programmaticContent', 'intro', val)}
                         />
                     </div>
@@ -462,53 +467,62 @@ const GameLogicSection: React.FC<{
                                                 <span className="text-[9px] text-indigo-400 font-bold uppercase italic">Clique para marcar a correta</span>
                                             </div>
                                             <div className="grid grid-cols-1 gap-2.5">
-                                                {(target.options && target.options.length > 0 ? target.options : (target.description ? target.description.split(/\n|\d\)|[a-d]\)/).filter((t: string) => t.trim()).map((t: string) => t.trim()) : ['Opção A', 'Opção B', 'Opção C', 'Opção D'])).slice(0, 4).map((alt, altIdx) => {
-                                                    const isCorrectAlt = alt === target.answer || (target.answer === undefined && altIdx === 0);
-                                                    return (
-                                                        <div
-                                                            key={altIdx}
-                                                            onClick={(e) => {
-                                                                if ((e.target as HTMLElement).isContentEditable) return;
-                                                                onEdit(`targets[${i}].answer`, alt);
-                                                            }}
-                                                            className={`group/alt relative p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center gap-4 ${isCorrectAlt
-                                                                ? 'bg-emerald-500/[0.03] border-emerald-400 shadow-sm'
-                                                                : 'bg-white/40 border-slate-100/80 hover:border-indigo-200 hover:bg-white'
-                                                                }`}
-                                                        >
-                                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[11px] font-black shrink-0 transition-all ${isCorrectAlt ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-100 text-slate-400'
-                                                                }`}>
-                                                                {altIdx + 1}
+                                                {(() => {
+                                                    const rawDesc = toStr(target.description || target.feedback || '');
+                                                    const opts = (target.options && Array.isArray(target.options) && target.options.length > 0)
+                                                        ? target.options
+                                                        : rawDesc.split(/\n|\d\)|[a-d]\)/).filter(t => t.trim()).map(t => t.trim());
+
+                                                    const finalOpts = (opts.length > 0 ? opts : ['Opção A', 'Opção B', 'Opção C', 'Opção D']).slice(0, 4);
+
+                                                    return finalOpts.map((alt, altIdx) => {
+                                                        const isCorrectAlt = alt === target.answer || (target.answer === undefined && altIdx === 0);
+                                                        return (
+                                                            <div
+                                                                key={altIdx}
+                                                                onClick={(e) => {
+                                                                    if ((e.target as HTMLElement).isContentEditable) return;
+                                                                    onEdit(`targets[${i}].answer`, alt);
+                                                                }}
+                                                                className={`group/alt relative p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center gap-4 ${isCorrectAlt
+                                                                    ? 'bg-emerald-500/[0.03] border-emerald-400 shadow-sm'
+                                                                    : 'bg-white/40 border-slate-100/80 hover:border-indigo-200 hover:bg-white'
+                                                                    }`}
+                                                            >
+                                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[11px] font-black shrink-0 transition-all ${isCorrectAlt ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-100 text-slate-400'
+                                                                    }`}>
+                                                                    {altIdx + 1}
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <Field
+                                                                        label=""
+                                                                        value={alt}
+                                                                        onChange={(val: string) => {
+                                                                            const currentOpts = (target.options && Array.isArray(target.options) && target.options.length > 0)
+                                                                                ? [...target.options]
+                                                                                : rawDesc.split(/\n|\d\)|[a-d]\)/).filter(t => t.trim()).map(t => t.trim());
+
+                                                                            if (currentOpts.length === 0) currentOpts.push('Opção A', 'Opção B', 'Opção C', 'Opção D');
+                                                                            if (currentOpts.length > 4) currentOpts.length = 4;
+
+                                                                            const wasCorrect = alt === target.answer;
+                                                                            currentOpts[altIdx] = val;
+
+                                                                            onEdit(`targets[${i}].options`, currentOpts);
+                                                                            if (wasCorrect) onEdit(`targets[${i}].answer`, val);
+                                                                            if (!target.options) onEdit(`targets[${i}].description`, '');
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                {isCorrectAlt ? (
+                                                                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                                                ) : (
+                                                                    <PencilLine className="w-4 h-4 text-slate-200 opacity-0 group-hover/alt:opacity-100 transition-opacity shrink-0" />
+                                                                )}
                                                             </div>
-                                                            <div className="flex-1">
-                                                                <Field
-                                                                    label=""
-                                                                    value={alt}
-                                                                    onChange={(val: string) => {
-                                                                        const rawDesc = target.description || '';
-                                                                        const currentOpts = (target.options && target.options.length > 0)
-                                                                            ? [...target.options]
-                                                                            : rawDesc.split(/\n|\d\)|[a-d]\)/).filter((t: string) => t.trim()).map((t: string) => t.trim());
-
-                                                                        if (currentOpts.length === 0) currentOpts.push('Opção A', 'Opção B', 'Opção C', 'Opção D');
-
-                                                                        const wasCorrect = alt === target.answer;
-                                                                        currentOpts[altIdx] = val;
-
-                                                                        onEdit(`targets[${i}].options`, currentOpts);
-                                                                        if (wasCorrect) onEdit(`targets[${i}].answer`, val);
-                                                                        if (!target.options) onEdit(`targets[${i}].description`, '');
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                            {isCorrectAlt ? (
-                                                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                                                            ) : (
-                                                                <PencilLine className="w-4 h-4 text-slate-200 opacity-0 group-hover/alt:opacity-100 transition-opacity shrink-0" />
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
+                                                        );
+                                                    });
+                                                })()}
                                             </div>
                                         </div>
                                     ) : (

@@ -31,8 +31,16 @@ const toStrArr = (v: unknown): string[] => {
 
 // Sanitiza o contenteúdo gerado pela IA (ou carregado do Firestore)
 // Garante que todos os campos exibidos como texto são strings válidas
-function sanitizeContent(data: Record<string, unknown>, gameType?: string): Record<string, unknown> {
-    if (!data || typeof data !== 'object') return data;
+function sanitizeContent(input: any, gameType?: string): Record<string, unknown> {
+    // PROTEÇÃO: Se a IA retornar um array (ex: [{...}]), pegamos o primeiro elemento
+    let data: Record<string, unknown>;
+    if (Array.isArray(input)) {
+        data = (input[0] && typeof input[0] === 'object') ? input[0] : {};
+    } else if (input && typeof input === 'object') {
+        data = input;
+    } else {
+        data = {};
+    }
 
     data.creativeTitle = toStr(data.creativeTitle);
 
@@ -356,11 +364,19 @@ const GeneratorPage: React.FC = () => {
         return map[gameType] || 'Crie 6 elementos do jogo com title, description, isCorrect (true/false), points e feedback relevantes ao conteúdo.';
     };
 
-    const handleGenerate = async (gameTypeOverride?: string) => {
-        // SOLUÇÃO DEFINITIVA: Usa Refs para ler os valores MAIS RECENTES do estado
-        // Isso anula qualquer problema de closure ou delay no React state
+    const handleGenerate = async (gameTypeOverride?: string | React.MouseEvent | React.PointerEvent) => {
+        // SOLUÇÃO DEFINITIVA: Intercepta se o primeiro argumento for um evento (ocorre via onClick)
+        // Se for um evento, ignoramos e usamos os seletores normais.
+        let finalGameType = '';
+        if (typeof gameTypeOverride === 'string' && gameTypeOverride.trim() !== '') {
+            finalGameType = gameTypeOverride;
+        } else {
+            // Se chamado via onClick, gameTypeOverride será o SyntheticEvent object
+            finalGameType = toStr(pendingGameTypeRef.current || formDataRef.current.gameType);
+        }
+
         const currentData = formDataRef.current;
-        const capturedGameType = toStr(gameTypeOverride || pendingGameTypeRef.current || currentData.gameType);
+        const capturedGameType = toStr(finalGameType);
         const capturedGradeLevel = toStr(currentData.gradeLevel);
         const capturedSubject = toStr(currentData.subject);
         const capturedYear = toStr(currentData.year);
@@ -445,24 +461,19 @@ Retorne APENAS um JSON válido com esta estrutura:
                 generationConfig: { responseMimeType: 'application/json' },
             });
 
-            const text = result.response.text();
-            if (!text) throw new Error('Sem resposta da IA.');
-
-            // Tenta processar o texto da IA como um objeto JSON
+            const text = result.response.text().replace(/```json|```/g, '').trim();
+            console.log('IA Bruta:', text);
             const data = JSON.parse(text);
 
-            // Sanitiza todos os campos (limpeza preventiva para segurança do React)
-            sanitizeContent(data, capturedGameType);
+            // Sanitiza e atualiza o estado com o conteúdo final bloqueando o gênero
+            const sanitizedData = sanitizeContent(data, capturedGameType) as any;
 
-            // Fallback para campos curriculares caso a IA deixe em branco
-            if (data.curriculumRelation && typeof data.curriculumRelation === 'object') {
-                const cr = data.curriculumRelation as Record<string, unknown>;
-                if (!cr.yearAndQuarter) cr.yearAndQuarter = `${capturedYear} - ${capturedQuarter}`;
-                if (!cr.subject) cr.subject = capturedSubject;
-            }
+            // Força IDs BNCC e complementos se faltarem
+            const cr = sanitizedData.curriculumRelation as any;
+            if (!cr.area) cr.area = capturedSubject;
+            if (!cr.subject) cr.subject = capturedSubject;
+            if (!cr.yearAndQuarter) cr.yearAndQuarter = `${capturedYear} - ${capturedQuarter}`;
 
-            // Atualiza o estado com o conteúdo final sanitizado e bloqueia o gênero
-            const sanitizedData = sanitizeContent(data as any, capturedGameType) as any;
             setGeneratedContent(sanitizedData);
             setIsViewMode(false);
             setIsDirty(true);
@@ -475,9 +486,10 @@ Retorne APENAS um JSON válido com esta estrutura:
             } else if (!projectTitle || isViewMode) {
                 setProjectTitle(toStr(capturedContext || capturedSubject || 'Novo Planejamento').split('\n')[0]);
             }
-        } catch (error: unknown) {
-            console.error('Erro ao gerar:', error);
-            alert('Falha ao gerar conteúdo. Tente novamente.');
+        } catch (error: any) {
+            console.error('Erro detalhado na geração:', error);
+            console.error('Stack trace:', error?.stack);
+            alert(`Falha ao gerar conteúdo: ${error?.message || 'Erro desconhecido'}. Tente novamente.`);
         } finally {
             setIsGenerating(false);
         }
