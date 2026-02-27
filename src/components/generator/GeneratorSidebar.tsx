@@ -319,16 +319,21 @@ export const GeneratorSidebar: React.FC<GeneratorSidebarProps> = ({
                     </div>
                 )}
                 <button
-                    onClick={viewOnly ? onRecreate : onGenerate}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        if (viewOnly) { onRecreate?.(); return; }
+                        if (!isFormReady || isGenerating) return;
+                        onGenerate();
+                    }}
                     disabled={isGenerating || (!viewOnly && !isFormReady)}
                     title={!viewOnly && !isFormReady ? `Faltam: ${missingFields.join(', ')}` : ''}
-                    className={`group relative w-full py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.25em] flex items-center justify-center gap-3 transition-all duration-500 shadow-2xl active:scale-95 ${isGenerating
-                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
+                    className={`group relative w-full py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.25em] flex items-center justify-center gap-3 transition-all duration-500 shadow-2xl ${isGenerating
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none pointer-events-none'
                             : (!viewOnly && !isFormReady)
-                                ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                                ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none pointer-events-none opacity-60'
                                 : viewOnly
-                                    ? 'bg-slate-900 text-white shadow-slate-900/10 hover:shadow-slate-900/20 cursor-pointer'
-                                    : 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-indigo-600/30 hover:scale-[1.02] cursor-pointer'
+                                    ? 'bg-slate-900 text-white shadow-slate-900/10 hover:shadow-slate-900/20 cursor-pointer active:scale-95'
+                                    : 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-indigo-600/30 hover:scale-[1.02] cursor-pointer active:scale-95'
                         }`}
                 >
                     {isGenerating ? (
