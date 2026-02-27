@@ -55,9 +55,10 @@ function sanitizeContent(data: Record<string, unknown>, gameType?: string): Reco
     }
     const gs = data.gameStyle as Record<string, unknown>;
 
-    // BLINDAGEM MÁXIMA: Se temos um gameType fornecido (pelo usuário ou projeto), ele MANDATORIAMENTE sobrescreve o da IA
-    if (gameType && gameType.trim() !== '') {
-        gs.genre = gameType;
+    // BLINDAGEM MÁXIMA: Se temos um gameType fornecido, ele MANDATORIAMENTE sobrescreve o da IA
+    const safeGameType = toStr(gameType);
+    if (safeGameType.trim() !== '') {
+        gs.genre = safeGameType;
     } else {
         gs.genre = toStr(gs.genre) || 'Não Definido';
     }
@@ -210,8 +211,10 @@ const GeneratorPage: React.FC = () => {
                         projectHasLoadedRef.current = true;
                         pendingGameTypeRef.current = project.formData?.gameType || project.gameType || '';
                         setFormData(prev => ({
-                            ...project.formData,
-                            gameType: project.formData?.gameType || project.gameType || prev.gameType
+                            ...prev,
+                            ...(project.formData || {}),
+                            gameType: project.formData?.gameType || project.gameType || prev.gameType,
+                            additionalContext: toStr(project.formData?.additionalContext || project.additionalContext || '')
                         }));
                         // Sanitiza ao carregar — projetos antigos podem ter dados malformados
                         const sanitized = sanitizeContent(project.content || {}, project.formData?.gameType || project.gameType || '') as any;
@@ -234,14 +237,16 @@ const GeneratorPage: React.FC = () => {
                     projectHasLoadedRef.current = true;
                     pendingGameTypeRef.current = project.formData?.gameType || project.gameType || '';
                     setFormData(prev => ({
-                        ...project.formData,
-                        gameType: project.formData?.gameType || project.gameType || prev.gameType
+                        ...prev,
+                        ...(project.formData || {}),
+                        gameType: project.formData?.gameType || project.gameType || prev.gameType,
+                        additionalContext: toStr(project.formData?.additionalContext || project.additionalContext || '')
                     }));
                     // Sanitiza ao carregar — projetos antigos podem ter dados malformados
                     setGeneratedContent(sanitizeContent(project.content || {}, project.formData?.gameType || '') as any);
                     setSavedProjectId(projectId);
                     setIsViewMode(true);
-                    const title = project.title || project.formData?.additionalContext?.split('\n')[0] || project.formData?.subject || 'Planejamento';
+                    const title = toStr(project.title || project.formData?.additionalContext || project.formData?.subject || 'Planejamento').split('\n')[0];
                     setProjectTitle(title);
                 }
             } catch (err) {
@@ -256,7 +261,7 @@ const GeneratorPage: React.FC = () => {
     // Atualiza título quando formData muda (modo criação)
     useEffect(() => {
         if (!isViewMode && !projectTitle) {
-            const derived = formData.additionalContext.split('\n')[0] || formData.subject || '';
+            const derived = toStr(formData.additionalContext || formData.subject || '').split('\n')[0];
             setProjectTitle(derived);
         }
     }, [formData, isViewMode]);
@@ -267,7 +272,7 @@ const GeneratorPage: React.FC = () => {
         setIsEditingTitle(true);
     };
     const confirmEditTitle = () => {
-        const trimmed = titleDraft.trim();
+        const trimmed = toStr(titleDraft).trim();
         if (trimmed) {
             setProjectTitle(trimmed);
             setIsDirty(true);
@@ -349,17 +354,17 @@ const GeneratorPage: React.FC = () => {
     };
 
     const handleGenerate = async (gameTypeOverride?: string) => {
-        // SOLUÇÃO DEFINITIVA: Usa o Ref (sempre live) para capturar o valor real, evitando closures de estado antigo
-        const capturedGameType = gameTypeOverride || pendingGameTypeRef.current || formData.gameType;
-        const capturedGradeLevel = formData.gradeLevel;
-        const capturedSubject = formData.subject;
-        const capturedYear = formData.year;
-        const capturedQuarter = formData.quarter;
-        const capturedContext = formData.additionalContext;
+        // SOLUÇÃO ROBUSTA: Usa toStr para garantir que trim() nunca falhe
+        const capturedGameType = toStr(gameTypeOverride || pendingGameTypeRef.current || formData.gameType);
+        const capturedGradeLevel = toStr(formData.gradeLevel);
+        const capturedSubject = toStr(formData.subject);
+        const capturedYear = toStr(formData.year);
+        const capturedQuarter = toStr(formData.quarter);
+        const capturedContext = toStr(formData.additionalContext);
         const capturedPdf = pdfBase64;
 
         const hasPdf = !!capturedPdf;
-        const hasContext = capturedContext.trim().length > 0;
+        const hasContext = toStr(capturedContext).trim().length > 0;
 
         if (!capturedGradeLevel || !capturedSubject || !capturedYear || !capturedQuarter || !capturedGameType) {
             alert('Por favor, preencha todos os campos obrigatórios.');
@@ -453,9 +458,9 @@ Retorne APENAS um JSON válido com esta estrutura:
             setFormData(prev => ({ ...prev, gameType: capturedGameType }));
 
             if (data.creativeTitle) {
-                setProjectTitle(data.creativeTitle.toUpperCase());
+                setProjectTitle(toStr(data.creativeTitle).toUpperCase());
             } else if (!projectTitle || isViewMode) {
-                setProjectTitle(capturedContext.split('\n')[0] || capturedSubject || 'Novo Planejamento');
+                setProjectTitle(toStr(capturedContext || capturedSubject || 'Novo Planejamento').split('\n')[0]);
             }
         } catch (error: unknown) {
             console.error('Erro ao gerar:', error);
