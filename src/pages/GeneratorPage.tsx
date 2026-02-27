@@ -175,11 +175,10 @@ const GeneratorPage: React.FC = () => {
     const [pdfBase64, setPdfBase64] = useState<string | null>(null);
     const [pdfFileName, setPdfFileName] = useState<string | null>(null);
 
-    // Mantém os refs sempre sincronizados com o state real
-    useEffect(() => {
-        formDataRef.current = formData;
-        pendingGameTypeRef.current = formData.gameType;
-    }, [formData]);
+    // SINCRONIZAÇÃO IMEDIATA: Garante que refs tenham sempre o valor mais atual do estado
+    // Isso evita qualquer "atraso" do useEffect em cliques rápidos.
+    formDataRef.current = formData;
+    pendingGameTypeRef.current = formData.gameType;
 
     const handlePdfChange = (base64: string | null, name: string | null) => {
         setPdfBase64(base64);
@@ -365,18 +364,16 @@ const GeneratorPage: React.FC = () => {
     };
 
     const handleGenerate = async (gameTypeOverride?: string | React.MouseEvent | React.PointerEvent) => {
-        // SOLUÇÃO DEFINITIVA: Intercepta se o primeiro argumento for um evento (ocorre via onClick)
-        // Se for um evento, ignoramos e usamos os seletores normais.
-        let finalGameType = '';
+        // SOLUÇÃO DEFINITIVA: Pega os dados mais recentes do Ref (blindagem contra stale state)
+        const currentData = formDataRef.current;
+
+        let capturedGameType = '';
         if (typeof gameTypeOverride === 'string' && gameTypeOverride.trim() !== '') {
-            finalGameType = gameTypeOverride;
+            capturedGameType = gameTypeOverride;
         } else {
-            // Se chamado via onClick, gameTypeOverride será o SyntheticEvent object
-            finalGameType = toStr(pendingGameTypeRef.current || formDataRef.current.gameType);
+            capturedGameType = toStr(currentData.gameType || pendingGameTypeRef.current);
         }
 
-        const currentData = formDataRef.current;
-        const capturedGameType = toStr(finalGameType);
         const capturedGradeLevel = toStr(currentData.gradeLevel);
         const capturedSubject = toStr(currentData.subject);
         const capturedYear = toStr(currentData.year);
