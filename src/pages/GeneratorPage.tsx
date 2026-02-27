@@ -364,33 +364,37 @@ const GeneratorPage: React.FC = () => {
     };
 
     const handleGenerate = async (gameTypeOverride?: string | React.MouseEvent | React.PointerEvent) => {
-        // SOLUÇÃO DEFINITIVA: Pega os dados mais recentes do Ref (blindagem contra stale state)
-        const currentData = formDataRef.current;
+        // SOLUÇÃO RADICAL: Ignora eventos e usa o estado 'formData' diretamente.
+        // Se chamado via clique de botão, o primeiro argumento é o evento, ignoramos.
+        let capturedGameType = (typeof gameTypeOverride === 'string' && gameTypeOverride.trim())
+            ? gameTypeOverride
+            : formData.gameType;
 
-        let capturedGameType = '';
-        if (typeof gameTypeOverride === 'string' && gameTypeOverride.trim() !== '') {
-            capturedGameType = gameTypeOverride;
-        } else {
-            capturedGameType = toStr(currentData.gameType || pendingGameTypeRef.current);
-        }
-
-        const capturedGradeLevel = toStr(currentData.gradeLevel);
-        const capturedSubject = toStr(currentData.subject);
-        const capturedYear = toStr(currentData.year);
-        const capturedQuarter = toStr(currentData.quarter);
-        const capturedContext = toStr(currentData.additionalContext);
+        const capturedGradeLevel = formData.gradeLevel;
+        const capturedSubject = formData.subject;
+        const capturedYear = formData.year;
+        const capturedQuarter = formData.quarter;
+        const capturedContext = formData.additionalContext;
         const capturedPdf = pdfBase64;
 
         const hasPdf = !!capturedPdf;
         const hasContext = toStr(capturedContext).trim().length > 0;
 
-        // Validação com feedback detalhado para o usuário
+        // Validação com fallback para garantir que pegamos o valor mais recente
         const missing = [];
-        if (!capturedGradeLevel) missing.push('Nível de Ensino');
-        if (!capturedSubject) missing.push('Matéria');
-        if (!capturedYear) missing.push('Ano/Série');
-        if (!capturedQuarter) missing.push('Bimestre');
-        if (!capturedGameType) missing.push('Tipo de Jogo');
+        if (!toStr(capturedGradeLevel).trim()) missing.push('Nível de Ensino');
+        if (!toStr(capturedSubject).trim()) missing.push('Matéria');
+        if (!toStr(capturedYear).trim()) missing.push('Ano/Série');
+        if (!toStr(capturedQuarter).trim()) missing.push('Bimestre');
+        if (!toStr(capturedGameType).trim()) {
+            // Última tentativa: tenta pegar do Ref se o state estiver com lag
+            const refGameType = toStr(formDataRef.current.gameType).trim();
+            if (refGameType) {
+                capturedGameType = refGameType;
+            } else {
+                missing.push('Tipo de Jogo');
+            }
+        }
 
         if (missing.length > 0) {
             alert(`Por favor, preencha os campos: ${missing.join(', ')}`);
