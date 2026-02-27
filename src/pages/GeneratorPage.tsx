@@ -141,8 +141,10 @@ const GeneratorPage: React.FC = () => {
         additionalContext: ''
     });
 
-    // SOLUÇÃO: ref que sempre reflete o gameType atual sem stale closure
-    const pendingGameTypeRef = useRef<string>('');
+    // SOLUÇÃO: refs que sempre refletem os valores atuais sem stale closures
+    const formDataRef = useRef<GeneratorFormData>(formData);
+    const pendingGameTypeRef = useRef<string>(formData.gameType);
+
     // Impede que loadProject (async) sobrescreva formData após mudanças do usuário
     const projectHasLoadedRef = useRef(false);
     const userHasModifiedRef = useRef(false);
@@ -165,10 +167,11 @@ const GeneratorPage: React.FC = () => {
     const [pdfBase64, setPdfBase64] = useState<string | null>(null);
     const [pdfFileName, setPdfFileName] = useState<string | null>(null);
 
-    // Mantém o ref de gameType sempre sincronizado com o state real
+    // Mantém os refs sempre sincronizados com o state real
     useEffect(() => {
+        formDataRef.current = formData;
         pendingGameTypeRef.current = formData.gameType;
-    }, [formData.gameType]);
+    }, [formData]);
 
     const handlePdfChange = (base64: string | null, name: string | null) => {
         setPdfBase64(base64);
@@ -354,20 +357,30 @@ const GeneratorPage: React.FC = () => {
     };
 
     const handleGenerate = async (gameTypeOverride?: string) => {
-        // SOLUÇÃO ROBUSTA: Usa toStr para garantir que trim() nunca falhe
-        const capturedGameType = toStr(gameTypeOverride || pendingGameTypeRef.current || formData.gameType);
-        const capturedGradeLevel = toStr(formData.gradeLevel);
-        const capturedSubject = toStr(formData.subject);
-        const capturedYear = toStr(formData.year);
-        const capturedQuarter = toStr(formData.quarter);
-        const capturedContext = toStr(formData.additionalContext);
+        // SOLUÇÃO DEFINITIVA: Usa Refs para ler os valores MAIS RECENTES do estado
+        // Isso anula qualquer problema de closure ou delay no React state
+        const currentData = formDataRef.current;
+        const capturedGameType = toStr(gameTypeOverride || pendingGameTypeRef.current || currentData.gameType);
+        const capturedGradeLevel = toStr(currentData.gradeLevel);
+        const capturedSubject = toStr(currentData.subject);
+        const capturedYear = toStr(currentData.year);
+        const capturedQuarter = toStr(currentData.quarter);
+        const capturedContext = toStr(currentData.additionalContext);
         const capturedPdf = pdfBase64;
 
         const hasPdf = !!capturedPdf;
         const hasContext = toStr(capturedContext).trim().length > 0;
 
-        if (!capturedGradeLevel || !capturedSubject || !capturedYear || !capturedQuarter || !capturedGameType) {
-            alert('Por favor, preencha todos os campos obrigatórios.');
+        // Validação com feedback detalhado para o usuário
+        const missing = [];
+        if (!capturedGradeLevel) missing.push('Nível de Ensino');
+        if (!capturedSubject) missing.push('Matéria');
+        if (!capturedYear) missing.push('Ano/Série');
+        if (!capturedQuarter) missing.push('Bimestre');
+        if (!capturedGameType) missing.push('Tipo de Jogo');
+
+        if (missing.length > 0) {
+            alert(`Por favor, preencha os campos: ${missing.join(', ')}`);
             return;
         }
 
