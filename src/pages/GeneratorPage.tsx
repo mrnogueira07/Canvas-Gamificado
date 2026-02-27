@@ -363,38 +363,40 @@ const GeneratorPage: React.FC = () => {
         return map[gameType] || 'Crie 6 elementos do jogo com title, description, isCorrect (true/false), points e feedback relevantes ao conteúdo.';
     };
 
-    const handleGenerate = async (gameTypeOverride?: string | React.MouseEvent | React.PointerEvent) => {
-        // SOLUÇÃO RADICAL: Ignora eventos e usa o estado 'formData' diretamente.
-        // Se chamado via clique de botão, o primeiro argumento é o evento, ignoramos.
-        let capturedGameType = (typeof gameTypeOverride === 'string' && gameTypeOverride.trim())
-            ? gameTypeOverride
-            : formData.gameType;
+    const handleGenerate = async (arg?: unknown) => {
+        // SOLUÇÃO FINAL: Ignora QUALQUER argumento que venha do onClick (SyntheticEvent)
+        // e lê os valores exclusivamente do Ref, que agora é sincronizado no ato do setFormData.
+        const currentData = formDataRef.current;
 
-        const capturedGradeLevel = formData.gradeLevel;
-        const capturedSubject = formData.subject;
-        const capturedYear = formData.year;
-        const capturedQuarter = formData.quarter;
-        const capturedContext = formData.additionalContext;
+        let capturedGameType = '';
+        if (typeof arg === 'string' && arg.trim() !== '') {
+            capturedGameType = arg;
+        } else {
+            capturedGameType = toStr(currentData.gameType);
+        }
+
+        const capturedGradeLevel = toStr(currentData.gradeLevel);
+        const capturedSubject = toStr(currentData.subject);
+        const capturedYear = toStr(currentData.year);
+        const capturedQuarter = toStr(currentData.quarter);
+        const capturedContext = toStr(currentData.additionalContext);
         const capturedPdf = pdfBase64;
+
+        console.log('Validando formulário:', {
+            capturedGameType, capturedGradeLevel, capturedSubject,
+            capturedYear, capturedQuarter, hasPdf: !!capturedPdf
+        });
 
         const hasPdf = !!capturedPdf;
         const hasContext = toStr(capturedContext).trim().length > 0;
 
-        // Validação com fallback para garantir que pegamos o valor mais recente
+        // Validação estrita
         const missing = [];
-        if (!toStr(capturedGradeLevel).trim()) missing.push('Nível de Ensino');
-        if (!toStr(capturedSubject).trim()) missing.push('Matéria');
-        if (!toStr(capturedYear).trim()) missing.push('Ano/Série');
-        if (!toStr(capturedQuarter).trim()) missing.push('Bimestre');
-        if (!toStr(capturedGameType).trim()) {
-            // Última tentativa: tenta pegar do Ref se o state estiver com lag
-            const refGameType = toStr(formDataRef.current.gameType).trim();
-            if (refGameType) {
-                capturedGameType = refGameType;
-            } else {
-                missing.push('Tipo de Jogo');
-            }
-        }
+        if (!capturedGradeLevel.trim()) missing.push('Nível de Ensino');
+        if (!capturedSubject.trim()) missing.push('Matéria');
+        if (!capturedYear.trim()) missing.push('Ano/Série');
+        if (!capturedQuarter.trim()) missing.push('Bimestre');
+        if (!capturedGameType.trim()) missing.push('Tipo de Jogo');
 
         if (missing.length > 0) {
             alert(`Por favor, preencha os campos: ${missing.join(', ')}`);
@@ -801,9 +803,13 @@ Retorne APENAS um JSON válido com esta estrutura:
                     <GeneratorSidebar
                         formData={formData}
                         setFormData={(updater) => {
-                            // Marca que o usuário modificou — impede loadProject de sobrescrever
                             userHasModifiedRef.current = true;
-                            setFormData(updater);
+                            setFormData(prev => {
+                                const next = typeof updater === 'function' ? updater(prev) : updater;
+                                // SINCRONIZAÇÃO FORÇADA: Garante que o Ref mude no mesmo instante do estado
+                                formDataRef.current = next;
+                                return next;
+                            });
                         }}
                         onGenerate={handleGenerate}
                         isGenerating={isGenerating}
