@@ -12,6 +12,7 @@ import { auth, db } from '../lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { Button } from '../components/ui/Button';
 import { LoadingAnimation } from '../components/ui/LoadingAnimation';
+import { generatePDFBlob } from '../lib/pdfExport';
 
 // ─── Sanitização de dados da IA ────────────────────────────────────────────
 // Converte qualquer valor para string segura (nunca renderiza objetos como React child)
@@ -93,6 +94,18 @@ function sanitizeContent(input: any, gameType?: string): Record<string, unknown>
     pc.winCondition = toStr(pc.winCondition);
     pc.loseCondition = toStr(pc.loseCondition);
 
+    // Força a existência ds mecânicas do jogo
+    if (!data.gameMechanics || typeof data.gameMechanics !== 'object') {
+        data.gameMechanics = { technicalRules: '', timeControl: '', challengesPerPhase: '', feedbackSystem: '', scoringSystem: '', collectibleItems: '' };
+    }
+    const gm = data.gameMechanics as Record<string, unknown>;
+    gm.technicalRules = toStr(gm.technicalRules);
+    gm.timeControl = toStr(gm.timeControl);
+    gm.challengesPerPhase = toStr(gm.challengesPerPhase);
+    gm.feedbackSystem = toStr(gm.feedbackSystem);
+    gm.scoringSystem = toStr(gm.scoringSystem);
+    gm.collectibleItems = toStr(gm.collectibleItems);
+
     // Força a existência da lógica do jogo
     if (!data.gameLogic || typeof data.gameLogic !== 'object') {
         data.gameLogic = { howToPlay: '', timeLimit: '', levels: '', difficulty: '', targets: [] };
@@ -109,7 +122,7 @@ function sanitizeContent(input: any, gameType?: string): Record<string, unknown>
             description: toStr(t.description),
             feedback: toStr(t.feedback),
             answer: toStr(t.answer),
-            options: toStrArr(t.options).length > 0 ? toStrArr(t.options) : [],
+            options: toStrArr(t.options).length >= 2 ? toStrArr(t.options) : ['Opção A', 'Opção B'],
             points: typeof t.points === 'number' ? t.points : Number(t.points) || 0,
             isCorrect: Boolean(t.isCorrect),
         }));
@@ -124,7 +137,7 @@ function sanitizeContent(input: any, gameType?: string): Record<string, unknown>
                 ...q,
                 question: toStr(q.question),
                 answer: toStr(q.answer),
-                options: toStrArr(q.options).length > 0 ? toStrArr(q.options) : ['Opção A', 'Opção B', 'Opção C', 'Opção D'],
+                options: toStrArr(q.options).length > 0 ? toStrArr(q.options) : ['Opção A', 'Opção B'],
             }));
         } else {
             quiz.questions = [];
@@ -348,19 +361,19 @@ const GeneratorPage: React.FC = () => {
     // Instruções específicas de gameLogic por tipo de jogo
     const getGameLogicInstruction = (gameType: string): string => {
         const map: Record<string, string> = {
-            'Jogo de Tiro ao Alvo': 'Crie 8 alvos (4 corretos com pontos positivos entre +10 e +20 e 4 incorretos com pontos negativos entre -5 e -15). Cada alvo tem uma afirmação sobre o conteúdo. timeLimit: "45 segundos", levels: "3 níveis", difficulty: "Progressiva".',
-            'Quiz': 'Crie 10 perguntas, cada uma com uma pergunta como title, a resposta correta ou explicação como description. Use 4 alternativas por pergunta no targets e deixe claro qual é a correta. points: entre 10 e 25 para corretas, -5 a -10 para incorretas. timeLimit: "30 segundos por pergunta", levels: "1 fase", difficulty: "Crescente".',
-            'Memória': 'Crie 8 pares de cartas (16 items no total, mas retorne apenas 8 pares únicos). Cada par tem title (conceito) e description (definição ou imagem). isCorrect: true para todos. points: +10 cada par. timeLimit: "2 minutos", levels: "1 fase", difficulty: "Moderada".',
-            'Arrastar e Soltar': 'Crie 6 items para arrastar para a categoria correta. title = item, description = categoria onde deve ser encaixado. 4 corretos (isCorrect: true, +15pts) e 2 incorretos (isCorrect: false, -10pts). timeLimit: "60 segundos", levels: "2 fases", difficulty: "Progressiva".',
-            'Jogo de Plataforma 2D': 'Crie um jogo de plataforma com 3 fases. O jogo deve ter um personagem principal definido. Crie 8 elementos: 3 INIMIGOS (isCorrect: false, -15pts), 3 OBSTÁCULOS (isCorrect: false, -10pts) e 2 ITENS INFORMATIVOS (isCorrect: true, +20pts). Nos itens informativos, coloque conceitos chave do tema no title e a explicação detalhada no description. Relacione inimigos e obstáculos com desafios do conteúdo e garanta que a progressão ocorra em 3 níveis distintos. timeLimit: "3 minutos", levels: "3 fases", difficulty: "Progressiva".',
-            'Roleta': 'Crie 10 casas para o jogo de roleta seguindo estritamente estas regras: 1) 4 casas de QUIZ (title: O ENUNCIADO COMPLETO E DETALHADO DA PERGUNTA, options: exatamente 4 alternativas curtas e objetivas, answer: a alternativa correta exata, isCorrect: true). 2) 3 casas INFORMATIVAS (title: "DICA", description: informação crucial para ajudar no quiz, isCorrect: true). 3) 3 casas de PERDA (title: "PENALIDADE", description: consequência negativa, isCorrect: false, points: -20). O visual vermelho é ativado por isCorrect: false. Objetivo: Responder todos os 4 quizes.',
-            'Quebra-Cabeça': 'Crie 6 peças do quebra-cabeça, cada peça é um fragmento de imagem ou conceito. isCorrect: true para as que se encaixam, false para as que não pertencem. +15 corretas, -5 incorretas. title = fragmento, description = o que representa. timeLimit: "90 segundos", levels: "2 fases", difficulty: "Moderada".',
-            'Enigmas Movimento': 'Crie 6 enigmas de movimento (labirinto/direção). title = a pergunta ou dica do enigma, description = explicação da resposta correta. 4 corretos (+15pts) e 2 incorretos (-10pts). timeLimit: "60 segundos", levels: "3 fases", difficulty: "Crescente".',
-            'Tabuleiro': 'Crie 8 casas do tabuleiro. Casas-bônus (isCorrect: true, +20pts) e casas-armadilha (isCorrect: false, -10pts). title = nome da casa, description = o que acontece ao cair nela e qual conteúdo ela representa. timeLimit: "Sem limite", levels: "1 partida", difficulty: "Moderada".',
-            'Esmaga Palavras': 'Crie uma lista de 10 palavras-chave relacionadas ao conteúdo para um jogo estilo "Caça Palavras" with mecânica de esmagar blocos que caem. Para cada item, coloque a palavra exata no "title" e uma descrição/pista sugestiva no "description". No jogo, a descrição será a dica visual e a palavra será o alvo encontrado. isCorrect: true para todos. points: +15pts cada. timeLimit: "2 minutos", levels: "1 fase", difficulty: "Moderada".',
-            'Jogo da Velha': 'Crie 9 posições do tabuleiro com afirmações sobre o conteúdo. Para marcar X ou O o jogador deve responder corretamente. 6 afirmações corretas (isCorrect: true, +10pts) e 3 incorretos (isCorrect: false, -5pts). title = afirmação, description = explicação. timeLimit: "Sem limite", levels: "Melhor de 3", difficulty: "Moderada".',
+            'Jogo de Tiro ao Alvo': 'Crie entre 3 e 5 perguntas. Para cada pergunta, forme um alvo correto (+15 pts) e um inimigo/alvo incorreto (-10 pts). options: exatamente 2 alternativas. timeLimit: "45 segundos", levels: "3 níveis", difficulty: "Progressiva".',
+            'Quiz': 'Crie até 5 perguntas, cada uma com o title sendo a pergunta. Use EXATAMENTE 2 alternativas em "options". A resposta correta DEVE estar contida exatamente no campo "answer". points: entre 10 e 25. timeLimit: "30 segundos por pergunta", levels: "1 fase", difficulty: "Crescente".',
+            'Memória': 'Crie até 5 pares de cartas (10 items no total). Cada par tem title (conceito) e description (definição). isCorrect: true para todos. options: 2 alternativas para contextualizar a carta. points: +10 cada par. timeLimit: "2 minutos".',
+            'Arrastar e Soltar': 'Crie até 5 items para arrastar. title = item, description = categoria. 3 corretos (+15pts) e 2 incorretos (-10pts). options: exatamente 2 alternativas contextuais. timeLimit: "60 segundos".',
+            'Jogo de Plataforma 2D': 'Crie um jogo de plataforma com até 5 elementos (inimigos/obstáculos/itens informativos). Em "targets", use question para perguntar, EXACTAMENTE 2 opções curtas em "options" e a correta em "answer". timeLimit: "3 minutos", levels: "3 fases".',
+            'Roleta': 'Crie EXATAMENTE 10 casas de roleta (SENDO: 5 casas de QUIZ com title sendo a pergunta e EXATAMENTE 2 opções em options, 3 casas de DICA informativa sobre o tema e 2 casas de PENALIDADE/PERDA DE PONTOS). Cada casa deve ter title, points (+15 quiz, 0 dica, -10 penalidade) e feedback contextual.',
+            'Quebra-Cabeça': 'Crie até 5 questões. Cada alvo do puzzle tem isCorrect: true ou false, +15 ou -5 pontos. Em "options", use EXATAMENTE 2 alternativas contextuais da imagem.',
+            'Enigmas Movimento': 'Crie até 5 enigmas de movimento. title = a pergunta do enigma. Em "options", forneça exatamente 2 alternativas (ex: Direita, Esquerda). answer = a alternativa exata. timeLimit: "60 segundos".',
+            'Tabuleiro': 'Crie casas do tabuleiro (até 5 perguntas). Casas-bônus (+20pts) e casas-armadilha (-10pts). title = pergunta, options = EXATAMENTE 2 alternativas, answer = a alternativa correta.',
+            'Esmaga Palavras': 'Crie uma lista de até 5 palavras-chave afins. Para cada item, title = palavra e description = dica. Para manter simetria, gere "options" com EXATAMENTE 2 alternativas para que o usuário escolha qual palavra melhor descreve a dica.',
+            'Jogo da Velha': 'Crie até 5 posições/perguntas do tabuleiro. Para marcar, devem responder a pergunta. options = EXATAMENTE 2 alternativas, answer = a opção correta. isCorrect: true.',
         };
-        return map[gameType] || 'Crie 6 elementos do jogo com title, description, isCorrect (true/false), points e feedback relevantes ao conteúdo.';
+        return map[gameType] || 'Crie até 5 elementos/perguntas com title, description, isCorrect, options (EXATAMENTE 2 ALTERNATIVAS), answer preciso e feedback relevante.';
     };
 
     const handleGenerate = async (arg?: unknown) => {
@@ -419,6 +432,8 @@ Crie um planejamento de gamificação educacional completo com os seguintes dado
 - Tipo de Jogo: ${capturedGameType}
 - Regras Específicas: ${gameLogicInstruction}
 - Contexto/Ideia do professor: ${capturedContext || '(não informado, use o PDF como base)'}
+- Instrução Global para Perguntas: Em todos os tipos de jogos, crie questões ou interações de acordo com o conteúdo fornecido ou contexto, adaptadas para o nível de ensino selecionado (${capturedGradeLevel}). Para as questões (seja no array 'targets' ou 'quiz'), você DEVE gerar EXATAMENTE 2 alternativas por pergunta e indicar a resposta correta com clareza na chave "answer". Crie de 1 a 5 perguntas.
+- ATENÇÃO MECÂNICAS: No campo "gameMechanics", preencha CADA subcampo com texto REAL e específico para o tipo de jogo "${capturedGameType}" e conteúdo "${capturedSubject}". NÃO use textos genéricos. Escreva regras concretas com pelo menos 2 frases por campo.
 
 Retorne APENAS um JSON válido com esta estrutura:
 {
@@ -434,11 +449,17 @@ Retorne APENAS um JSON válido com esta estrutura:
     "winCondition": "",
     "loseCondition": ""
   },
+  "gameMechanics": {
+    "technicalRules": "[GERE: regras técnicas detalhadas e específicas para ${capturedGameType} com o conteúdo de ${capturedSubject}]",
+    "timeControl": "[GERE: tempo específico por rodada/fase/total para ${capturedGameType}]",
+    "challengesPerPhase": "[GERE: quantidade e tipo de desafios por fase no ${capturedGameType}]",
+    "scoringSystem": "[GERE: pontuação por acerto, penalidade por erro e bônus no ${capturedGameType}]"
+  },
   "gameLogic": {
     "howToPlay": "", "timeLimit": "", "levels": "", "difficulty": "",
-    "targets": [{ "title": "", "description": "", "isCorrect": true, "points": 15, "options": ["", "", "", ""], "answer": "", "feedback": "" }]
+    "targets": [{ "title": "", "description": "", "isCorrect": true, "points": 15, "options": ["", ""], "answer": "", "feedback": "" }]
   },
-  "quiz": ${capturedGameType === 'Quiz' ? '{ "questions": [{ "question": "", "options": ["","","",""], "answer": "" }] }' : 'null'}
+  "quiz": ${capturedGameType === 'Quiz' ? '{ "questions": [{ "question": "", "options": ["",""], "answer": "" }] }' : 'null'}
 }`;
 
             const parts: Part[] = [{ text: prompt }];
@@ -501,133 +522,11 @@ Retorne APENAS um JSON válido com esta estrutura:
         setTimeout(() => handleGenerate(gameTypeSnapshot), 0);
     };
 
-    const handleExportPDF = () => {
-        const input = document.getElementById('canvas-content');
-        if (!input) { alert("Conteúdo não encontrado."); return; }
-
-        // Captura o estado atual do canvas de Drag & Drop, se existir
-        let dragDropImageUrl: string | null = null;
-        const ddCanvas = document.querySelector('#drag-drop-canvas-section canvas') as HTMLCanvasElement | null;
-        if (ddCanvas) {
-            dragDropImageUrl = ddCanvas.toDataURL('image/png');
+    const handleExportPDF = async () => {
+        const result = await generatePDFBlob('canvas-content', projectTitle || formData.subject || 'Planejamento');
+        if (result) {
+            result.pdf.save(result.fileName);
         }
-
-        const printWindow = window.open('', '_blank', 'width=900,height=700');
-        if (!printWindow) { alert("O popup foi bloqueado."); return; }
-
-        if (!printWindow || !generatedContent) { alert("Erro ao gerar PDF ou popup bloqueado."); return; }
-
-        const currentTitle = projectTitle || formData.subject || 'Canvas Gamificado';
-        const docTitle = (currentTitle).toUpperCase();
-
-        printWindow.document.write(`
-            <!DOCTYPE html>
-            <html lang="pt-BR">
-            <head>
-                <meta charset="UTF-8" />
-                <title>${docTitle}</title>
-                <style>
-                    body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; line-height: 1.6; background: #fff; }
-                    h1 { color: #4f46e5; border-bottom: 3px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 40px; text-align: center; font-size: 28px; text-transform: uppercase; letter-spacing: 2px; }
-                    .canvas-grid { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; }
-                    .section { margin-bottom: 25px; padding: 25px; border: 2px solid #f1f5f9; border-radius: 20px; background: #fcfdfe; page-break-inside: avoid; }
-                    .section-full { grid-column: span 2; }
-                    .header-meta { text-align: center; margin-bottom: 40px; color: #64748b; font-weight: bold; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }
-                    .section-title { font-weight: 900; text-transform: uppercase; font-size: 13px; color: #4f46e5; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-                    .label { font-weight: 800; font-size: 10px; color: #94a3b8; text-transform: uppercase; margin-top: 15px; margin-bottom: 4px; }
-                    .value { font-size: 14px; color: #334155; }
-                    .target-item { margin-top: 10px; padding: 10px; border-radius: 10px; background: #f8fafc; border-left: 4px solid #4f46e5; }
-                    .tag { display: inline-block; padding: 3px 10px; border-radius: 20px; background: #eef2ff; color: #4f46e5; font-size: 10px; font-weight: 900; margin-right: 5px; }
-                    @media print { body { padding: 0; } .section { border-color: #e2e8f0; } }
-                </style>
-            </head>
-            <body>
-                <h1>${docTitle}</h1>
-                <div class="header-meta">
-                    ${formData.gradeLevel} &bull; ${formData.subject} &bull; ${formData.year} - ${formData.quarter}
-                </div>
-                
-                <div class="canvas-grid">
-                    <div class="section section-full">
-                        <div class="section-title">1. Planejamento Curricular</div>
-                        <div class="label">Área</div><div class="value">${generatedContent.curriculumRelation.area}</div>
-                        <div class="label">Tema</div><div class="value">${generatedContent.curriculumRelation.theme}</div>
-                        <div class="label">BNCC</div><div class="value">${generatedContent.curriculumRelation.bnccSkills}</div>
-                        <div class="label">Descrição</div><div class="value">${generatedContent.curriculumRelation.skillsDescription}</div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-title">2. Estilo do Jogo</div>
-                        <div class="label">TIPO DE JOGO</div><div class="value">${generatedContent.gameStyle.genre}</div>
-                        <div class="label">PÚBLICO</div><div class="value">${generatedContent.gameStyle.targetAudience}</div>
-                        <div class="label">NARRATIVA CURTA</div><div class="value">${generatedContent.gameStyle.narrative}</div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-title">3. Fluxo do Jogo</div>
-                        <div class="label">FLUXO DO JOGO</div><div class="value">${generatedContent.gamePlot.synopsis}</div>
-                        <div class="label">CHEFES E INIMIGOS / OBSTÁCULOS</div><div class="value">${generatedContent.gamePlot.characters}</div>
-                    </div>
-
-                    <div class="section section-full">
-                        <div class="section-title">4. Conteúdo Programático</div>
-                        <div class="label">INTRODUÇÃO</div><div class="value">${(generatedContent.programmaticContent.intro || '').replace(/^GUIA DE IMPLEMENTAÇÃO PARA O DESENVOLVEDOR:?/i, '').trim()}</div>
-                        <div style="display: flex; gap: 20px; margin-top: 15px;">
-                            <div style="flex: 1"><div class="label">VITÓRIA</div><div class="value">${generatedContent.programmaticContent.winCondition}</div></div>
-                            <div style="flex: 1"><div class="label">DERROTA</div><div class="value">${generatedContent.programmaticContent.loseCondition}</div></div>
-                        </div>
-                    </div>
-
-                    <div class="section section-full">
-                        <div class="section-title">5. Lógica do Jogo</div>
-                        <div class="label">COMO JOGAR</div><div class="value">${generatedContent.gameLogic.howToPlay}</div>
-                        <div class="label">CONFIGURAÇÕES</div>
-                        <div style="display: flex; gap: 10px; margin-top: 5px;">
-                            <span class="tag">TEMPO: ${generatedContent.gameLogic.timeLimit}</span>
-                            <span class="tag">FASES: ${generatedContent.gameLogic.levels}</span>
-                            <span class="tag">DIFICULDADE: ${generatedContent.gameLogic.difficulty}</span>
-                        </div>
-                        <div class="label">ELEMENTOS DO JOGO</div>
-                        ${generatedContent.gameLogic.targets.map(t => `
-                            <div class="target-item">
-                                <div style="font-weight: bold; font-size: 13px; color: ${t.isCorrect ? '#10b981' : '#f43f5e'}">${t.title}</div>
-                                <div class="label" style="margin-top: 5px; color: #94a3b8; font-size: 8px;">${formData.gameType === 'Esmaga Palavras' ? 'DICA' : 'FEEDBACK'}</div>
-                                <div style="font-size: 11px; color: #64748b">${t.description || t.feedback}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-
-                    ${generatedContent.quiz ? `
-                    <div class="section section-full">
-                        <div class="section-title">Quiz Extra</div>
-                        ${generatedContent.quiz.questions.map((q, i) => `
-                            <div style="margin-bottom: 15px;">
-                                <div style="font-weight: bold; font-size: 13px;">${i + 1}. ${q.question}</div>
-                                <div style="font-size: 12px; color: #64748b; margin-left: 15px; margin-top: 5px;">
-                                    ${q.options.map(o => `&bull; ${o}${o === q.answer ? ' <b>(CORRETA)</b>' : ''}`).join('<br>')}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    ` : ''}
-
-                    ${dragDropImageUrl ? `
-                    <div class="section section-full">
-                        <div class="section-title">Canvas Drag &amp; Drop — Posições finais</div>
-                        <img src="${dragDropImageUrl}" style="width:100%; border-radius: 12px; margin-top: 10px; border: 1px solid #f1f5f9;" />
-                    </div>
-                    ` : ''}
-                </div>
-
-                <div style="margin-top: 50px; padding-top: 20px; border-top: 1px border #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center;">
-                    Documento gerado eletronicamente por Game Canvas AI.
-                </div>
-
-                <script>window.onload = function() { window.print(); window.close(); };<\/script>
-            </body>
-            </html>
-        `);
-        printWindow.document.close();
     };
 
     const handleContentUpdate = (section: keyof GeneratedContent, field: string, value: any) => {
