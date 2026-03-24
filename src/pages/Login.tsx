@@ -195,7 +195,10 @@ const Login: React.FC = () => {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [rawX, rawY]);
 
-  const isValidDomain = (em: string) => em.toLowerCase().endsWith("@innyx.com");
+  const isValidDomain = (em: string) => {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return true;
+    return em.toLowerCase().endsWith("@innyx.com");
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,9 +234,13 @@ const Login: React.FC = () => {
           passwordSet: true,
         });
 
-        // Desloga imediatamente — só entra quem verificou o e-mail
-        await signOut(auth);
-        setAwaitingVerification(true);
+        // Desloga imediatamente — só entra quem verificou o e-mail (exceto no localhost)
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+          await signOut(auth);
+          setAwaitingVerification(true);
+        } else {
+          navigate("/dashboard");
+        }
       } else {
         const userCredential = await signInWithEmailAndPassword(
           auth,
@@ -242,7 +249,7 @@ const Login: React.FC = () => {
         );
         const user = userCredential.user;
 
-        if (!user.emailVerified) {
+        if (!user.emailVerified && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
           await signOut(auth);
           setError(
             "Sua conta ainda não foi verificada. Por favor, clique no link que enviamos para o seu e-mail.",

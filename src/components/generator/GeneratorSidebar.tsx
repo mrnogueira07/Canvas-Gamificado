@@ -228,8 +228,8 @@ export const GeneratorSidebar: React.FC<GeneratorSidebarProps> = ({
 
   const isFormReady = missingFields.length === 0;
 
-  const inputWrapperClasses = `relative group gradient-border`;
-  const innerInputClasses = `w-full p-4 bg-transparent text-slate-800 text-sm font-bold outline-none transition-all disabled:opacity-50 appearance-none`;
+  const inputWrapperClasses = `relative group rounded-2xl border-2 border-slate-100 hover:border-indigo-200/50 bg-white/50 focus-within:bg-white focus-within:border-indigo-500/50 focus-within:shadow-2xl focus-within:shadow-indigo-500/5 transition-all duration-300`;
+  const innerInputClasses = `w-full p-4.5 bg-transparent text-slate-800 text-xs font-black uppercase tracking-widest outline-none transition-all disabled:opacity-50 appearance-none cursor-pointer`;
 
   return (
     <motion.div
@@ -453,18 +453,20 @@ export const GeneratorSidebar: React.FC<GeneratorSidebarProps> = ({
                     if (file) processFile(file);
                   }}
                   onClick={() => !isGenerating && fileInputRef.current?.click()}
-                  className={`relative group border-2 border-dashed rounded-[2.5rem] p-8 text-center cursor-pointer transition-all duration-300 ${isDragging
-                      ? "border-indigo-500 bg-indigo-500/10"
-                      : "border-slate-200 hover:bg-slate-50 hover:border-indigo-500"
+                  className={`relative group border-2 border-dashed rounded-[2.5rem] p-10 text-center cursor-pointer transition-all duration-500 ${isDragging
+                      ? "border-indigo-500 bg-indigo-500/10 scale-[1.02]"
+                      : "border-slate-200 bg-slate-50/30 hover:bg-white hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-500/5"
                     }`}
                 >
-                  <Upload
-                    className={`w-8 h-8 mx-auto mb-4 transition-all duration-300 ${isDragging ? "text-indigo-500 scale-110" : "text-slate-300 group-hover:text-indigo-400 group-hover:scale-110"}`}
-                  />
-                  <p className="text-[11px] text-slate-600 font-bold leading-tight">
-                    Arraste um PDF aqui ou clique para buscar
+                  <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500">
+                    <Upload
+                      className={`w-6 h-6 transition-all duration-300 ${isDragging ? "text-indigo-500" : "text-slate-300 group-hover:text-indigo-500"}`}
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest leading-tight">
+                    Material de Apoio
                   </p>
-                  <p className="text-[9px] text-slate-400 mt-2 font-black uppercase tracking-widest">
+                  <p className="text-[9px] text-slate-400 mt-2 font-bold opacity-60">
                     PDF • 15MB MAX
                   </p>
                 </motion.div>
@@ -538,12 +540,14 @@ export const GeneratorSidebar: React.FC<GeneratorSidebarProps> = ({
         </div>
       </div>
 
-      <div className="p-8 pb-10 border-t border-indigo-100/50 bg-white/80 backdrop-blur-xl shadow-[0_-20px_50px_rgba(79,70,229,0.05)] rounded-t-[2.5rem]">
+      <div className="p-8 pb-10 border-t border-slate-100 bg-white/80 backdrop-blur-3xl rounded-t-[2.5rem] relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
+        
         {/* Informação sobre campos faltando */}
         {!viewOnly && !isFormReady && (
-          <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200/60 rounded-2xl">
-            <p className="text-[9px] text-amber-600 font-black uppercase tracking-wider text-center leading-relaxed">
-              Preencha: {missingFields.join(" • ")}
+          <div className="mb-4 px-5 py-3.5 bg-amber-50/50 border border-amber-200/30 rounded-[1.25rem] backdrop-blur-md">
+            <p className="text-[8px] text-amber-600/70 font-black uppercase tracking-[0.2em] text-center leading-relaxed">
+              Complete: {missingFields.join(" • ")}
             </p>
           </div>
         )}
@@ -558,32 +562,25 @@ export const GeneratorSidebar: React.FC<GeneratorSidebarProps> = ({
             onGenerate();
           }}
           disabled={isGenerating || (!viewOnly && !isFormReady)}
-          title={
-            !viewOnly && !isFormReady
-              ? `Faltam: ${missingFields.join(", ")}`
-              : ""
-          }
-          className={`group relative w-full py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.25em] flex items-center justify-center gap-3 transition-all duration-500 shadow-2xl ${isGenerating
-              ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none pointer-events-none"
+          className={`group relative w-full py-5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 transition-all duration-500 shadow-2xl ${isGenerating
+              ? "bg-slate-100 text-slate-400 cursor-not-allowed pointer-events-none"
               : !viewOnly && !isFormReady
-                ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none pointer-events-none opacity-60"
+                ? "bg-slate-100 text-slate-300 cursor-not-allowed opacity-50"
                 : viewOnly
-                  ? "bg-slate-900 text-white shadow-slate-900/10 hover:shadow-slate-900/20 cursor-pointer active:scale-95"
-                  : "bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-indigo-600/30 hover:scale-[1.02] cursor-pointer active:scale-95"
+                  ? "bg-slate-900 text-white hover:bg-black hover:-translate-y-0.5 shadow-xl shadow-slate-900/10 active:scale-95"
+                  : "bg-indigo-600 text-white hover:bg-indigo-700 hover:-translate-y-0.5 shadow-xl shadow-indigo-600/20 active:scale-95"
             }`}
         >
           {isGenerating ? (
             <RefreshCw className="w-4 h-4 animate-spin" />
-          ) : viewOnly ? (
-            <RefreshCw className="w-4 h-4" />
           ) : (
-            <Wand2 className="w-4 h-4" />
+            <Wand2 className={`w-4 h-4 transition-transform duration-500 ${isFormReady ? "group-hover:rotate-12 group-hover:scale-110" : ""}`} />
           )}
           {isGenerating
-            ? "Processando IA..."
+            ? "Processando..."
             : viewOnly
-              ? "Recriar Planejamento"
-              : "Gerar Planejamento"}
+              ? "Recriar"
+              : "Gerar Canvas"}
         </button>
       </div>
     </motion.div>

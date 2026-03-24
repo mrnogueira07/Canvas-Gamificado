@@ -435,11 +435,15 @@ export default function Dashboard() {
           projectsData = loadProjects();
         }
 
-        // Ordenação Inicial: Por ordem explícita ou por data
+        // Ordenação Inicial: Prioridade para order (que representa a última mexida ou manual), depois data
         projectsData.sort((a, b) => {
-          if (typeof a.order === 'number' && typeof b.order === 'number') {
-            return b.order - a.order; // Decrescente (maior em primeiro)
+          const orderA = (typeof a.order === 'number') ? a.order : 0;
+          const orderB = (typeof b.order === 'number') ? b.order : 0;
+          
+          if (orderB !== orderA) {
+            return orderB - orderA;
           }
+
           const timeA = (a.updatedAt instanceof Date ? a.updatedAt : new Date(a.updatedAt || 0)).getTime();
           const timeB = (b.updatedAt instanceof Date ? b.updatedAt : new Date(b.updatedAt || 0)).getTime();
           return timeB - timeA;
@@ -554,11 +558,13 @@ export default function Dashboard() {
     folderId: string | null,
   ) => {
     try {
+      const updatedAt = new Date().toISOString();
+      const order = Date.now();
       if (project.id) {
-        await updateDoc(doc(db, "projects", project.id), { folderId });
+        await updateDoc(doc(db, "projects", project.id), { folderId, updatedAt, order });
       }
       setProjects((prev) =>
-        prev.map((p) => (p.id === project.id ? { ...p, folderId } : p)),
+        prev.map((p) => (p.id === project.id ? { ...p, folderId, updatedAt: new Date(updatedAt), order } : p)),
       );
       setMovingProject(null);
     } catch (err) {
@@ -592,11 +598,15 @@ export default function Dashboard() {
       ? projects.filter((p) => (p as any).folderId === currentFolderId)
       : projects.filter((p) => !(p as any).folderId);
 
-    // Garante estado ordenado como na tela
+    // Garante estado ordenado como na tela: Prioridade para order, depois updatedAt
     const sorted = [...currentList].sort((a, b) => {
-      if (typeof a.order === 'number' && typeof b.order === 'number') {
-        return b.order - a.order;
+      const orderA = (typeof a.order === 'number') ? a.order : 0;
+      const orderB = (typeof b.order === 'number') ? b.order : 0;
+      
+      if (orderB !== orderA) {
+        return orderB - orderA;
       }
+
       const timeA = (a.updatedAt instanceof Date ? a.updatedAt : new Date(a.updatedAt || 0)).getTime();
       const timeB = (b.updatedAt instanceof Date ? b.updatedAt : new Date(b.updatedAt || 0)).getTime();
       return timeB - timeA;
@@ -659,7 +669,7 @@ export default function Dashboard() {
         ...project,
         createdAt: dateToIso(project.createdAt),
         updatedAt: dateToIso(project.updatedAt),
-        deletedAt: new Date().toLocaleDateString("pt-BR"),
+        deletedAt: new Date().toISOString(),
       };
       const updatedProjects = projects.filter((p) => p.id !== id);
       const updatedTrash = [...trash, trashed];
@@ -681,10 +691,12 @@ export default function Dashboard() {
         ...trashed,
         createdAt: new Date(trashed.createdAt),
         updatedAt: trashed.updatedAt ? new Date(trashed.updatedAt) : new Date(),
+        order: Date.now(),
       };
       if (auth.currentUser) {
         await setDoc(doc(db, "projects", id), {
           ...restored,
+          order: restored.order,
           createdAt:
             restored.createdAt instanceof Date
               ? restored.createdAt.toISOString()

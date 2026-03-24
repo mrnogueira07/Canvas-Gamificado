@@ -6,6 +6,7 @@ import React, {
   Component,
 } from "react";
 import type { GeneratedContent } from "../../types";
+import { model } from "../../lib/gemini";
 import {
   BookOpen,
   Gamepad2,
@@ -36,6 +37,7 @@ import {
   CheckCircle2,
   Plus,
   Trash2,
+  Type,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -61,8 +63,8 @@ class DocumentViewErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-6 p-12">
-          <div className="w-16 h-16 rounded-2xl bg-rose-100 flex items-center justify-center">
-            <AlertTriangle className="w-8 h-8 text-rose-500" />
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+            <AlertTriangle className="w-8 h-8 text-indigo-500" />
           </div>
           <div className="text-center">
             <h3 className="text-lg font-black text-slate-800 mb-2">
@@ -71,7 +73,7 @@ class DocumentViewErrorBoundary extends Component<
             <p className="text-sm text-slate-500 mb-1">
               Ocorreu um erro inesperado ao exibir o conteúdo gerado.
             </p>
-            <p className="text-xs font-mono text-rose-400 bg-rose-50 px-3 py-1.5 rounded-lg mt-2">
+            <p className="text-xs font-mono text-rose-400 bg-slate-50 px-3 py-1.5 rounded-lg mt-2">
               {this.state.errorMessage}
             </p>
           </div>
@@ -179,30 +181,24 @@ export const DocumentView: React.FC<DocumentViewProps> = ({
     >
       {/* Header / Banner Principal */}
       <div 
-        className="relative group mb-8 overflow-hidden rounded-[2rem] p-10 text-center shadow-[0_15px_40px_rgba(0,0,0,0.2)] export-compact-header"
+        className="relative group mb-12 overflow-hidden rounded-[3rem] p-12 text-center shadow-[0_20px_50px_rgba(0,0,0,0.3)] export-compact-header border border-white/10"
         style={{ 
-          backgroundColor: '#2e1065', 
-          border: '1px solid rgba(88, 28, 135, 0.5)'
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%)',
         }}
       >
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/hexellence.png')] opacity-10" />
-        <div 
-          className="absolute inset-0 opacity-60" 
-          style={{ background: 'linear-gradient(to bottom right, #581c87, transparent, #701a75)' }}
-        />
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 mix-blend-overlay" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 via-transparent to-purple-500/10" />
+        
         <div className="relative z-10">
-          <div className="flex justify-center mb-6">
-            <span 
-              className="px-4 py-1.5 backdrop-blur-md rounded-full font-black text-[9px] uppercase tracking-[0.4em] shadow-inner"
-              style={{ 
-                backgroundColor: 'rgba(99, 102, 241, 0.1)', 
-                border: '1px solid rgba(99, 102, 241, 0.2)',
-                color: '#818cf8' 
-              }}
-            >
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-center mb-8"
+          >
+            <span className="px-5 py-2 bg-white/5 backdrop-blur-xl rounded-2xl font-black text-[10px] uppercase tracking-[0.4em] text-indigo-300 border border-white/10 shadow-2xl">
               Plano de Aula Gamificado
             </span>
-          </div>
+          </motion.div>
 
           {isEditingTitle ? (
             <div className="flex flex-col items-center gap-6">
@@ -336,7 +332,7 @@ export const DocumentView: React.FC<DocumentViewProps> = ({
                           <div
                             className={`absolute -top-3 right-0 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-tighter shadow-sm border ${
                               !isValid
-                                ? "bg-rose-50 text-rose-600 border-rose-100"
+                                ? "bg-slate-50 text-indigo-600 border-slate-100"
                                 : content.curriculumRelation.bnccSource ===
                                     "pdf"
                                   ? "bg-emerald-50 text-emerald-600 border-emerald-100"
@@ -357,7 +353,7 @@ export const DocumentView: React.FC<DocumentViewProps> = ({
                           </div>
                         )}
                         {!isValid && (
-                          <div className="absolute -bottom-6 left-1 flex items-center gap-1 text-[8px] font-bold text-rose-500 uppercase tracking-wider animate-bounce">
+                          <div className="absolute -bottom-6 left-1 flex items-center gap-1 text-[8px] font-bold text-indigo-500 uppercase tracking-wider animate-bounce">
                             <AlertTriangle className="w-2.5 h-2.5" />
                             {isMedium
                               ? "Padrão: 2 Letras, 2 Números, 3 Letras, 3 Números"
@@ -495,6 +491,8 @@ export const DocumentView: React.FC<DocumentViewProps> = ({
                 <GameLogicSection
                   gameLogic={content.gameLogic}
                   gameType={content.gameStyle.genre}
+                  subject={content.curriculumRelation?.subject || "Geral"}
+                  theme={content.curriculumRelation?.theme || ""}
                   onEdit={(f: string, v: any) => onEdit("gameLogic", f, v)}
                   onAdd={(path: string, item: any) =>
                     onAdd("gameLogic", path, item)
@@ -505,79 +503,75 @@ export const DocumentView: React.FC<DocumentViewProps> = ({
                 />
               )}
             </div>
-          </div>
+            </div>
+            
+            {/* Extra: Drag & Drop / Previews Moved inside Component */}
+            {(() => {
+              const gt = String(propGameType || content.gameStyle?.genre || "");
+              if (gt.toLowerCase().includes("arrastar"))
+                return <DragAndDropCanvas />;
+              if (gt === "Roleta") {
+                const roletaUpdater = (idx: number, fieldOrPatch: string | Record<string, any>, val?: any) => {
+                  const currentTargets = content.gameLogic.roletaSegments || [];
+                  const newTargets = currentTargets.length > 0
+                    ? [...currentTargets]
+                    : [
+                        { title: "Dica Pedag\u00f3gica 1", isCorrect: true, points: 0, description: "Conte\u00fado importante sobre o tema" },
+                        { title: "Emboscada Inimiga!", isCorrect: false, points: -10, description: "Opa, entrei na trincheira inimiga e fui pego! Preciso recuar." },
+                        { title: "Dica Pedag\u00f3gica 2", isCorrect: true, points: 0, description: "Outra informa\u00e7\u00e3o relevante" },
+                        { title: "Descanso Acidental", isCorrect: false, points: -10, description: "Voc\u00ea parou para descansar e o inimigo avan\u00e7ou. Perdeu a vez!" },
+                        { title: "Dica de Ouro", isCorrect: true, points: 10, description: "Informa\u00e7\u00e3o chave do tema" },
+                        { title: "Armadilha Oculta", isCorrect: false, points: -15, description: "Pisei em uma armadilha tem\u00e1tica! Volte duas casas e tente focar mais." },
+                      ].slice(0, 6);
+                  if (typeof fieldOrPatch === 'object') {
+                    newTargets[idx] = { ...newTargets[idx], ...fieldOrPatch };
+                  } else {
+                    newTargets[idx] = { ...newTargets[idx], [fieldOrPatch as string]: val };
+                  }
+                  onEdit("gameLogic", "roletaSegments", newTargets);
+                };
+                return (
+                  <RoletaPreview
+                    targets={content.gameLogic.roletaSegments || []}
+                    questionCount={content.gameLogic.targets?.length || 0}
+                    subject={content.curriculumRelation?.subject || "Geral"}
+                    onUpdate={roletaUpdater}
+                    onRemove={(idx) => {
+                      const currentTargets = [...(content.gameLogic.roletaSegments || [])];
+                      if (currentTargets.length === 0) return;
+                      currentTargets.splice(idx, 1);
+                      onEdit("gameLogic", "roletaSegments", currentTargets);
+                    }}
+                    onAdd={() => {
+                      const currentTargets: any[] = (content.gameLogic.roletaSegments && content.gameLogic.roletaSegments.length > 0)
+                        ? [...content.gameLogic.roletaSegments]
+                        : [
+                            { title: "Dica Pedag\u00f3gica 1", isCorrect: true, points: 0, description: "Conte\u00fado importante sobre o tema" },
+                            { title: "Emboscada Inimiga!", isCorrect: false, points: -10, description: "Opa, entrei na trincheira inimiga e fui pego! Preciso recuar." },
+                            { title: "Dica Pedag\u00f3gica 2", isCorrect: true, points: 0, description: "Outra informa\u00e7\u00e3o relevante" },
+                            { title: "Descanso Acidental", isCorrect: false, points: -10, description: "Voc\u00ea parou para descansar e o inimigo avan\u00e7ou. Perdeu a vez!" },
+                            { title: "Dica de Ouro", isCorrect: true, points: 10, description: "Informa\u00e7\u00e3o chave do tema" },
+                            { title: "Armadilha Oculta", isCorrect: false, points: -15, description: "Pisei em uma armadilha tem\u00e1tica! Volte duas casas e tente focar mais." },
+                          ];
+                      if (currentTargets.length >= 6) return;
+                      currentTargets.push({
+                        title: "Nova Dica ou Penalidade",
+                        description: "Descreva de forma imersiva o que aconteceu.",
+                        isCorrect: true,
+                        points: 0
+                      });
+                      onEdit("gameLogic", "roletaSegments", currentTargets);
+                    }}
+                  />
+                );
+              }
+              if (gt === "Jogo da Velha")
+                return <TicTacToePreview targets={content.gameLogic.targets} />;
+              if (gt === "Sliding Puzzle")
+                return <SlidingPuzzlePreview targets={content.gameLogic.targets} />;
+              return null;
+              })()}
         </SectionCard>
-
-        {/* Extra: Drag & Drop Canvas */}
-        {(() => {
-          const gt = String(propGameType || content.gameStyle?.genre || "");
-          if (gt.toLowerCase().includes("arrastar"))
-            return <DragAndDropCanvas />;
-          if (gt === "Roleta")
-            return (
-              <RoletaPreview
-                targets={content.gameLogic.targets}
-                onUpdate={(idx, field, val) => {
-                  const currentTargets = content.gameLogic.targets || [];
-                  const newTargets = currentTargets.length > 0 
-                    ? [...currentTargets] 
-                    : [
-                        { title: "Pergunta 1", isCorrect: true, points: 15, options: ["Correta", "Incorreta"], answer: "Correta" },
-                        { title: "Dica Pedagógica", isCorrect: true, points: 0, description: "Conteúdo importante sobre o tema" },
-                        { title: "Penalidade", isCorrect: false, points: -10, feedback: "Tente novamente!" },
-                        { title: "Pergunta 2", isCorrect: true, points: 15, options: ["Sim", "Não"], answer: "Sim" },
-                        { title: "Dica", isCorrect: true, points: 0, description: "Informação complementar" },
-                        { title: "Penalidade", isCorrect: false, points: -10 },
-                        { title: "Pergunta 3", isCorrect: true, points: 15, options: ["Opção A", "Opção B"], answer: "Opção A" },
-                        { title: "Bônus Especial", isCorrect: true, points: 25 },
-                        { title: "Pergunta 4", isCorrect: true, points: 15, options: ["Certo", "Errado"], answer: "Certo" },
-                        { title: "Pergunta 5", isCorrect: true, points: 15, options: ["Verdadeiro", "Falso"], answer: "Verdadeiro" },
-                      ].slice(0, 10);
-                  
-                  newTargets[idx] = { ...newTargets[idx], [field]: val };
-                  onEdit("gameLogic", "targets", newTargets);
-                }}
-                onRemove={(idx) => {
-                  const currentTargets = [...(content.gameLogic.targets || [])];
-                  if (currentTargets.length === 0) return; // Nada para remover se for fallback
-                  currentTargets.splice(idx, 1);
-                  onEdit("gameLogic", "targets", currentTargets);
-                }}
-                onAdd={() => {
-                  const currentTargets: any[] = (content.gameLogic.targets && content.gameLogic.targets.length > 0)
-                    ? [...content.gameLogic.targets]
-                    : [
-                        { title: "Pergunta 1", isCorrect: true, points: 15, options: ["Correta", "Incorreta"], answer: "Correta" },
-                        { title: "Dica Pedagógica", isCorrect: true, points: 0, description: "Conteúdo importante sobre o tema" },
-                        { title: "Penalidade", isCorrect: false, points: -10, feedback: "Tente novamente!" },
-                        { title: "Pergunta 2", isCorrect: true, points: 15, options: ["Sim", "Não"], answer: "Sim" },
-                        { title: "Dica", isCorrect: true, points: 0, description: "Informação complementar" },
-                        { title: "Penalidade", isCorrect: false, points: -10 },
-                        { title: "Pergunta 3", isCorrect: true, points: 15, options: ["Opção A", "Opção B"], answer: "Opção A" },
-                        { title: "Bônus Especial", isCorrect: true, points: 25 },
-                        { title: "Pergunta 4", isCorrect: true, points: 15, options: ["Certo", "Errado"], answer: "Certo" },
-                        { title: "Pergunta 5", isCorrect: true, points: 15, options: ["Verdadeiro", "Falso"], answer: "Verdadeiro" },
-                      ].slice(0, 10);
-                  
-                  currentTargets.push({
-                    title: "Nova Pergunta: Escreva o enunciado aqui",
-                    description: "Forneça uma dica ou explicação adicional para o aluno.",
-                    isCorrect: true,
-                    points: 15,
-                    options: ["Alternativa Correta", "Alternativa Incorreta"],
-                    answer: "Alternativa Correta",
-                    feedback: "Parabéns! Resposta certa."
-                  });
-                  onEdit("gameLogic", "targets", currentTargets);
-                }}
-              />
-            );
-          if (gt === "Jogo da Velha")
-            return <TicTacToePreview targets={content.gameLogic.targets} />;
-          if (gt === "Sliding Puzzle")
-            return <SlidingPuzzlePreview targets={content.gameLogic.targets} />;
-          return null;
-        })()}
 
         {/* Exemplos de Imagens (Até 5 Imagens) */}
         <ReferenceImagesSection
@@ -606,21 +600,26 @@ const SectionCard: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ number, title, icon, headerColor, children, className = "" }) => (
-  <div className={`bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-slate-100 overflow-hidden transition-all hover:shadow-[0_10px_30px_rgb(0,0,0,0.04)] ${className}`}>
+  <div className={`bg-white rounded-[2.5rem] shadow-[0_4px_25px_rgba(0,0,0,0.03)] border border-slate-100 overflow-hidden transition-all duration-500 hover:shadow-[0_20px_60px_rgba(0,0,0,0.06)] hover:-translate-y-1 ${className}`}>
     <div
-      className={`px-8 py-4 flex items-center gap-4 border-b border-slate-50 ${headerColor}`}
+      className={`px-10 py-6 flex items-center justify-between border-b border-slate-50 ${headerColor}`}
     >
-      <div className="bg-white/80 p-2 rounded-xl shadow-sm border border-white/50">
-        {icon}
+      <div className="flex items-center gap-4">
+        <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 transition-transform duration-500 group-hover:scale-110">
+          {icon}
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">Etapa {number}</span>
+          <span className="text-slate-800 font-black uppercase tracking-widest text-[11px] mt-0.5">
+            {title}
+          </span>
+        </div>
       </div>
-      <div className="flex items-baseline gap-2">
-        <span className="text-slate-200 font-black text-lg">{number}</span>
-        <span className="text-slate-600 font-black uppercase tracking-widest text-[10px]">
-          {title}
-        </span>
+      <div className="w-10 h-10 rounded-full bg-white/50 flex items-center justify-center border border-white">
+        <span className="text-slate-200 font-black text-xs">{number}</span>
       </div>
     </div>
-    <div className="p-8 md:p-10">{children}</div>
+    <div className="p-10 md:p-12">{children}</div>
   </div>
 );
 
@@ -662,7 +661,7 @@ const PlatformerSection: React.FC<{
             >
               <button
                 onClick={() => onRemove("targets", i)}
-                className="absolute -top-2 -right-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover/plat:opacity-100 bg-white rounded-full shadow-md z-20"
+                className="absolute -top-2 -right-2 text-slate-300 hover:text-indigo-500 transition-colors opacity-0 group-hover/plat:opacity-100 bg-white rounded-full shadow-md z-20"
               >
                 <XCircle className="w-5 h-5" />
               </button>
@@ -737,7 +736,7 @@ const PlatformerSection: React.FC<{
             >
               <button
                 onClick={() => onRemove("thematicHints", i)}
-                className="absolute -top-2 -right-2 text-slate-300 hover:text-rose-500 opacity-0 group-hover/hint:opacity-100 bg-white rounded-full"
+                className="absolute -top-2 -right-2 text-slate-300 hover:text-indigo-500 opacity-0 group-hover/hint:opacity-100 bg-white rounded-full"
               >
                 <XCircle className="w-4 h-4" />
               </button>
@@ -761,11 +760,13 @@ const EXAMPLE_PUZZLE_URL =
 const SinglePuzzle: React.FC<{
   puzzle: any;
   pIdx: number;
+  targets: any[];
   onUpdatePuzzle: (idx: number, updates: any) => void;
   onRemovePuzzle: (idx: number) => void;
   canRemove: boolean;
-}> = ({ puzzle, pIdx, onUpdatePuzzle, onRemovePuzzle, canRemove }) => {
+}> = ({ puzzle, pIdx, targets, onUpdatePuzzle, onRemovePuzzle, canRemove }) => {
   const [placedPieces, setPlacedPieces] = useState<number[]>([]);
+  const [lastTargetIdx, setLastTargetIdx] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const pieceCount = puzzle.pieceCount || 8;
@@ -830,8 +831,17 @@ const SinglePuzzle: React.FC<{
   };
 
   const handlePieceClick = (idx: number) => {
-    if (placedPieces.includes(idx)) return;
+    if (placedPieces.includes(idx)) {
+       // Se já está posicionado, mostramos a pergunta correspondente
+       if (targets.length > 0) {
+         setLastTargetIdx(idx % targets.length);
+       }
+       return;
+    };
     setPlacedPieces((prev) => [...prev, idx]);
+    if (targets.length > 0) {
+      setLastTargetIdx(idx % targets.length);
+    }
   };
 
   return (
@@ -839,7 +849,7 @@ const SinglePuzzle: React.FC<{
       {canRemove && (
         <button
           onClick={() => onRemovePuzzle(pIdx)}
-          className="absolute -top-3 -right-3 w-8 h-8 flex items-center justify-center bg-white text-slate-300 hover:text-rose-500 border border-slate-100 rounded-full shadow-md transition-all opacity-0 group-hover/pcontainer:opacity-100 z-30 cursor-pointer"
+          className="absolute -top-3 -right-3 w-8 h-8 flex items-center justify-center bg-white text-slate-300 hover:text-indigo-500 border border-slate-100 rounded-full shadow-md transition-all opacity-0 group-hover/pcontainer:opacity-100 z-30 cursor-pointer"
         >
           <XCircle className="w-5 h-5" />
         </button>
@@ -875,7 +885,7 @@ const SinglePuzzle: React.FC<{
           {placedPieces.length > 0 && (
             <button
               onClick={() => setPlacedPieces([])}
-              className="text-[9px] font-black text-violet-500 uppercase tracking-widest hover:text-rose-500 transition-colors px-3 py-1.5 bg-violet-50 rounded-lg border border-violet-100 cursor-pointer"
+              className="text-[9px] font-black text-violet-500 uppercase tracking-widest hover:text-indigo-500 transition-colors px-3 py-1.5 bg-violet-50 rounded-lg border border-violet-100 cursor-pointer"
             >
               ↺ Reiniciar
             </button>
@@ -959,7 +969,7 @@ const SinglePuzzle: React.FC<{
               );
             })}
           </div>
-          {/* Barra de progresso */}
+        {/* Barra de progresso */}
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-20">
             <div
               className="h-full bg-emerald-400 transition-all duration-700 shadow-[0_0_10px_rgba(52,211,153,0.5)]"
@@ -967,6 +977,49 @@ const SinglePuzzle: React.FC<{
             />
           </div>
         </div>
+
+        {/* Questão do Alvo / Respostas - MOSTRAR AQUI */}
+        {lastTargetIdx !== null && targets[lastTargetIdx] && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="p-5 rounded-3xl bg-indigo-50/50 border border-indigo-100 shadow-sm"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">
+                ?
+              </div>
+              <p className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">
+                Desafio da Peça
+              </p>
+            </div>
+            
+            <p className="text-sm font-black text-slate-800 mb-4 leading-tight">
+              {targets[lastTargetIdx].question || targets[lastTargetIdx].title}
+            </p>
+
+            {targets[lastTargetIdx].options && targets[lastTargetIdx].options.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                {targets[lastTargetIdx].options.slice(0, 3).map((opt: string, oi: number) => {
+                  const currentAnswer = targets[lastTargetIdx].answer || "";
+                  const isCorrect = opt.trim().toLowerCase() === currentAnswer.trim().toLowerCase();
+                  return (
+                    <div 
+                      key={oi}
+                      className={`px-3 py-2 rounded-xl text-[10px] font-bold border transition-all ${
+                        isCorrect 
+                          ? "bg-emerald-500 text-white border-emerald-600 shadow-sm shadow-emerald-200" 
+                          : "bg-white text-slate-500 border-slate-200"
+                      }`}
+                    >
+                      {opt}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* Mensagem de Vitória */}
         {placedPieces.length === TOTAL && (
@@ -985,18 +1038,29 @@ const SinglePuzzle: React.FC<{
           </div>
         )}
 
+        {/* Descrição */}
+        <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-6 shadow-sm mt-8">
+          <Field
+            label="O QUE ESTA IMAGEM REPRESENTA? (DESCRIÇÃO)"
+            value={puzzle.description || ""}
+            onChange={(val: string) =>
+              onUpdatePuzzle(pIdx, { description: val })
+            }
+          />
+        </div>
+
         {/* Upload Image for this puzzle */}
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="relative group cursor-pointer border-2 border-dashed border-violet-200 rounded-3xl overflow-hidden hover:border-violet-400 transition-all duration-300 bg-violet-50/30 hover:bg-violet-50 p-6 flex items-center justify-center gap-4 text-center mt-6"
+          className="relative group cursor-pointer border-2 border-dashed border-violet-200 rounded-3xl overflow-hidden hover:border-violet-400 transition-all duration-300 bg-white hover:bg-violet-50 p-6 flex items-center justify-center gap-4 text-center mt-4"
         >
-          <span className="text-3xl">📷</span>
+          <span className="text-3xl">🖼️</span>
           <div className="text-left">
             <p className="text-[12px] font-black text-violet-700">
-              Substituir Imagem (Quebra-Cabeça {pIdx + 1})
+              Inserir Foto no Canvas (Quebra-Cabeça {pIdx + 1})
             </p>
             <p className="text-[9px] text-slate-400 font-medium mt-1">
-              Clique para carregar foto (Máx 10MB)
+              Clique para fazer upload da sua própria imagem
             </p>
           </div>
           <input
@@ -1008,16 +1072,6 @@ const SinglePuzzle: React.FC<{
           />
         </div>
 
-        {/* Descrição */}
-        <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 shadow-sm mt-4 mb-2">
-          <Field
-            label="DESCRIÇÃO DA IMAGEM / CONTEXTO"
-            value={puzzle.description || ""}
-            onChange={(val: string) =>
-              onUpdatePuzzle(pIdx, { description: val })
-            }
-          />
-        </div>
       </div>
     </div>
   );
@@ -1066,7 +1120,7 @@ const PuzzleSection: React.FC<{
     onEdit("puzzles", newPuzzles);
   };
 
-  const MAX_TARGETS = puzzles.length >= 3 ? 10 : 5;
+  const MAX_TARGETS = 5;
 
   return (
     <div className="space-y-10">
@@ -1074,10 +1128,7 @@ const PuzzleSection: React.FC<{
         <div className="flex items-center justify-between pb-3 mb-6 border-b border-violet-100">
           <div>
             <p className="text-[11px] font-black text-violet-700 uppercase tracking-widest">
-              {puzzles.length > 1
-                ? "Múltiplos Quebra-Cabeças"
-                : "Quebra-Cabeça"}{" "}
-              ({puzzles.length}/3)
+              DESIGN DO QUEBRA-CABEÇA
             </p>
           </div>
           {puzzles.length < 3 && (
@@ -1096,6 +1147,7 @@ const PuzzleSection: React.FC<{
             key={idx}
             puzzle={p}
             pIdx={idx}
+            targets={targets}
             onUpdatePuzzle={handleUpdatePuzzle}
             onRemovePuzzle={handleRemovePuzzle}
             canRemove={puzzles.length > 1}
@@ -1115,9 +1167,13 @@ const PuzzleSection: React.FC<{
                 onClick={() => {
                   onAdd("targets", {
                     title: `Questão ${targets.length + 1}`,
-                    question: `Nova pergunta ${targets.length + 1}?`,
-                    options: ["Opção A", "Opção B"],
-                    answer: "Opção A",
+                    question: `Pergunta pedagógica sobre o tema (Ex: Qual a importância de...?)`,
+                    options: [
+                      "Texto da primeira alternativa explicativa...",
+                      "Texto da segunda alternativa explicativa...",
+                      "Texto da terceira alternativa explicativa...",
+                    ],
+                    answer: "Texto da primeira alternativa explicativa...",
                     isCorrect: true,
                   });
                 }}
@@ -1140,12 +1196,13 @@ const PuzzleSection: React.FC<{
             return (
               <div
                 key={i}
-                className={`group/pz relative p-6 rounded-[2rem] border transition-all ${target.isCorrect ? "bg-indigo-50/30 border-indigo-100 shadow-sm" : "bg-rose-50/50 border-rose-100"} hover:shadow-xl hover:bg-white`}
+                className={`group/pz relative p-6 rounded-[2rem] border transition-all ${target.isCorrect ? "bg-indigo-50/30 border-indigo-100 shadow-sm" : "bg-slate-50/50 border-slate-100"} hover:shadow-xl hover:bg-white`}
               >
+                {/* Botão de remover: mínimo 3 questões (visível apenas a partir de 4) */}
                 {targets.length > 3 && (
                   <button
                     onClick={() => onRemove("targets", i)}
-                    className="absolute -top-2 -right-2 w-8 h-8 flex items-center justify-center text-slate-300 hover:text-rose-500 bg-white rounded-full shadow-md z-20 transition-all opacity-0 group-hover/pz:opacity-100 cursor-pointer"
+                    className="absolute -top-2 -right-2 w-8 h-8 flex items-center justify-center text-slate-300 hover:text-indigo-500 bg-white rounded-full shadow-md z-20 transition-all opacity-0 group-hover/pz:opacity-100 cursor-pointer"
                   >
                     <XCircle className="w-5 h-5" />
                   </button>
@@ -1159,7 +1216,7 @@ const PuzzleSection: React.FC<{
                   </div>
                   <div className="flex items-center gap-2">
                     <span
-                      className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${target.isCorrect ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-rose-50 border-rose-100 text-rose-600"}`}
+                      className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${target.isCorrect ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-slate-50 border-slate-100 text-indigo-600"}`}
                     >
                       {hasQuestion ? "❓ Questionário" : "💡 Conteúdo"}
                     </span>
@@ -1181,21 +1238,29 @@ const PuzzleSection: React.FC<{
 
                     <div className="pt-4 border-t border-slate-100">
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">
-                        Alternativas e Resposta Correta (2 Opções)
+                        Alternativas e Resposta Correta (3 Opções)
                       </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {(Array.isArray(target.options) && target.options.length >= 2
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {(Array.isArray(target.options) && target.options.length >= 3
                           ? target.options
-                          : ["Opção A", "Opção B"]
+                          : [
+                              "Digite o texto da alternativa...",
+                              "Digite o texto da alternativa...",
+                              "Digite o texto da alternativa...",
+                            ]
                         )
-                          .slice(0, 2)
+                          .slice(0, 3)
                           .map((opt: string, oi: number) => (
                             <div
                               key={oi}
-                              className={`relative p-1 rounded-2xl border-2 transition-all ${opt === target.answer ? "border-emerald-400 bg-emerald-50/30" : "border-slate-50"}`}
+                              className={`relative p-1 rounded-2xl border-2 transition-all ${
+                                target.answer && opt.trim().toLowerCase() === target.answer.trim().toLowerCase() 
+                                  ? "border-emerald-400 bg-emerald-50/30" 
+                                  : "border-slate-50"
+                              }`}
                             >
                               <Field
-                                label={`ALT ${String.fromCharCode(65 + oi)}`}
+                                label={`OPÇÃO ${oi + 1}`}
                                 value={toStr(opt)}
                                 onChange={(val: string) => {
                                   const currentTarget = targets[i] || target;
@@ -1223,18 +1288,22 @@ const PuzzleSection: React.FC<{
                               }}
                             />
                             <button
-                              onClick={() => {
-                                if (!targets[i])
-                                  onEdit(`targets[${i}]`, {
-                                    ...target,
-                                    answer: opt,
-                                  });
-                                else onEdit(`targets[${i}].answer`, opt);
-                              }}
-                              className={`absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-all cursor-pointer ${opt === target.answer ? "bg-emerald-500 text-white scale-110" : "bg-white text-slate-300 hover:text-emerald-500 opacity-0 group-hover/pz:opacity-100"}`}
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
+                               onClick={() => {
+                                 if (!targets[i])
+                                   onEdit(`targets[${i}]`, {
+                                     ...target,
+                                     answer: opt,
+                                   });
+                                 else onEdit(`targets[${i}].answer`, opt);
+                               }}
+                               className={`absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-all cursor-pointer ${
+                                 target.answer && opt.trim().toLowerCase() === target.answer.trim().toLowerCase() 
+                                   ? "bg-emerald-500 text-white scale-110" 
+                                   : "bg-white text-slate-300 hover:text-emerald-500 opacity-0 group-hover/pz:opacity-100"
+                               }`}
+                             >
+                               <Check className="w-3.5 h-3.5" />
+                             </button>
                           </div>
                         ))}
                     </div>
@@ -1267,10 +1336,12 @@ const PuzzleSection: React.FC<{
 const GameLogicSection: React.FC<{
   gameLogic: GeneratedContent["gameLogic"];
   gameType: string;
+  subject: string;
+  theme: string;
   onEdit: (field: string, value: any) => void;
   onAdd: (path: string, item: any) => void;
   onRemove: (path: string, index: number) => void;
-}> = ({ gameLogic, gameType, onEdit, onAdd, onRemove }) => {
+}> = ({ gameLogic, gameType, subject, theme, onEdit, onAdd, onRemove }) => {
   const {
     howToPlay,
     timeLimit,
@@ -1281,11 +1352,14 @@ const GameLogicSection: React.FC<{
     thematicHints = [],
   } = gameLogic;
 
-  const handleAddTarget = () => {
+  const [addingQuestion, setAddingQuestion] = useState(false);
+
+  const handleAddTarget = async () => {
     // Limites por tipo de jogo
-    if (gameType === "Roleta" && targets.length >= 10) return;
-    if (gameType === "Jogo de Tiro ao Alvo" && targets.length >= 25) return;
-    if (gameType === "Jogo de Plataforma 2D" && targets.length >= 5) return;
+    if (gameType === "Roleta" && targets.length >= 4) return;
+    if (gameType === "Jogo de Tiro ao Alvo" && targets.length >= 15) return;
+    const limit = 15;
+    if (targets.length >= limit && gameType !== "Jogo de Tiro ao Alvo" && gameType !== "Roleta") return;
 
     if (gameType === "Jogo de Tiro ao Alvo") {
       // Pega uma questão real do banco para preencher automaticamente
@@ -1296,17 +1370,17 @@ const GameLogicSection: React.FC<{
 
       const questionText =
         poolQuestion?.question ||
-        `Pergunta ${Math.floor(targets.length / 2) + 1}`;
+        `Pergunta ${Math.floor(targets.length / 3) + 1}`;
 
       // O `answer` pode ser só uma letra ("A") — buscamos o texto completo nas options
-      let correctTitle = "Resposta Correta";
-      let wrongTitle = "Resposta Incorreta";
+      let correctTitle = "Resposta pedagógica correta (explicativa)";
+      let wrongTitle1 = "Alternativa incorreta (distrator plausível)";
+      let wrongTitle2 = "Outra alternativa incorreta contextualizada";
 
       if (poolQuestion) {
         const rawAnswer = (poolQuestion.answer || "").trim();
         const options: string[] = poolQuestion.options || [];
 
-        // Tenta achar option que começa com a letra da resposta (ex: "A)" ou é exatamente o texto)
         const correctOption =
           options.find(
             (o: string) =>
@@ -1320,12 +1394,9 @@ const GameLogicSection: React.FC<{
 
         correctTitle = correctOption;
 
-        // Pega uma errada diferente da correta
         const wrongOptions = options.filter((o: string) => o !== correctOption);
-        wrongTitle =
-          wrongOptions.length > 0
-            ? wrongOptions[Math.floor(Math.random() * wrongOptions.length)]
-            : "Resposta Incorreta";
+        wrongTitle1 = wrongOptions[0] || "Incorreta 1";
+        wrongTitle2 = wrongOptions[1] || "Incorreta 2";
       }
 
       const newGroup = [
@@ -1338,9 +1409,17 @@ const GameLogicSection: React.FC<{
           feedback: "",
         },
         {
-          title: wrongTitle,
+          title: wrongTitle1,
           question: questionText,
           description: "Esta opção está incorreta conforme o conteúdo.",
+          isCorrect: false,
+          points: -10,
+          feedback: "",
+        },
+        {
+          title: wrongTitle2,
+          question: questionText,
+          description: "Desafio extra! Esta opção também está incorreta.",
           isCorrect: false,
           points: -10,
           feedback: "",
@@ -1356,8 +1435,8 @@ const GameLogicSection: React.FC<{
           ? questionPool[Math.floor(Math.random() * questionPool.length)]
           : null;
 
-      let finalOptions = ["Sim", "Não"];
-      let finalAnswer = "Sim";
+      let finalOptions = ["Afirmação correta sobre o tema", "Afirmação incorreta ou distrator"];
+      let finalAnswer = "Afirmação correta sobre o tema";
 
       if (poolQuestion) {
         const correctAnswer = poolQuestion.answer || poolQuestion.options[0];
@@ -1383,7 +1462,7 @@ const GameLogicSection: React.FC<{
         options: finalOptions,
         answer: finalAnswer,
         isCorrect: true,
-        points: 15,
+        points: 20,
       });
       return;
     }
@@ -1397,41 +1476,93 @@ const GameLogicSection: React.FC<{
     const isRoleta = gameType === "Roleta";
     const isTabuleiro = gameType === "Tabuleiro";
     const isEsmaga = gameType === "Esmaga Palavras";
+    const isDragOrQuiz = gameType === "Arrastar e Soltar" || gameType === "Quiz";
+
     const finalOptions: string[] = poolQuestion
-      ? isRoleta
-        ? (() => {
-            const correct = poolQuestion.answer || poolQuestion.options[0];
-            const others = poolQuestion.options.filter(o => o !== correct);
-            return [correct, others[0] || "Opção B", others[1] || "Opção C", others[2] || "Opção D"].sort(() => Math.random() - 0.5);
-          })()
-        : isTabuleiro
-          ? poolQuestion.options.slice(0, 3)
-          : poolQuestion.options
-      : isRoleta
-        ? ["Resposta A", "Resposta B", "Resposta C", "Resposta D"]
-        : isTabuleiro
-          ? ["A", "B", "C"]
-          : ["Opção A", "Opção B"];
+      ? isRoleta || isTabuleiro
+          ? (poolQuestion.options || ["A", "B", "C"]).slice(0, 3)
+          : (poolQuestion.options || ["Opção A", "Opção B", "Opção C"]).slice(0, 3)
+      : isDragOrQuiz
+        ? ["Maria comprou o livro", "comprou o livro", "fizeram a atividade"]
+        : isRoleta
+          ? ["Resposta explicativa A", "Resposta explicativa B", "Resposta explicativa C"]
+          : isTabuleiro
+            ? ["Frase de resposta 1", "Frase de resposta 2", "Frase de resposta 3"]
+            : ["Resposta pedagógica contextualizada 1", "Resposta pedagógica contextualizada 2", "Resposta pedagógica contextualizada 3"];
+
+    const defaultQuestion = "Considerando o conteúdo abordado, analise as proposições abaixo e identifique a alternativa correta que descreve o conceito solicitado:";
 
     const newTarget = {
       title: poolQuestion
         ? poolQuestion.question
-        : isRoleta || isTabuleiro
-          ? "NOVA PERGUNTA DO JOGO"
-          : isEsmaga
-            ? "NOVA PALAVRA"
-            : "Novo Alvo",
-      question: poolQuestion ? poolQuestion.question : "",
+        : isDragOrQuiz
+          ? defaultQuestion
+          : isRoleta || isTabuleiro
+            ? `Pergunta ${targets.length + 1}: Escreva o tema aqui...`
+            : "Escreva aqui a pergunta sobre o tema...",
+      question: poolQuestion ? poolQuestion.question : (isDragOrQuiz ? defaultQuestion : ""),
       description:
-        (isRoleta || isTabuleiro || isEsmaga) && !poolQuestion
-          ? "Clique para editar o conteúdo."
-          : "",
+        isEsmaga 
+          ? "Esta é a definição técnica que o aluno deve ler para identificar a palavra acima."
+          : (isRoleta || isTabuleiro) && !poolQuestion
+            ? "Clique para editar o conteúdo."
+            : "",
       options: finalOptions,
       answer: poolQuestion ? poolQuestion.answer : finalOptions[0],
       isCorrect: true,
       points: 15,
       feedback: "",
     };
+
+    // Roleta: gera com IA ANTES de adicionar
+    if (isRoleta) {
+      const questionNumber = targets.length + 1;
+      setAddingQuestion(true);
+
+      const prompt = `Você é um especialista em gamificação educacional.
+Gere EXATAMENTE 1 pergunta de múltipla escolha sobre a matéria "${subject}" com o tema "${theme || subject}".
+A pergunta deve ser elaborada (2-4 linhas) e muito contextualizada no tema.
+Gere 3 alternativas (1 correta e 2 distratores plausíveis contextualizados).
+
+Retorne EXATAMENTE ESSE FORMATO JSON:
+{
+  "title": "Pergunta ${questionNumber}: Enunciado completo da pergunta",
+  "question": "Enunciado completo da pergunta",
+  "options": ["Alternativa A", "Alternativa B", "Alternativa C"],
+  "answer": "Texto exato da alternativa correta"
+}`;
+
+      try {
+        const res = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: 'application/json' },
+        });
+        const data = JSON.parse(res.response.text().replace(/```json|```/g, '').trim());
+        onAdd("targets", {
+          title: data.title || `Pergunta ${questionNumber}:`,
+          question: data.question || `Pergunta sobre ${theme || subject}`,
+          options: data.options || ["Alternativa A", "Alternativa B", "Alternativa C"],
+          answer: data.answer || data.options?.[0] || "Alternativa A",
+          isCorrect: true,
+          points: 15,
+          feedback: "",
+        });
+      } catch {
+        // Fallback com template
+        onAdd("targets", {
+          title: `Pergunta ${questionNumber}: Sobre ${theme || subject}`,
+          question: `Considerando o conteúdo sobre "${theme || subject}", qual das alternativas abaixo está correta?`,
+          options: ["Alternativa correta contextualizada", "Primeiro distrator plausível", "Segundo distrator plausível"],
+          answer: "Alternativa correta contextualizada",
+          isCorrect: true,
+          points: 15,
+          feedback: "",
+        });
+      } finally {
+        setAddingQuestion(false);
+      }
+      return;
+    }
 
     onAdd("targets", newTarget);
   };
@@ -1455,36 +1586,51 @@ const GameLogicSection: React.FC<{
             </span>
           </div>
         </div>
+        {/* Botão Adicionar */}
         <button
           onClick={handleAddTarget}
           disabled={
-            (gameType === "Roleta" && targets.length >= 10) ||
-            (gameType === "Jogo de Tiro ao Alvo" && targets.length >= 25) ||
-            (gameType === "Jogo de Plataforma 2D" && targets.length >= 5)
+            addingQuestion ||
+            (gameType === "Roleta" && targets.length >= 4) ||
+            (gameType === "Jogo de Tiro ao Alvo" && targets.length >= 15) ||
+            (gameType === "Jogo de Plataforma 2D" && targets.length >= 5) ||
+            (targets.length >= 15 && !["Jogo de Tiro ao Alvo", "Jogo de Plataforma 2D", "Roleta"].includes(gameType))
           }
           className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all shadow-lg active:scale-95 ${
-            (gameType === "Roleta" && targets.length >= 10) ||
-            (gameType === "Jogo de Tiro ao Alvo" && targets.length >= 25) ||
-            (gameType === "Jogo de Plataforma 2D" && targets.length >= 5)
+            (gameType === "Roleta" && targets.length >= 4) ||
+            (gameType === "Jogo de Tiro ao Alvo" && targets.length >= 15) ||
+            (targets.length >= 15 && !["Jogo de Tiro ao Alvo", "Jogo de Plataforma 2D", "Roleta"].includes(gameType))
               ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
               : "bg-indigo-500 text-white hover:bg-indigo-600 shadow-indigo-500/20"
           }`}
         >
           <Zap
-            className={`w-3.5 h-3.5 ${(gameType === "Roleta" && targets.length >= 10) || (gameType === "Jogo de Tiro ao Alvo" && targets.length >= 25) || (gameType === "Jogo de Plataforma 2D" && targets.length >= 5) ? "text-slate-100" : "fill-white"}`}
+            className={`w-3.5 h-3.5 ${
+              (gameType === "Roleta" && targets.length >= 4) ||
+              (gameType === "Jogo de Tiro ao Alvo" && targets.length >= 15) ||
+              (targets.length >= 15)
+                ? "text-slate-100"
+                : "fill-white"
+            }`}
           />
-          {gameType === "Roleta" || gameType === "Tabuleiro"
-            ? targets.length >= 10
-              ? "Limite de Casas Atingido"
-              : "+ Adicionar Casa"
-            : gameType === "Esmaga Palavras"
+          {gameType === "Roleta"
+            ? addingQuestion
+              ? "⏳ Gerando com IA..."
+              : targets.length >= 4
+                ? "Limite Máximo (4)"
+                : "+ Adicionar Questão"
+            : gameType === "Tabuleiro"
+              ? targets.length >= 15
+                ? "Limite de Questões Atingido"
+                : "+ Adicionar Questão"
+              : gameType === "Esmaga Palavras"
               ? targets.length >= 30
                 ? "Limite de Palavras Atingido"
                 : "+ Adicionar Palavra"
               : gameType === "Jogo de Tiro ao Alvo"
-                ? targets.length >= 25
+                ? targets.length >= 15
                   ? "Limite de Alvos Atingido"
-                  : "+ Adicionar Alvo"
+                  : "+ Adicionar Pergunta (Alvos)"
                 : gameType === "Jogo de Plataforma 2D"
                   ? targets.length >= 5
                     ? "Limite de Questões Atingido"
@@ -1519,7 +1665,7 @@ const GameLogicSection: React.FC<{
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               {targets.map((target, i) => (
                 <div
                   key={i}
@@ -1527,7 +1673,7 @@ const GameLogicSection: React.FC<{
                 >
                   <button
                     onClick={() => onRemove("targets", i)}
-                    className="absolute -top-2 -right-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover/mem:opacity-100 bg-white rounded-full shadow-md z-20"
+                    className="absolute -top-2 -right-2 text-slate-300 hover:text-indigo-500 transition-colors opacity-0 group-hover/mem:opacity-100 bg-white rounded-full shadow-md z-20"
                   >
                     <XCircle className="w-5 h-5" />
                   </button>
@@ -1573,17 +1719,17 @@ const GameLogicSection: React.FC<{
           <div className="space-y-12">
             <div className="flex items-center justify-between px-1">
               <div className="flex flex-col gap-1">
-                <p className="text-[10px] font-black text-rose-600/80 uppercase tracking-widest">
-                  Configuração de Desafios — {Math.ceil(targets.length / 5)}{" "}
+                <p className="text-[10px] font-black text-indigo-600/80 uppercase tracking-widest">
+                  Configuração de Desafios — {Math.ceil(targets.length / 3)}{" "}
                   Fase(s)
                 </p>
                 <p className="text-[9px] text-rose-400 font-bold uppercase italic">
-                  🎯 Perguntas com 1 Alvo Correto e 1 Inimigo
+                  🎯 Perguntas com 1 Alvo Correto e 2 Distratores
                 </p>
               </div>
-              <div className="bg-rose-50 px-4 py-2 rounded-2xl border border-rose-100 flex items-center gap-2">
-                <Crosshair className="w-3.5 h-3.5 text-rose-500" />
-                <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest leading-none">
+              <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100 flex items-center gap-2">
+                <Crosshair className="w-3.5 h-3.5 text-indigo-500" />
+                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-none">
                   Mira Ativa
                 </span>
               </div>
@@ -1607,7 +1753,7 @@ const GameLogicSection: React.FC<{
                   ).trim();
                   const normalizedQ =
                     qRaw.toLowerCase().replace(/[^a-z0-9]/g, "") ||
-                    `_auto_group_${Math.floor(idx / 5)}`;
+                    `_auto_group_${Math.floor(idx / 3)}`;
 
                   let group = groups.find(
                     (g) =>
@@ -1616,7 +1762,7 @@ const GameLogicSection: React.FC<{
                   );
                   if (!group) {
                     group = {
-                      question: qRaw || `Pergunta ${Math.floor(idx / 5) + 1}`,
+                      question: qRaw || `Pergunta ${Math.floor(idx / 3) + 1}`,
                       items: [],
                       originalIndices: [],
                     };
@@ -1626,24 +1772,24 @@ const GameLogicSection: React.FC<{
                   group.originalIndices.push(idx);
                 });
 
-                // Se agrupou errado, forçamos agrupamento por 2 (padrão atual do jogo)
+                // Se agrupou errado, forçamos agrupamento por 3 (padrão atual do jogo)
                 if (
                   gameType === "Jogo de Tiro ao Alvo" &&
-                  groups.length > Math.ceil(targets.length / 2) &&
+                  groups.length > Math.ceil(targets.length / 3) &&
                   targets.length > 0
                 ) {
                   const forcedGroups: typeof groups = [];
-                  for (let i = 0; i < targets.length; i += 2) {
+                  for (let i = 0; i < targets.length; i += 3) {
                     const t = targets[i];
                     forcedGroups.push({
                       question:
                         t?.question ||
                         (t as any)?.pergunta ||
                         (t as any)?.enunciado ||
-                        `Pergunta ${Math.floor(i / 2) + 1}`,
-                      items: targets.slice(i, i + 2),
+                        `Pergunta ${Math.floor(i / 3) + 1}`,
+                      items: targets.slice(i, i + 3),
                       originalIndices: Array.from(
-                        { length: Math.min(2, targets.length - i) },
+                        { length: Math.min(3, targets.length - i) },
                         (_, k) => i + k,
                       ),
                     });
@@ -1688,13 +1834,13 @@ const GameLogicSection: React.FC<{
                               onRemove("targets", idx),
                             );
                           }}
-                          className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                          className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-indigo-500 hover:bg-slate-50 rounded-xl transition-all"
                         >
                           <XCircle className="w-5 h-5" />
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-w-4xl">
+                      <div className="grid grid-cols-1 gap-3 max-w-5xl">
                         {group.items.map((target: any, itemIdx: number) => {
                           const originalIdx = group.originalIndices[itemIdx];
                           return (
@@ -1703,11 +1849,11 @@ const GameLogicSection: React.FC<{
                               className={`group/hit relative p-2 px-3 rounded-xl border transition-all duration-300 ${
                                 target.isCorrect
                                   ? "bg-emerald-50/30 border-emerald-100 hover:border-emerald-300"
-                                  : "bg-rose-50/30 border-rose-100 hover:border-rose-300"
+                                  : "bg-slate-50/30 border-slate-100 hover:border-rose-300"
                               } flex items-center gap-2`}
                             >
                               <div
-                                className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 shadow-sm ${target.isCorrect ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"}`}
+                                className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 shadow-sm ${target.isCorrect ? "bg-emerald-500 text-white" : "bg-indigo-500 text-white"}`}
                               >
                                 {target.isCorrect ? (
                                   <Target className="w-3 h-3" />
@@ -1766,8 +1912,12 @@ const GameLogicSection: React.FC<{
             onAdd={onAdd}
             onRemove={onRemove}
           />
-        ) : gameType === "Roleta" ? (
-          null
+        ) : gameType === "Esmaga Palavras" ? (
+          <WordSmashTargets
+            targets={targets}
+            onEdit={onEdit}
+            onRemove={onRemove}
+          />
         ) : (
           <HouseQuizTargets
             targets={targets}
@@ -2116,76 +2266,165 @@ function drawShape(
   ctx.restore();
 }
 
+const WordSmashTargets: React.FC<{ targets: any[], onEdit?: any, onRemove?: any }> = ({ targets, onEdit, onRemove }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {targets.map((target, i) => (
+      <div 
+        key={i} 
+        className="p-5 bg-white rounded-[1.5rem] border border-slate-200 shadow-sm relative group/esmaga transition-all hover:border-amber-200"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20">
+              <Type className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+              Palavra {i + 1}
+            </span>
+          </div>
+          {onRemove && (
+            <button 
+              onClick={() => onRemove("targets", i)} 
+              className="text-slate-300 hover:text-indigo-500 opacity-0 group-hover/esmaga:opacity-100 transition-opacity"
+            >
+              <XCircle className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50">
+            <Field 
+              label="PALAVRA NO GRID (ESMAGA)" 
+              value={target.title || ""} 
+              onChange={(v) => onEdit(`targets[${i}].title`, v)} 
+            />
+          </div>
+          
+          <div className="bg-slate-50/50 p-4 rounded-2xl border border-dashed border-slate-200">
+            <Field 
+              label="DESCRIÇÃO / CONTEXTO PEDAGÓGICO" 
+              value={target.description || ""} 
+              onChange={(v) => onEdit(`targets[${i}].description`, v)} 
+            />
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 const HouseQuizTargets: React.FC<{ targets: any[], gameType: string, onEdit?: any, onRemove?: any }> = ({ targets, gameType, onEdit, onRemove }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 export-compact-grid">
+  <div className="grid grid-cols-1 gap-4 export-compact-grid">
     {targets.map((target, i) => {
       const targetTitleLabel = (target.title || "").toUpperCase();
       const isHouseType = gameType === "Roleta" || gameType === "Tabuleiro";
-      const isDragDrop = gameType === "Arrastar e Soltar";
-      const isQuizMode = gameType === "Quiz" || gameType === "Jogo da Velha" || gameType === "Sliding Puzzle";
+      const isDragDropOrQuiz = gameType === "Arrastar e Soltar" || gameType === "Quiz";
+      const isQuizMode = gameType === "Jogo da Velha" || gameType === "Sliding Puzzle";
       
-      const isHouseTip = (isHouseType || isDragDrop) && 
+      const isHouseTip = (isHouseType || isDragDropOrQuiz) && 
         (targetTitleLabel === "DICA" || targetTitleLabel === "INFORMAÇÃO" || targetTitleLabel === "CONCEITO" || targetTitleLabel === "INFORMATIVO" || !target.options || target.options.length === 0) && 
         target.isCorrect;
       
-      const isHouseQuiz = (isHouseType || isDragDrop || isQuizMode) && target.isCorrect && !isHouseTip;
+      const isHouseQuiz = (isHouseType || isDragDropOrQuiz || isQuizMode) && target.isCorrect && !isHouseTip;
 
       return (
         <div 
           key={i} 
           className={`p-4 rounded-[1.5rem] border transition-all duration-300 relative group/target export-compact-target ${
-            target.isCorrect ? (isHouseTip ? "bg-amber-50/50 border-amber-100" : "bg-emerald-50/50 border-emerald-100") : "bg-rose-50/50 border-rose-100"
+            isHouseTip ? "bg-white border-amber-200/50 shadow-sm" : 
+            isHouseQuiz ? "bg-white border-emerald-200/50 shadow-sm" : 
+            "bg-white border-slate-200 shadow-sm"
           }`}
         >
           <div className="flex items-center justify-between mb-3">
              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => onEdit && onRemove && (isHouseType || isDragDrop) && (target as any)._toggleType?.(i)}
+                  onClick={() => onEdit && onRemove && (isHouseType) && (target as any)._toggleType?.(i)}
                   className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black ${
-                    target.isCorrect ? (isHouseTip ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600") : "bg-rose-100 text-rose-500"
-                  }`}
+                    target.isCorrect ? (isHouseTip ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600") : "bg-slate-100 text-slate-400"
+                  } ${!isHouseType ? 'cursor-default' : ''}`}
                 >
-                  {target.isCorrect ? (isHouseTip ? <Lightbulb className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />) : <X className="w-3.5 h-3.5" />}
+                  {target.isCorrect ? (isHouseTip ? <Lightbulb className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />) : <X className="w-3.5 h-3.5 text-slate-400" />}
                 </button>
-                <span className="text-[9px] font-black text-slate-400 tracking-widest uppercase">
-                  {target.isCorrect ? (isHouseTip ? "Informação" : "Pergunta") : "Penalidade"}
+                <span className={`text-[10px] font-black tracking-[0.2em] uppercase ${isDragDropOrQuiz ? "text-emerald-600" : "text-slate-400"}`}>
+                  {isDragDropOrQuiz ? "DESAFIO PEDAGÓGICO" : target.isCorrect ? (isHouseTip ? "Informação" : "Pergunta") : "Penalidade"}
                 </span>
              </div>
              {onRemove && (
-               <button onClick={() => onRemove("targets", i)} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover/target:opacity-100 transition-opacity">
+               <button onClick={() => onRemove("targets", i)} className="text-slate-300 hover:text-indigo-500 opacity-0 group-hover/target:opacity-100 transition-opacity">
                  <XCircle className="w-4 h-4" />
                </button>
              )}
           </div>
           <div className="space-y-2">
             {onEdit ? (
-              <Field label="" value={target.title} onChange={(v) => onEdit(`targets[${i}].title`, v)} />
+              <Field 
+                label="ENUNCIADO ELABORADO (SITUAÇÃO-PROBLEMA)" 
+                value={target.question || target.title || ""} 
+                onChange={(v) => onEdit(`targets[${i}].question`, v)} 
+              />
             ) : (
-              <p className="text-[11px] font-bold text-slate-800 line-clamp-2">{target.title}</p>
+              <div className="bg-white/40 p-4 rounded-2xl border border-slate-200/50 shadow-sm">
+                <p className="text-[13px] font-bold text-slate-800 leading-relaxed">
+                  {target.question || target.title}
+                </p>
+              </div>
             )}
             
-            {isHouseQuiz && target.options && (
-              <div className="grid grid-cols-2 gap-1.5 pt-1">
-                {target.options.slice(0, 2).map((opt: string, optIdx: number) => {
-                  const isCorrect = isCorrectAnswer(opt, target.answer || "", optIdx) || (target.answer === undefined && optIdx === 0);
-                  return (
-                    <div 
-                      key={optIdx} 
-                      onClick={() => onEdit && onEdit(`targets[${i}].answer`, opt)}
-                      className={`px-2 py-1 rounded-lg border text-[9px] font-medium transition-all ${
-                        isCorrect ? "bg-emerald-500 text-white border-emerald-600 shadow-sm" : "bg-slate-50 border-slate-100 text-slate-400"
-                      } ${onEdit ? "cursor-pointer" : ""}`}
-                    >
-                      {onEdit ? (
-                        <Field label="" value={opt} onChange={(v) => {
-                          const newOpts = [...target.options];
-                          newOpts[optIdx] = v;
-                          onEdit(`targets[${i}].options`, newOpts);
-                        }} />
-                      ) : opt}
-                    </div>
-                  );
-                })}
+            {isHouseQuiz && (
+              <div className="grid grid-cols-1 gap-2 pt-2">
+                {(Array.isArray(target.options) && target.options.length >= 3
+                  ? target.options
+                  : [
+                      "Digite o texto da alternativa...",
+                      "Digite o texto da alternativa...",
+                      "Digite o texto da alternativa...",
+                    ]
+                )
+                  .slice(0, 3)
+                  .map((opt: string, optIdx: number) => {
+                    const isCorrect = isCorrectAnswer(opt, target.answer || "", optIdx) || (target.answer === undefined && optIdx === 0);
+                    return (
+                      <div 
+                        key={optIdx} 
+                        onClick={() => onEdit && onEdit(`targets[${i}].answer`, opt)}
+                        className={`rounded-[1.25rem] border transition-all duration-500 relative overflow-hidden ${
+                          isCorrect 
+                            ? "bg-emerald-500 border-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.25)] scale-[1.02] z-10" 
+                            : "bg-white border-slate-100 hover:border-indigo-200 hover:bg-slate-50/50"
+                        } ${onEdit ? "cursor-pointer" : ""}`}
+                      >
+                        {onEdit ? (
+                          <Field 
+                            label="" 
+                            prefix={`${String.fromCharCode(65 + optIdx)})`}
+                            value={opt} 
+                            onChange={(v) => {
+                              const newOpts = [...target.options];
+                              newOpts[optIdx] = v;
+                              onEdit(`targets[${i}].options`, newOpts);
+                            }} 
+                            isCorrect={isCorrect}
+                          />
+                        ) : (
+                          <div className={`p-4 flex items-center justify-between gap-3 ${isCorrect ? "text-white" : "text-slate-700"}`}>
+                            <div className="flex items-center gap-4">
+                              <span className={`font-black text-xs px-2 py-1 rounded-lg ${isCorrect ? "bg-white/20 text-white" : "bg-slate-100 text-slate-400"}`}>
+                                {String.fromCharCode(65 + optIdx)}
+                              </span>
+                              <span className="text-sm font-bold tracking-tight">{opt}</span>
+                            </div>
+                            {isCorrect && (
+                              <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-lg">
+                                <Check className="w-4 h-4 text-emerald-500 font-bold" />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>
@@ -2418,7 +2657,7 @@ const DragAndDropCanvas: React.FC = () => {
             <Move className="w-5 h-5 text-violet-400" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-violet-200 font-black text-lg">6</span>
+            <span className="text-violet-200 font-black text-lg">3</span>
             <span className="text-slate-700 font-black uppercase tracking-widest text-[11px]">
               Canvas Drag &amp; Drop
             </span>
@@ -2426,7 +2665,7 @@ const DragAndDropCanvas: React.FC = () => {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-            Arraste as formas livremente
+            Arraste para revelar as questões
           </span>
           <button
             onClick={handleReset}
@@ -2458,7 +2697,7 @@ const DragAndDropCanvas: React.FC = () => {
           style={{ touchAction: "none" }}
         />
         <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest text-center mt-4">
-          Clique e arraste qualquer forma para reposicioná-la
+          Arraste os objetos para as zonas de encaixe para revelar os desafios pedagógicos.
         </p>
       </div>
     </div>
@@ -2468,40 +2707,33 @@ const DragAndDropCanvas: React.FC = () => {
 // --- RoletaPreview ---
 export const RoletaPreview: React.FC<{
   targets: any[];
+  questionCount: number;
+  subject: string;
   onUpdate: (index: number, field: string, value: any) => void;
   onRemove: (index: number) => void;
   onAdd: () => void;
-}> = ({ targets, onUpdate, onRemove, onAdd }) => {
+}> = ({ targets, questionCount, subject, onUpdate, onRemove, onAdd }) => {
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [landed, setLanded] = useState<number | null>(null);
 
   // Monta segmentos: usa os targets ou gera defaults (Sempre entre 8 e 10 casas)
   const segments = (targets && targets.length > 0 ? targets : [
-    { title: "Pergunta 1", isCorrect: true, points: 15, options: ["Correta", "Incorreta"], answer: "Correta" },
-    { title: "Dica Pedagógica", isCorrect: true, points: 0, description: "Conteúdo importante sobre o tema" },
-    { title: "Penalidade", isCorrect: false, points: -10, feedback: "Tente novamente!" },
-    { title: "Pergunta 2", isCorrect: true, points: 15, options: ["Sim", "Não"], answer: "Sim" },
-    { title: "Dica", isCorrect: true, points: 0, description: "Informação complementar" },
-    { title: "Penalidade", isCorrect: false, points: -10 },
-    { title: "Pergunta 3", isCorrect: true, points: 15, options: ["Opção A", "Opção B"], answer: "Opção A" },
-    { title: "Bônus Especial", isCorrect: true, points: 25 },
-    { title: "Pergunta 4", isCorrect: true, points: 15, options: ["Certo", "Errado"], answer: "Certo" },
-    { title: "Pergunta 5", isCorrect: true, points: 15, options: ["Verdadeiro", "Falso"], answer: "Verdadeiro" },
-  ]).slice(0, 10);
+    { title: "Dica Pedagógica 1", isCorrect: true, points: 0, description: "Conteúdo importante sobre o tema" },
+    { title: "Emboscada Inimiga!", isCorrect: false, points: -10, description: "Opa, entrei na trincheira inimiga e fui pego! Preciso recuar." },
+    { title: "Dica Pedagógica 2", isCorrect: true, points: 0, description: "Outra informação relevante" },
+    { title: "Descanso Acidental", isCorrect: false, points: -10, description: "Você parou para descansar e o inimigo avançou. Perdeu a vez!" },
+    { title: "Dica de Ouro", isCorrect: true, points: 10, description: "Informação importante do tema" },
+    { title: "Armadilha Oculta", isCorrect: false, points: -15, description: "Pisei em uma armadilha temática! Volte duas casas e tente focar mais." },
+  ]).slice(0, 6);
 
   const segCount = segments.length;
   const segAngle = 360 / segCount;
 
   // Cores por tipo de casa
-  const getColor = (t: any, i: number) => {
-    const title = (t.title || "").toLowerCase();
-    if (title.includes("dica") || title.includes("tip")) return ["#f59e0b", "#d97706"];
-    if (title.includes("penali") || title.includes("perd") || t.isCorrect === false) return ["#f43f5e", "#e11d48"];
-    if (title.includes("bônus") || title.includes("bonus")) return ["#10b981", "#059669"];
-    // quiz / pergunta alternados
-    const colors = [["#6366f1", "#4f46e5"], ["#8b5cf6", "#7c3aed"], ["#3b82f6", "#2563eb"]];
-    return colors[i % colors.length];
+  const getColor = (t: any) => {
+    if (t.isCorrect === false) return ["#f43f5e", "#e11d48"]; // Penalidade (Rose Red)
+    return ["#f59e0b", "#d97706"]; // Dica (Amber)
   };
 
   const handleSpin = () => {
@@ -2532,7 +2764,7 @@ export const RoletaPreview: React.FC<{
             <Zap className="w-5 h-5 text-amber-500" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-amber-300 font-black text-lg">5</span>
+            <span className="text-amber-300 font-black text-lg">5.2</span>
             <span className="text-slate-700 font-black uppercase tracking-widest text-[11px]">
               Preview Roleta Interativa
             </span>
@@ -2583,7 +2815,7 @@ export const RoletaPreview: React.FC<{
               const y2 = cy + r * Math.sin(toRad(endAngle));
               const largeArc = segAngle > 180 ? 1 : 0;
               const pathD = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
-              const [fill, stroke] = getColor(seg, i);
+              const [fill, stroke] = getColor(seg);
               // Text angle
               const midAngle = startAngle + segAngle / 2;
               const tr = r * 0.65;
@@ -2631,21 +2863,29 @@ export const RoletaPreview: React.FC<{
               animate={{ opacity: 1, scale: 1 }}
               className="p-4 rounded-2xl border-2 text-center"
               style={{
-                background: getColor(segments[landed], landed)[0] + "15",
-                borderColor: getColor(segments[landed], landed)[0],
+                background: getColor(segments[landed])[0] + "15",
+                borderColor: getColor(segments[landed])[0],
               }}
             >
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] mb-1" style={{ color: getColor(segments[landed], landed)[0] }}>
+              <p className="text-[9px] font-black uppercase tracking-[0.3em] mb-1" style={{ color: getColor(segments[landed])[0] }}>
                 Casa Escolhida
               </p>
               <p className="text-sm font-black text-slate-800 leading-tight">
                 {segments[landed].title || "—"}
               </p>
-              {segments[landed].options?.length > 0 && (
-                <div className="mt-3 grid grid-cols-2 gap-1.5">
-                  {segments[landed].options.slice(0, 2).map((opt: string, oi: number) => (
+              <div className="mt-3 grid grid-cols-1 gap-1.5">
+                {(Array.isArray(segments[landed].options) && segments[landed].options.length >= 3
+                  ? segments[landed].options
+                  : [
+                    "Digite o texto da alternativa...",
+                    "Digite o texto da alternativa...",
+                    "Digite o texto da alternativa...",
+                  ]
+                )
+                  .slice(0, 3)
+                  .map((opt: string, oi: number) => (
                     <div key={oi} className={`px-2 py-1.5 rounded-lg text-[9px] font-bold border ${
-                      opt === segments[landed].answer
+                      segments[landed].answer && opt.trim().toLowerCase() === segments[landed].answer.trim().toLowerCase()
                         ? "bg-emerald-500 text-white border-emerald-600"
                         : "bg-slate-50 text-slate-500 border-slate-200"
                     }`}>
@@ -2653,7 +2893,6 @@ export const RoletaPreview: React.FC<{
                     </div>
                   ))}
                 </div>
-              )}
             </motion.div>
           )}
 
@@ -2662,10 +2901,8 @@ export const RoletaPreview: React.FC<{
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipos de Casa</p>
             <div className="flex flex-wrap gap-2">
               {[
-                { label: "Pergunta", color: "#6366f1" },
                 { label: "Dica", color: "#f59e0b" },
                 { label: "Penalidade", color: "#f43f5e" },
-                { label: "Bônus", color: "#10b981" },
               ].map(({ label, color }) => (
                 <div key={label} className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
@@ -2681,9 +2918,11 @@ export const RoletaPreview: React.FC<{
             <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
               O aluno gira a roleta e cai em uma das{" "}
               <span className="text-amber-600 font-bold">{segCount} casas</span>. Casas de{" "}
-              <span className="text-indigo-500 font-bold">Pergunta</span> exigem resposta correta para pontuar.
-              Casas de <span className="text-amber-500 font-bold">Dica</span> revelam conteúdo pedagógico.
+              <span className="text-amber-500 font-bold">Dica</span> revelam conteúdo pedagógico.
               Casas de <span className="text-rose-500 font-bold">Penalidade</span> subtraem pontos.
+            </p>
+            <p className="text-[10px] text-indigo-500 font-bold mt-2 p-2 bg-indigo-50/50 rounded-lg">
+              🎯 Você configurou {questionCount} pergunta(s) (no item 5.1) para usar com a Roleta!
             </p>
           </div>
         </div>
@@ -2701,15 +2940,12 @@ export const RoletaPreview: React.FC<{
               <Plus className="w-3 h-3" /> Adicionar Casa
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="flex flex-col gap-5">
             {segments.map((seg: any, i: number) => {
-              const [color] = getColor(seg, i);
-              const title = (seg.title || "").toLowerCase();
-              const isDica = title.includes("dica") || title.includes("tip");
-              const isPenal = title.includes("penali") || title.includes("perd") || seg.isCorrect === false;
-              const isBonus = title.includes("bônus") || title.includes("bonus");
-              const isQuiz = !isDica && !isPenal && !isBonus;
-              const typeLabel = isPenal ? "Penalidade" : isDica ? "Dica" : isBonus ? "Bônus" : "Pergunta";
+              const [color] = getColor(seg);
+              const isPenal = seg.isCorrect === false;
+              const typeLabel = isPenal ? "Penalidade" : "Dica";
+              const isQuiz = false;
 
               return (
                 <motion.div
@@ -2717,8 +2953,8 @@ export const RoletaPreview: React.FC<{
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className="relative rounded-2xl border overflow-hidden transition-all hover:shadow-md"
-                  style={{ borderColor: color + "40", background: color + "07" }}
+                  className="relative rounded-[2rem] border overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 bg-white group/card"
+                  style={{ borderColor: color + "30" }}
                 >
                   {/* Accent bar */}
                   <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: color }} />
@@ -2736,36 +2972,51 @@ export const RoletaPreview: React.FC<{
                           value={typeLabel}
                           onChange={(e) => {
                             const nt = e.target.value;
-                            let newTitle = seg.title || "";
-                            // Remove old tags if present to avoid "Dica Dica"
-                            newTitle = newTitle.replace(/^(Dica|Penalidade|Bônus|Pergunta):\s*/i, "");
-                            
-                            // Adjust title based on type selection if needed
-                            let updatedTitle = newTitle;
-                            if (nt === "Dica" && !newTitle.toLowerCase().includes("dica")) updatedTitle = `Dica: ${newTitle}`;
-                            if (nt === "Penalidade" && !newTitle.toLowerCase().includes("penali")) updatedTitle = `Penalidade: ${newTitle}`;
-                            if (nt === "Bônus" && !newTitle.toLowerCase().includes("bônus")) updatedTitle = `Bônus: ${newTitle}`;
-                            
-                            onUpdate(i, "title", updatedTitle);
-                            onUpdate(i, "isCorrect", nt !== "Penalidade");
-                            // Adjust points automatically
-                            if (nt === "Penalidade") onUpdate(i, "points", -10);
-                            if (nt === "Bônus") onUpdate(i, "points", 25);
-                            if (nt === "Dica") onUpdate(i, "points", 0);
-                            if (nt === "Pergunta") onUpdate(i, "points", 15);
+                            const isDica = nt === "Dica";
+
+                            // 1. Conteúdo imediato — aparece na hora, sem esperar a IA
+                            const immediateTitle = isDica
+                              ? `Dica sobre ${subject}`
+                              : `Penalidade: Armadilha no Caminho!`;
+                            const immediateDesc = isDica
+                              ? `Atenção! Esta dica é importante para avançar no estudo de "${subject}". Guarde bem esta informação!`
+                              : `Você caiu em uma armadilha durante a jornada de "${subject}"! Perde pontos e recua algumas casas. Fique mais atento!`;
+
+                            onUpdate(i, "title", immediateTitle);
+                            onUpdate(i, "description", immediateDesc);
+                            onUpdate(i, "points", isDica ? 5 : -10);
+                            onUpdate(i, "isCorrect", isDica);
+
+                            // 2. IA refina o conteúdo em background com algo mais específico ao tema
+                            const prompt = `Gere APENAS um JSON para uma casa de Roleta sobre o tema "${subject}".
+O tipo da casa é: ${nt}.
+Se for Dica: título curto e factível + curiosidade pedagógica rápida sobre o tema.
+Se for Penalidade: título curto imersivo + relato narrativo em 1ª pessoa de algo ruim que aconteceu estudando "${subject}".
+
+Retorne EXATAMENTE ESSE FORMATO JSON:
+{ "title": "Título Curto", "description": "Texto narrativo" }`;
+
+                            model.generateContent({
+                                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                                generationConfig: { responseMimeType: 'application/json' },
+                            }).then(res => {
+                                try {
+                                    const data = JSON.parse(res.response.text().replace(/```json|```/g, '').trim());
+                                    onUpdate(i, "title", data.title || immediateTitle);
+                                    onUpdate(i, "description", data.description || immediateDesc);
+                                } catch(e) { /* mantém o imediato */ }
+                            }).catch(() => { /* mantém o imediato */ });
                           }}
                           className="px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border outline-none bg-white cursor-pointer"
                           style={{ color, borderColor: color + "40" }}
                         >
-                          <option value="Pergunta">Pergunta</option>
                           <option value="Dica">Dica</option>
                           <option value="Penalidade">Penalidade</option>
-                          <option value="Bônus">Bônus</option>
                         </select>
                       </div>
                       <button
                         onClick={() => onRemove(i)}
-                        className="text-slate-300 hover:text-rose-500 transition-colors"
+                        className="text-slate-300 hover:text-indigo-500 transition-colors"
                         title="Remover casa"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -2792,8 +3043,9 @@ export const RoletaPreview: React.FC<{
 
                     {/* Alternativas — apenas casas de Pergunta */}
                     {isQuiz && seg.options && seg.options.length > 0 && (
-                      <div className="grid grid-cols-2 gap-1.5 mt-1.5">
-                        {seg.options.slice(0, 2).map((opt: string, oi: number) => {
+                      <div className="flex flex-col gap-2 mt-4">
+                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest ml-1 mb-1">Alternativas</p>
+                        {seg.options.slice(0, 3).map((opt: string, oi: number) => {
                           const correct =
                             seg.answer
                               ? opt.trim().toLowerCase() === seg.answer.trim().toLowerCase()
@@ -2801,13 +3053,15 @@ export const RoletaPreview: React.FC<{
                           return (
                             <div
                               key={oi}
-                              className={`px-2 py-1.5 rounded-lg text-[9px] font-bold border flex items-baseline gap-1 ${
+                              className={`px-4 py-3 rounded-xl text-[10px] font-bold border flex items-center gap-3 transition-all ${
                                 correct
-                                  ? "bg-emerald-500 text-white border-emerald-600"
-                                  : "bg-white text-slate-500 border-slate-200 shadow-sm"
+                                  ? "bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/20"
+                                  : "bg-white text-slate-600 border-slate-100 shadow-sm hover:border-indigo-200"
                               }`}
                             >
-                              {correct ? <Check className="w-2.5 h-2.5 shrink-0" /> : <div className="w-2.5 h-2.5 shrink-0" />}
+                              <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 text-[9px] font-black ${correct ? "bg-white/20" : "bg-slate-50 text-slate-400"}`}>
+                                {String.fromCharCode(65 + oi)}
+                              </div>
                               <div className="flex-1 min-w-0">
                                 <Field
                                   value={opt}
@@ -2820,6 +3074,7 @@ export const RoletaPreview: React.FC<{
                                   label=""
                                 />
                               </div>
+                              {correct && <Check className="w-3 h-3 shrink-0" />}
                             </div>
                           );
                         })}
@@ -2830,10 +3085,10 @@ export const RoletaPreview: React.FC<{
                     {typeof seg.points === "number" && seg.points !== 0 && (
                       <div className="mt-2 flex items-center gap-2 flex-wrap">
                         <span
-                          className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
+                          className={`text-[9px] font-black px-3 py-1 rounded-full ${
                             seg.points > 0
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-rose-100 text-rose-700"
+                              ? "bg-emerald-500 text-white"
+                              : "bg-rose-500 text-white"
                           }`}
                         >
                           {seg.points > 0 ? `+${seg.points}` : seg.points} pts
@@ -2887,7 +3142,7 @@ export const TicTacToePreview: React.FC<{ targets: any[] }> = ({ targets }) => {
                 <Circle className="w-10 h-10 text-indigo-500 animate-in zoom-in-50 duration-500" />
               )}
               {i === 4 && (
-                <X className="w-10 h-10 text-rose-500 animate-in zoom-in-50 duration-500" />
+                <X className="w-10 h-10 text-indigo-500 animate-in zoom-in-50 duration-500" />
               )}
               {i !== 0 && i !== 4 && (
                 <span className="text-[10px] font-black text-slate-200 uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">
@@ -3042,7 +3297,7 @@ const UnblockPuzzle: React.FC<{ onWin: () => void }> = ({ onWin }) => {
       len: 2,
       axis: "h",
       isTarget: true,
-      color: "from-rose-500 to-rose-600",
+      color: "from-indigo-500 to-indigo-600",
     },
     { id: "b1", x: 2, y: 0, len: 3, axis: "v", color: "bg-slate-700" },
     { id: "b2", x: 3, y: 1, len: 2, axis: "h", color: "bg-slate-600" },
@@ -3201,9 +3456,9 @@ const UnblockPuzzle: React.FC<{ onWin: () => void }> = ({ onWin }) => {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center p-3 bg-rose-50 border border-rose-100 rounded-xl"
+          className="text-center p-3 bg-slate-50 border border-slate-100 rounded-xl"
         >
-          <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest italic">
+          <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest italic">
             🎯 Estratégia Dominada! Saída Liberada.
           </p>
         </motion.div>
@@ -3259,7 +3514,7 @@ export const SlidingPuzzlePreview: React.FC<{ targets: any[] }> = ({ targets }) 
 
           {/* Visual Grid Mockup (Unblock) - Estilo Moderno/Industrial */}
           <div className="space-y-4">
-            <h4 className="text-[10px] font-black text-rose-600 uppercase tracking-widest text-center">
+            <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest text-center">
               Modo Unblock (Estratégia)
             </h4>
             <UnblockPuzzle onWin={() => setUnblockSolved(true)} />
@@ -3413,7 +3668,9 @@ const Field: React.FC<{
   value?: string;
   onChange: (v: string) => void;
   readonly?: boolean;
-}> = ({ label, value, onChange, readonly = false }) => {
+  prefix?: string;
+  isCorrect?: boolean;
+}> = ({ label, value, onChange, readonly = false, prefix, isCorrect = false }) => {
   const divRef = useRef<HTMLDivElement | null>(null);
   const [focused, setFocused] = useState(false);
 
@@ -3438,32 +3695,43 @@ const Field: React.FC<{
   }, [strValue, focused]);
 
   return (
-    <div className="w-full group/field">
+    <div className="w-full group/field relative">
       {label && (
-        <div className="flex items-center justify-between mb-1.5 ml-1">
-          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+        <div className="flex items-center justify-between mb-2 ml-1">
+          <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] group-focus-within/field:text-indigo-500 transition-colors">
             {label}
           </h4>
           {!readonly && (
-            <PencilLine className="w-3 h-3 text-indigo-400 opacity-0 group-hover/field:opacity-100 transition-opacity mr-4" />
+            <div className="opacity-0 group-hover/field:opacity-100 transition-opacity">
+              <PencilLine className={`w-3.5 h-3.5 ${isCorrect ? "text-emerald-200" : "text-indigo-400"}`} />
+            </div>
           )}
         </div>
       )}
-      <div
-        ref={divRef}
-        contentEditable={!readonly}
-        onFocus={() => setFocused(true)}
-        onBlur={() => {
-          setFocused(false);
-          const newVal = divRef.current?.innerText || "";
-          if (newVal !== strValue) onChange(newVal);
-        }}
-        className={`text-[15px] font-medium leading-relaxed outline-none p-2 rounded-xl transition-all relative border ${
-          readonly
-            ? "text-slate-500 italic bg-transparent border-transparent"
-            : "border-slate-300/40 hover:bg-white hover:border-indigo-300/50 focus:bg-white focus:ring-2 focus:ring-indigo-200 focus:shadow-md bg-slate-50/30"
-        }`}
-      />
+      <div className="flex items-center relative group-focus-within/field:transform group-focus-within/field:scale-[1.002] transition-transform">
+        {prefix && (
+          <span className={`absolute left-5 font-black text-sm select-none transition-colors z-10 ${isCorrect ? "text-emerald-100" : "text-slate-400 group-focus-within/field:text-indigo-500"}`}>
+            {prefix}
+          </span>
+        )}
+        <div
+          ref={divRef}
+          contentEditable={!readonly}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            const newVal = divRef.current?.innerText || "";
+            if (newVal !== strValue) onChange(newVal);
+          }}
+          className={`w-full text-sm font-bold leading-relaxed outline-none rounded-2xl transition-all relative border ${
+            readonly
+              ? "text-slate-500 italic bg-transparent border-transparent"
+              : isCorrect
+                ? "border-emerald-500/30 bg-emerald-500 text-white shadow-xl shadow-emerald-500/10"
+                : "border-slate-100 hover:border-indigo-300/50 bg-slate-50/30 hover:bg-white focus:bg-white focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/50 focus:shadow-sm"
+          } ${prefix ? "pl-12 pr-6 py-4" : "p-5"}`}
+        />
+      </div>
     </div>
   );
 };
@@ -3592,7 +3860,7 @@ const ReferenceImagesSection: React.FC<{
                 <img src={imgUrl} className="w-full h-full object-cover object-center" alt={`Exemplo ${i + 1}`} />
                 <button
                   onClick={() => removeImage(i)}
-                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white text-slate-400 hover:text-rose-500 shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white text-slate-400 hover:text-indigo-500 shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
                 >
                   <X className="w-4 h-4" />
                 </button>

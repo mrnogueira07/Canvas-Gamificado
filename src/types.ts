@@ -94,6 +94,7 @@ export interface GeneratedContent {
       pieceCount: number;
     }[];
     referenceImages?: string[]; // Array of base64 image strings
+    roletaSegments?: any[]; // Segmentos específicos para o preview da roleta (dicas, penalidades, bônus)
   };
 
   // Seção 6: Mecânicas e Tarefas

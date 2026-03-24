@@ -4,13 +4,12 @@ import { motion } from 'framer-motion';
 import { GeneratorSidebar } from '../components/generator/GeneratorSidebar';
 import { DocumentView, DocumentViewErrorBoundary } from '../components/generator/DocumentView';
 import type { GeneratorFormData, GeneratedContent } from '../types';
-import { Wand2, Save, FolderDown, CheckCircle, Pencil, Check, X } from 'lucide-react';
+import { Wand2, Save, FolderDown, CheckCircle, Pencil, Check, X, ArrowLeft, RefreshCw, AlertTriangle } from 'lucide-react';
 import { model } from '../lib/gemini';
 import type { Part } from '@google/generative-ai';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { Button } from '../components/ui/Button';
 import { LoadingAnimation } from '../components/ui/LoadingAnimation';
 import { generatePDFBlob } from '../lib/pdfExport';
 
@@ -116,24 +115,52 @@ function sanitizeContent(input: any, gameType?: string): Record<string, unknown>
     gl.levels = toStr(gl.levels);
     gl.difficulty = toStr(gl.difficulty);
     if (Array.isArray(gl.targets)) {
-        gl.targets = (gl.targets as Record<string, unknown>[]).map(t => ({
-            ...t,
-            title: toStr(t.title),
-            description: toStr(t.description),
-            feedback: toStr(t.feedback),
-            answer: toStr(t.answer),
-            options: toStrArr(t.options).length >= 2 ? toStrArr(t.options) : ['Opção A', 'Opção B'],
-            points: typeof t.points === 'number' ? t.points : Number(t.points) || 0,
-            isCorrect: Boolean(t.isCorrect),
-        }));
+        let maxTargets = 3;
+        const normalizedType = toStr(gameType);
+        if (normalizedType === 'Roleta') maxTargets = 10;
+        if (normalizedType === 'Jogo de Tiro ao Alvo') maxTargets = 9;
+        if (normalizedType === 'Arrastar e Soltar') maxTargets = 5; // Allow for user additions up to 5
+        if (normalizedType === 'Quiz') maxTargets = 10;
+
+        gl.targets = (gl.targets as Record<string, unknown>[]).slice(0, maxTargets).map(t => {
+            const rawQuestion = toStr(t.question || (t as any).pergunta || (t as any).enunciado);
+            const rawTitle = toStr(t.title);
+
+            // Prefer the longer text for the 'question' field to ensure it's "elaborated"
+            const finalQuestion = (rawQuestion.length >= rawTitle.length) ? rawQuestion : rawTitle;
+            const finalTitle = (rawTitle.length < rawQuestion.length && rawTitle.length > 0) ? rawTitle : finalQuestion.split('.')[0] + '.';
+
+            // Force isCorrect for games that shouldn't have penalties
+            const forceCorrect = normalizedType === 'Arrastar e Soltar' || normalizedType === 'Quiz';
+
+            return {
+                ...t,
+                title: finalTitle,
+                question: finalQuestion,
+                description: toStr(t.description),
+                feedback: toStr(t.feedback),
+                answer: toStr(t.answer),
+                options: toStrArr(t.options),
+                points: typeof t.points === 'number' ? t.points : Number(t.points) || 15,
+                isCorrect: forceCorrect ? true : Boolean(t.isCorrect),
+            };
+        });
     } else {
         gl.targets = [];
+    }
+
+    if (Array.isArray(gl.questionPool)) {
+        gl.questionPool = (gl.questionPool as Record<string, unknown>[]).map(q => ({
+            question: toStr(q.question),
+            options: toStrArr(q.options),
+            answer: toStr(q.answer)
+        }));
     }
 
     if (data.quiz && typeof data.quiz === 'object') {
         const quiz = data.quiz as Record<string, unknown>;
         if (Array.isArray(quiz.questions)) {
-            quiz.questions = (quiz.questions as Record<string, unknown>[]).map(q => ({
+            quiz.questions = (quiz.questions as Record<string, unknown>[]).slice(0, 3).map(q => ({
                 ...q,
                 question: toStr(q.question),
                 answer: toStr(q.answer),
@@ -322,11 +349,12 @@ const GeneratorPage: React.FC = () => {
                 title,
                 subject: formData.subject,
                 grade: formData.gradeLevel,
-                updatedAt: new Date().toLocaleDateString('pt-BR'),
+                updatedAt: new Date().toISOString(),
                 createdAt: savedProjectId ? (new Date().toISOString()) : new Date().toISOString(), // Simplified for now
                 formData,
                 content: generatedContent,
-                color: 'bg-indigo-500'
+                color: 'bg-indigo-500',
+                order: Date.now()
             };
 
             // Salva no Firestore se logado
@@ -361,19 +389,19 @@ const GeneratorPage: React.FC = () => {
     // Instruções específicas de gameLogic por tipo de jogo
     const getGameLogicInstruction = (gameType: string): string => {
         const map: Record<string, string> = {
-            'Jogo de Tiro ao Alvo': 'Crie entre 3 e 5 perguntas. Para cada pergunta, forme um alvo correto (+15 pts) e um inimigo/alvo incorreto (-10 pts). options: exatamente 2 alternativas. timeLimit: "45 segundos", levels: "3 níveis", difficulty: "Progressiva".',
-            'Quiz': 'Crie até 5 perguntas, cada uma com o title sendo a pergunta. Use EXATAMENTE 2 alternativas em "options". A resposta correta DEVE estar contida exatamente no campo "answer". points: entre 10 e 25. timeLimit: "30 segundos por pergunta", levels: "1 fase", difficulty: "Crescente".',
-            'Memória': 'Crie até 5 pares de cartas (10 items no total). Cada par tem title (conceito) e description (definição). isCorrect: true para todos. options: 2 alternativas para contextualizar a carta. points: +10 cada par. timeLimit: "2 minutos".',
-            'Arrastar e Soltar': 'Crie até 5 items para arrastar. title = item, description = categoria. 3 corretos (+15pts) e 2 incorretos (-10pts). options: exatamente 2 alternativas contextuais. timeLimit: "60 segundos".',
-            'Jogo de Plataforma 2D': 'Crie um jogo de plataforma com até 5 elementos (inimigos/obstáculos/itens informativos). Em "targets", use question para perguntar, EXACTAMENTE 2 opções curtas em "options" e a correta em "answer". timeLimit: "3 minutos", levels: "3 fases".',
-            'Roleta': 'Crie EXATAMENTE 10 casas de roleta (SENDO: 5 casas de QUIZ com title sendo a pergunta e EXATAMENTE 2 opções em options, 3 casas de DICA informativa sobre o tema e 2 casas de PENALIDADE/PERDA DE PONTOS). Cada casa deve ter title, points (+15 quiz, 0 dica, -10 penalidade) e feedback contextual.',
-            'Quebra-Cabeça': 'Crie até 5 questões. Cada alvo do puzzle tem isCorrect: true ou false, +15 ou -5 pontos. Em "options", use EXATAMENTE 2 alternativas contextuais da imagem.',
-            'Enigmas Movimento': 'Crie até 5 enigmas de movimento. title = a pergunta do enigma. Em "options", forneça exatamente 2 alternativas (ex: Direita, Esquerda). answer = a alternativa exata. timeLimit: "60 segundos".',
-            'Tabuleiro': 'Crie casas do tabuleiro (até 5 perguntas). Casas-bônus (+20pts) e casas-armadilha (-10pts). title = pergunta, options = EXATAMENTE 2 alternativas, answer = a alternativa correta.',
-            'Esmaga Palavras': 'Crie uma lista de até 5 palavras-chave afins. Para cada item, title = palavra e description = dica. Para manter simetria, gere "options" com EXATAMENTE 2 alternativas para que o usuário escolha qual palavra melhor descreve a dica.',
-            'Jogo da Velha': 'Crie até 5 posições/perguntas do tabuleiro. Para marcar, devem responder a pergunta. options = EXATAMENTE 2 alternativas, answer = a opção correta. isCorrect: true.',
+            'Jogo de Tiro ao Alvo': 'Crie EXATAMENTE 3 perguntas elaboradas e contextualizadas sobre o tema. Gere 3 alvos por questão.',
+            'Quiz': 'Crie EXATAMENTE 3 perguntas elaboradas. Use enunciados que apresentem uma situação-problema.',
+            'Memória': 'Crie EXATAMENTE 3 pares. O título deve ser uma pergunta ou conceito técnico elaborado.',
+            'Arrastar e Soltar': 'Crie EXATAMENTE 3 itens. O enunciado DEVE ser uma pergunta elaborada e contextualizada de acordo com o tema. Gere 3 alternativas curtas.',
+            'Jogo de Plataforma 2D': 'Crie EXATAMENTE 3 desafios pedagógicos elaborados.',
+            'Roleta': 'Em "targets" crie EXATAMENTE 5 *perguntas elaboradas* com alternativas. Já na roleta (roletaSegments), crie EXATAMENTE 10 itens como descritos na instrução.',
+            'Quebra-Cabeça': 'Crie EXATAMENTE 3 desafios. Enunciado elaborado e 3 opções curtas.',
+            'Enigmas Movimento': 'Crie EXATAMENTE 3 enigmas seguindo o estilo de desafio pedagógico contextualizado.',
+            'Tabuleiro': 'Crie EXATAMENTE 3 casas de desafio com perguntas elaboradas sobre o tema.',
+            'Esmaga Palavras': 'Crie EXATAMENTE 12 palavras curtas e relevantes. Para cada palavra: use o campo "title" para a palavra em si e o campo "description" para uma definição técnica ou contexto pedagógico elaborado (2-3 linhas).',
+            'Jogo da Velha': 'Crie EXATAMENTE 3 desafios com perguntas elaboradas e diretas.',
         };
-        return map[gameType] || 'Crie até 5 elementos/perguntas com title, description, isCorrect, options (EXATAMENTE 2 ALTERNATIVAS), answer preciso e feedback relevante.';
+        return map[gameType] || 'Crie EXATAMENTE 3 desafios pedagógicos elaborados e contextualizados.';
     };
 
     const handleGenerate = async (arg?: unknown) => {
@@ -422,6 +450,10 @@ const GeneratorPage: React.FC = () => {
 
             const gameLogicInstruction = getGameLogicInstruction(capturedGameType);
 
+            const globalInstruction = capturedGameType === 'Roleta'
+                ? '- INSTRUÇÃO ROLETA: Crie UM NOVO ARRAY chamado "roletaSegments" dentro de "gameLogic" com EXATAMENTE 6 itens (sendo 3 Dicas e 3 Penalidades). NESTE NOVO ARRAY, É PROIBIDO CRIAR PERGUNTAS OU BÔNUS. Cada target de `roletaSegments` DEVE ser APENAS "Dica" (texto temático interativo) ou "Penalidade" (crie um pequeno relato narrativo e imersivo informando algo rum que aconteceu no contexto do tema, ex: "Ops, entrei na trincheira inimiga e fui pego!"). O texto longo vai em "description" e o "title" é um resumo (ex: "Trincheira Inimiga!").\n- Além disso, O ARRAY PADRÃO "targets" (5.1) DEVE CONTINUAR EXISTINDO NORMALMENTE E TER EXATAMENTE 3 PERGUNTAS ELABORADAS, com "options" e "answer". Insira a numeração no campo "title" de cada pergunta (ex: "Pergunta 1: Título do Tema").'
+                : '- Instrução Global para Perguntas: Crie EXATAMENTE 3 perguntas no total. É TERMINANTEMENTE PROIBIDO criar mais de 3 perguntas. Cada uma das 3 questões DEVE ser diferente da outra, explorando diferentes aspectos do tema. O enunciado de CADA questão deve ser elaborado (3 a 5 linhas), apresentando uma situação-problema ou um contexto técnico profundo antes da pergunta direta.\n  Use linguajar técnico e variado, com termos reais do tema. PROIBIDO repetir a mesma abordagem ou o mesmo tipo de desafio nas 3 questões. Gere EXATAMENTE 3 alternativas no array "options" para cada questão. O campo "answer" deve conter o texto EXATO da alternativa correta. TUDO deve estar preenchido pela IA. Proibido usar placeholders.';
+
             const prompt = `Você é um especialista em gamificação educacional.
 ${pdfInstruction}
 Crie um planejamento de gamificação educacional completo com os seguintes dados:
@@ -432,8 +464,10 @@ Crie um planejamento de gamificação educacional completo com os seguintes dado
 - Tipo de Jogo: ${capturedGameType}
 - Regras Específicas: ${gameLogicInstruction}
 - Contexto/Ideia do professor: ${capturedContext || '(não informado, use o PDF como base)'}
-- Instrução Global para Perguntas: Em todos os tipos de jogos, crie questões ou interações de acordo com o conteúdo fornecido ou contexto, adaptadas para o nível de ensino selecionado (${capturedGradeLevel}). Para as questões (seja no array 'targets' ou 'quiz'), você DEVE gerar EXATAMENTE 2 alternativas por pergunta e indicar a resposta correta com clareza na chave "answer". Crie de 1 a 5 perguntas.
-- ATENÇÃO MECÂNICAS: No campo "gameMechanics", preencha CADA subcampo com texto REAL e específico para o tipo de jogo "${capturedGameType}" e conteúdo "${capturedSubject}". NÃO use textos genéricos. Escreva regras concretas com pelo menos 2 frases por campo.
+${globalInstruction}
+- Question Pool: Deixe o array "questionPool" VAZIO. Não gere questões extras.
+- Tiro ao Alvo: Gere EXATAMENTE 3 questões. Cada questão deve ter 3 alvos (1 correto, 2 incorretos). Total de 9 targets no array, mas apenas 3 enunciados de questão diferentes.
+- ATENÇÃO MECÂNICAS: No campo "gameMechanics", preencha CADA subcampo com texto REAL e específico para o tipo de jogo "${capturedGameType}" e conteúdo "${capturedSubject}". Escreva regras concretas com pelo menos 2 frases por campo.
 
 Retorne APENAS um JSON válido com esta estrutura:
 {
@@ -457,9 +491,20 @@ Retorne APENAS um JSON válido com esta estrutura:
   },
   "gameLogic": {
     "howToPlay": "", "timeLimit": "", "levels": "", "difficulty": "",
-    "targets": [{ "title": "", "description": "", "isCorrect": true, "points": 15, "options": ["", ""], "answer": "", "feedback": "" }]
+    "targets": [
+      { 
+        "question": "Na frase 'Os alunos estudaram para a prova ontem.', qual a função de 'para a prova'?", 
+        "title": "Análise Sintática: Adjunto Adverbial", 
+        "options": ["Objeto Indireto", "Adjunto Adverbial", "Complemento Nominal"], 
+        "answer": "Adjunto Adverbial", 
+        "isCorrect": true, 
+        "points": 15 
+      }
+    ],
+    ${capturedGameType === 'Roleta' ? '"roletaSegments": [{ "title": "Dica de Ouro", "description": "Lembre-se desta dica", "points": 0, "isCorrect": true }],' : ''}
+    "questionPool": [{ "question": "", "options": ["", "", ""], "answer": "" }]
   },
-  "quiz": ${capturedGameType === 'Quiz' ? '{ "questions": [{ "question": "", "options": ["",""], "answer": "" }] }' : 'null'}
+  "quiz": ${capturedGameType === 'Quiz' ? '{ "questions": [{ "question": "", "options": ["","",""], "answer": "" }] }' : 'null'}
 }`;
 
             const parts: Part[] = [{ text: prompt }];
@@ -611,13 +656,14 @@ Retorne APENAS um JSON válido com esta estrutura:
             className="flex h-screen bg-mesh-light overflow-hidden transition-colors duration-300 font-sans"
         >
             <div className="flex-1 flex flex-col h-full overflow-hidden">
-                <header className="h-20 bg-slate-100/90 backdrop-blur-3xl border-b border-slate-300/30 flex items-center justify-between px-8 z-[70]">
+                <header className="h-20 bg-white/70 backdrop-blur-2xl border-b border-slate-200/50 flex items-center justify-between px-8 z-[70] sticky top-0 shadow-sm">
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => isDirty ? setShowUnsavedModal(true) : navigate('/dashboard')}
-                            className="flex items-center gap-2 px-6 py-2 border-2 border-slate-200 text-slate-400 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 hover:text-white hover:border-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-900/5 cursor-pointer bg-white"
+                            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all active:scale-95 shadow-sm cursor-pointer group"
                             title="Voltar ao Dashboard"
                         >
+                            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
                             Voltar
                         </button>
                     </div>
@@ -637,7 +683,7 @@ Retorne APENAS um JSON válido com esta estrutura:
                                     <button onClick={confirmEditTitle} className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all">
                                         <Check className="w-4 h-4" />
                                     </button>
-                                    <button onClick={cancelEditTitle} className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:text-rose-500 transition-all">
+                                    <button onClick={cancelEditTitle} className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:text-indigo-500 transition-all">
                                         <X className="w-4 h-4" />
                                     </button>
                                 </div>
@@ -656,24 +702,22 @@ Retorne APENAS um JSON válido com esta estrutura:
                     <div className="flex items-center gap-3">
                         {generatedContent && (
                             <>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
+                                <button
                                     onClick={handleExportPDF}
-                                    className="flex items-center gap-2 border-rose-200 text-rose-500 hover:bg-rose-50 px-6 font-black text-[10px] tracking-widest uppercase"
+                                    className="flex items-center gap-3 px-6 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-indigo-600 rounded-2xl font-black text-[10px] tracking-[0.2em] uppercase transition-all active:scale-95 shadow-sm cursor-pointer"
                                 >
                                     <FolderDown className="w-4 h-4" />
-                                    Exportar PDF
-                                </Button>
-                                <Button
-                                    size="sm"
+                                    PDF
+                                </button>
+                                <button
                                     onClick={handleSave}
-                                    isLoading={isSaving}
-                                    className="flex items-center gap-2 shadow-xl shadow-indigo-500/10 bg-indigo-500 hover:bg-indigo-600 border-none px-6"
+                                    className={`flex items-center gap-3 px-8 py-3 rounded-2xl font-black text-[10px] tracking-[0.2em] uppercase transition-all active:scale-95 shadow-xl shadow-indigo-600/10 cursor-pointer ${
+                                        isSaving ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
+                                    } text-white`}
                                 >
-                                    <Save className="w-4 h-4" />
+                                    {isSaving ? <RefreshCw className="w-4 h-4 animate-spin text-white-500" /> : <Save className="w-4 h-4" />}
                                     {isViewMode ? 'ATUALIZAR' : 'SALVAR'}
-                                </Button>
+                                </button>
                             </>
                         )}
                     </div>
@@ -744,32 +788,39 @@ Retorne APENAS um JSON válido com esta estrutura:
 
             {/* Modal de Confirmação para Sair sem Salvar */}
             {showUnsavedModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl">
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] border border-white text-center"
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-[0_40px_80px_-20px_rgba(0,0,0,0.3)] border border-white relative overflow-hidden"
                     >
-                        <div className="w-20 h-20 bg-indigo-50 rounded-[2rem] flex items-center justify-center mb-8 mx-auto shadow-2xl shadow-indigo-500/10 transition-transform hover:scale-105">
-                            <X className="w-8 h-8 text-indigo-500" />
-                        </div>
-                        <h3 className="text-xl font-black text-slate-900 mb-3 uppercase tracking-tight">Sair sem salvar?</h3>
-                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest leading-relaxed mb-10 px-4 opacity-80">
-                            Você tem alterações pendentes que serão perdidas se sair agora.
-                        </p>
-                        <div className="flex flex-col gap-3">
-                            <button
-                                onClick={() => navigate('/dashboard')}
-                                className="w-full py-4 bg-[#0f172a] hover:bg-slate-800 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all shadow-lg shadow-slate-900/10 active:scale-95 cursor-pointer"
-                            >
-                                Sair mesmo assim
-                            </button>
-                            <button
-                                onClick={() => setShowUnsavedModal(false)}
-                                className="w-full py-4 bg-slate-50 hover:bg-slate-100 text-slate-400 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all active:scale-95 cursor-pointer"
-                            >
-                                Continuar Editando
-                            </button>
+                        <div className="relative z-10 flex flex-col items-center">
+                            <div className="w-20 h-20 bg-amber-50 rounded-[2rem] flex items-center justify-center mb-8 shadow-inner shadow-white">
+                                <AlertTriangle className="w-8 h-8 text-amber-500 stroke-[2.5]" />
+                            </div>
+
+                            <div className="text-center mb-10">
+                                <h3 className="text-2xl font-black text-slate-900 mb-4 tracking-tight uppercase">Sair sem salvar?</h3>
+                                <p className="text-slate-500 font-medium text-sm leading-relaxed px-2">
+                                    Existem alterações pendentes. Se você sair agora, todo o progresso não salvo será <span className="text-rose-500 font-bold">perdido permanentemente</span>.
+                                </p>
+                            </div>
+
+                            <div className="w-full space-y-3">
+                                <button
+                                    onClick={() => setShowUnsavedModal(false)}
+                                    className="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all shadow-xl shadow-slate-900/20 active:scale-[0.98] cursor-pointer"
+                                >
+                                    Continuar Editando
+                                </button>
+                                <button
+                                    onClick={() => navigate('/dashboard')}
+                                    className="w-full py-5 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all active:scale-[0.98] cursor-pointer border border-slate-100 hover:border-rose-100"
+                                >
+                                    Sair mesmo assim
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
                 </div>
