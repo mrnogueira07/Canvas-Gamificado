@@ -159,8 +159,11 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
     }, [siteKey, theme, size]);
 
     return (
-      <div className={`w-full flex justify-center my-2 min-h-[65px] ${className}`}>
-        <div ref={containerRef} className="w-full max-w-[300px] flex justify-center items-center" />
+      <div className={`w-full flex items-center min-h-[65px] ${className}`}>
+        <div
+          ref={containerRef}
+          className={`w-full flex items-center ${size === "flexible" ? "" : "max-w-[300px] justify-center"}`}
+        />
       </div>
     );
   }
