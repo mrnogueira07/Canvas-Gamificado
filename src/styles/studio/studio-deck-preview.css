@@ -382,66 +382,81 @@
   display: grid !important;
   grid-template-columns: 46% 49% !important;
   gap: 5% !important;
-  align-items: stretch !important;
+  align-items: start !important;
   height: 100% !important;
   flex: 1 1 0 !important;
   min-height: 0 !important;
 }
 
 .studio-preview--konectar .studio-preview__image {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  flex: 1 1 0;
-  justify-content: center;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  flex: 1 1 0 !important;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
 }
 
 .studio-preview--konectar .studio-preview__image-container {
   position: relative;
-  width: 100%;
-  height: 100%;
-  flex: 1 1 0;
+  width: 100% !important;
+  height: auto !important;
+  max-height: calc(100% - 2.2cqw) !important;
+  aspect-ratio: 3 / 4;
+  flex: 0 1 auto !important;
   min-height: 0;
+  margin: 0 !important;
   display: flex;
   border-radius: 0.6cqw;
   overflow: hidden;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-  background: #f1f5f9;
+  background: transparent !important;
+  border: none !important;
   transition: aspect-ratio 0.2s ease, max-height 0.2s ease;
 }
 
-/* Proporções editáveis diretamente no slide */
+/* Proporções editáveis diretamente no slide (sempre alinhadas ao topo com o texto e com a fonte colada abaixo) */
+.studio-preview__image-container[data-aspect="3:4"],
+.studio-preview--konectar .studio-preview__image-container[data-aspect="3:4"] {
+  aspect-ratio: 3 / 4 !important;
+  width: 100% !important;
+  height: auto !important;
+  max-height: calc(100% - 2.2cqw) !important;
+  flex: 0 1 auto !important;
+  margin: 0 !important;
+}
+
 .studio-preview__image-container[data-aspect="1:1"],
 .studio-preview--konectar .studio-preview__image-container[data-aspect="1:1"] {
   aspect-ratio: 1 / 1 !important;
+  width: 100% !important;
   height: auto !important;
-  max-height: 92% !important;
-  width: auto !important;
-  max-width: 100% !important;
+  max-height: calc(100% - 2.2cqw) !important;
   flex: 0 1 auto !important;
-  margin: auto !important;
+  margin: 0 !important;
 }
 
 .studio-preview__image-container[data-aspect="4:3"],
 .studio-preview--konectar .studio-preview__image-container[data-aspect="4:3"] {
   aspect-ratio: 4 / 3 !important;
-  height: auto !important;
-  max-height: 82% !important;
   width: 100% !important;
-  flex: 0 0 auto !important;
-  margin: auto 0 !important;
+  height: auto !important;
+  max-height: calc(100% - 2.2cqw) !important;
+  flex: 0 1 auto !important;
+  margin: 0 !important;
 }
 
 .studio-preview__image-container[data-aspect="16:9"],
 .studio-preview--konectar .studio-preview__image-container[data-aspect="16:9"] {
   aspect-ratio: 16 / 9 !important;
-  height: auto !important;
-  max-height: 68% !important;
   width: 100% !important;
-  flex: 0 0 auto !important;
-  margin: auto 0 !important;
+  height: auto !important;
+  max-height: calc(100% - 2.2cqw) !important;
+  flex: 0 1 auto !important;
+  margin: 0 !important;
 }
 
 .studio-preview--konectar .studio-preview__image img {
@@ -453,13 +468,22 @@
   aspect-ratio: auto !important;
   object-fit: cover !important;
   border-radius: 0.6cqw;
+  border: none !important;
+  background: transparent !important;
   display: block;
+}
+
+.studio-preview__image-container[data-fit="contain"],
+.studio-preview--konectar .studio-preview__image-container[data-fit="contain"] {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .studio-preview__image-container[data-fit="contain"] img,
 .studio-preview--konectar .studio-preview__image-container[data-fit="contain"] img {
   object-fit: contain !important;
-  background: #f8fafc !important;
+  object-position: top left !important;
+  background: transparent !important;
 }
 
 .studio-preview--konectar .studio-preview__image-pending {
@@ -478,12 +502,16 @@
 
 .studio-preview--konectar .studio-preview__image small,
 .studio-preview--konectar .studio-preview__source {
+  display: block !important;
+  width: 100% !important;
   font-family: Montserrat, sans-serif;
   font-size: 1.04cqw;
   font-weight: 500;
+  line-height: 1.2;
   color: #536779;
-  margin-top: 0.35cqw;
-  flex-shrink: 0;
+  margin: 0.35cqw 0 0 0 !important;
+  padding: 0 !important;
+  flex: 0 0 auto !important;
 }
 
 .studio-preview--konectar .studio-preview__topics--topicos_com_imagem p {

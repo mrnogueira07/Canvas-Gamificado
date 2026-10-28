@@ -358,8 +358,138 @@ export async function extractImagesFromDocx(buffer: ArrayBuffer): Promise<Extrac
   return images;
 }
 
+const trimmedImageCache = new Map<string, string>();
+
+function detectContentBounds(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  const { data } = ctx.getImageData(0, 0, width, height);
+  const isMarginPixel = (x: number, y: number) => {
+    const idx = (y * width + x) * 4;
+    const r = data[idx];
+    const g = data[idx + 1];
+    const b = data[idx + 2];
+    const a = data[idx + 3];
+    if (a < 25) return true;
+    return r >= 226 && g >= 226 && b >= 226 && Math.max(r, g, b) - Math.min(r, g, b) <= 20;
+  };
+
+  const isRowMargin = (y: number) => {
+    const step = Math.max(1, Math.floor(width / 80));
+    let total = 0;
+    let marginCount = 0;
+    for (let x = 0; x < width; x += step) {
+      total++;
+      if (isMarginPixel(x, y)) marginCount++;
+    }
+    return marginCount / total >= 0.9;
+  };
+
+  const isColMargin = (x: number, topY: number, bottomY: number) => {
+    const span = Math.max(1, bottomY - topY + 1);
+    const step = Math.max(1, Math.floor(span / 80));
+    let total = 0;
+    let marginCount = 0;
+    for (let y = topY; y <= bottomY; y += step) {
+      total++;
+      if (isMarginPixel(x, y)) marginCount++;
+    }
+    return marginCount / total >= 0.9;
+  };
+
+  const maxCropY = Math.floor(height * 0.22);
+  const maxCropX = Math.floor(width * 0.22);
+
+  let top = 0;
+  while (top < maxCropY && isRowMargin(top)) top++;
+
+  let bottom = height - 1;
+  while (bottom > height - 1 - maxCropY && isRowMargin(bottom)) bottom--;
+
+  let left = 0;
+  while (left < maxCropX && isColMargin(left, top, bottom)) left++;
+
+  let right = width - 1;
+  while (right > width - 1 - maxCropX && isColMargin(right, top, bottom)) right--;
+
+  // Inset 2px nas bordas detectadas para remover linhas anti-aliasing esbranquiçadas
+  if (top > 0) top = Math.min(maxCropY, top + 2);
+  if (bottom < height - 1) bottom = Math.max(height - 1 - maxCropY, bottom - 2);
+  if (left > 0) left = Math.min(maxCropX, left + 2);
+  if (right < width - 1) right = Math.max(width - 1 - maxCropX, right - 2);
+
+  const cropW = right - left + 1;
+  const cropH = bottom - top + 1;
+  const trimmed =
+    cropW >= width * 0.55 &&
+    cropH >= height * 0.55 &&
+    (top > 0 || bottom < height - 1 || left > 0 || right < width - 1);
+
+  return { left, top, cropW, cropH, trimmed };
+}
+
 /**
- * Otimiza data URLs de imagens em base64 (restringe dimensão máxima a 1200px e comprime)
+ * Remove bordas brancas/cinzas embutidas nas imagens extraídas de apostilas (DOCX/PDF).
+ */
+export async function trimImageWhiteBorders(dataUrl: string): Promise<string> {
+  if (typeof document === "undefined" || !dataUrl || !dataUrl.startsWith("data:image/")) {
+    return dataUrl;
+  }
+  const cached = trimmedImageCache.get(dataUrl);
+  if (cached) return cached;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const { width, height } = img;
+        if (width < 32 || height < 32) {
+          trimmedImageCache.set(dataUrl, dataUrl);
+          resolve(dataUrl);
+          return;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const { left, top, cropW, cropH, trimmed } = detectContentBounds(ctx, width, height);
+        if (!trimmed) {
+          trimmedImageCache.set(dataUrl, dataUrl);
+          resolve(dataUrl);
+          return;
+        }
+        const outCanvas = document.createElement("canvas");
+        outCanvas.width = cropW;
+        outCanvas.height = cropH;
+        const outCtx = outCanvas.getContext("2d");
+        if (!outCtx) {
+          resolve(dataUrl);
+          return;
+        }
+        outCtx.drawImage(canvas, left, top, cropW, cropH, 0, 0, cropW, cropH);
+        const result = outCanvas.toDataURL("image/jpeg", 0.9);
+        trimmedImageCache.set(dataUrl, result);
+        trimmedImageCache.set(result, result);
+        resolve(result);
+      } catch {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+export function getCachedTrimmedImage(dataUrl?: string): string | undefined {
+  if (!dataUrl) return dataUrl;
+  return trimmedImageCache.get(dataUrl);
+}
+
+/**
+ * Otimiza data URLs de imagens em base64 (remove margens brancas, restringe dimensão máxima a 1200px e comprime)
  * reduzindo o peso em 80-90% para evitar ultrapassar limites de armazenamento do navegador.
  */
 export async function optimizeImageBase64(dataUrl: string, maxDim = 1200, quality = 0.82): Promise<string> {
@@ -368,10 +498,6 @@ export async function optimizeImageBase64(dataUrl: string, maxDim = 1200, qualit
     const img = new Image();
     img.onload = () => {
       let { width, height } = img;
-      if (width <= maxDim && height <= maxDim && dataUrl.length < 150000) {
-        resolve(dataUrl);
-        return;
-      }
       if (width > maxDim || height > maxDim) {
         if (width > height) {
           height = Math.round((height * maxDim) / width);
@@ -388,9 +514,27 @@ export async function optimizeImageBase64(dataUrl: string, maxDim = 1200, qualit
       if (!ctx) { resolve(dataUrl); return; }
       ctx.drawImage(img, 0, 0, width, height);
       try {
-        const isPng = dataUrl.startsWith("data:image/png");
-        const optimized = canvas.toDataURL(isPng ? "image/png" : "image/jpeg", quality);
-        resolve(optimized.length < dataUrl.length ? optimized : dataUrl);
+        const { left, top, cropW, cropH, trimmed } = detectContentBounds(ctx, width, height);
+        let targetCanvas = canvas;
+        if (trimmed) {
+          const cropped = document.createElement("canvas");
+          cropped.width = cropW;
+          cropped.height = cropH;
+          const croppedCtx = cropped.getContext("2d");
+          if (croppedCtx) {
+            croppedCtx.drawImage(canvas, left, top, cropW, cropH, 0, 0, cropW, cropH);
+            targetCanvas = cropped;
+          }
+        } else if (width === img.width && height === img.height && dataUrl.length < 150000) {
+          trimmedImageCache.set(dataUrl, dataUrl);
+          resolve(dataUrl);
+          return;
+        }
+        const isPng = dataUrl.startsWith("data:image/png") && !trimmed;
+        const optimized = targetCanvas.toDataURL(isPng ? "image/png" : "image/jpeg", quality);
+        const finalUrl = trimmed || optimized.length < dataUrl.length ? optimized : dataUrl;
+        trimmedImageCache.set(finalUrl, finalUrl);
+        resolve(finalUrl);
       } catch {
         resolve(dataUrl);
       }

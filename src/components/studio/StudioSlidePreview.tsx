@@ -1,7 +1,8 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import type { StudioProject, StudioSlide, StudioSlideImageAspect, StudioSlideImageFit } from "../../lib/studioProjects";
 import { createStudioId } from "../../lib/studioProjects";
 import { formatBnccCodes } from "../../lib/studioBriefing";
+import { trimImageWhiteBorders, getCachedTrimmedImage } from "../../lib/studioReference";
 import "../../styles/studio/studio-deck-preview.css";
 
 const SLIDE_ASPECT_OPTIONS: { id: StudioSlideImageAspect; label: string; title: string }[] = [
@@ -114,12 +115,33 @@ export function StudioSlideFrame({
     }
   }
 
+  // Remove automaticamente faixas brancas embutidas nas imagens extraídas de DOCX/PDF
+  const [trimmedOverride, setTrimmedOverride] = useState<{ sourceUrl: string; trimmedUrl: string } | null>(null);
+  const displayImageUrl =
+    getCachedTrimmedImage(resolvedImageUrl) ||
+    (trimmedOverride?.sourceUrl === resolvedImageUrl ? trimmedOverride.trimmedUrl : undefined) ||
+    resolvedImageUrl;
+
+  useEffect(() => {
+    if (!resolvedImageUrl || !resolvedImageUrl.startsWith("data:image/")) return;
+    if (getCachedTrimmedImage(resolvedImageUrl)) return;
+    let active = true;
+    trimImageWhiteBorders(resolvedImageUrl).then(trimmed => {
+      if (active && trimmed && trimmed !== resolvedImageUrl) {
+        setTrimmedOverride({ sourceUrl: resolvedImageUrl, trimmedUrl: trimmed });
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [resolvedImageUrl]);
+
   // Se for linha do tempo, usamos o layout de cards com colunas onde todas as imagens aparecem juntas!
   const withImage = !isTimeline && (
-    Boolean(resolvedImageUrl) ||
+    Boolean(displayImageUrl) ||
     (["imagem_esquerda_texto_direita", "topicos_com_imagem"].includes(slide.layout || "") && (Boolean(slide.image?.description) || isEditable))
   );
-  const imageIsVisible = Boolean(resolvedImageUrl);
+  const imageIsVisible = Boolean(displayImageUrl);
   const currentAspect: StudioSlideImageAspect = slide.image?.aspectRatio || "3:4";
   const currentFit: StudioSlideImageFit = slide.image?.fit || "cover";
   const imageSource = slide.image?.source?.trim();
@@ -546,7 +568,7 @@ export function StudioSlideFrame({
                         data-fit={currentFit}
                       >
                         <img
-                          src={resolvedImageUrl}
+                          src={displayImageUrl}
                           alt={slide.image?.description || timelineImages[0]?.image?.description || slide.title}
                         />
                         {isEditable && (
@@ -573,7 +595,7 @@ export function StudioSlideFrame({
                                           source: slide.image?.source || "",
                                           status: slide.image?.status || "Pronta",
                                           ...slide.image,
-                                          url: resolvedImageUrl,
+                                          url: displayImageUrl,
                                           aspectRatio: opt.id,
                                         },
                                       });
@@ -596,7 +618,7 @@ export function StudioSlideFrame({
                                       source: slide.image?.source || "",
                                       status: slide.image?.status || "Pronta",
                                       ...slide.image,
-                                      url: resolvedImageUrl,
+                                      url: displayImageUrl,
                                       fit: nextFit,
                                     },
                                   });

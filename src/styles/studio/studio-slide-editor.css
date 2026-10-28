@@ -1913,7 +1913,7 @@
   display: grid !important;
   grid-template-columns: 46% 49% !important;
   gap: 5% !important;
-  align-items: stretch !important;
+  align-items: start !important;
   height: 100% !important;
   width: 100% !important;
   flex: 1 1 0 !important;
@@ -1925,26 +1925,44 @@
   flex-direction: column !important;
   width: 100% !important;
   height: 100% !important;
+  max-height: 100% !important;
   flex: 1 1 0 !important;
   min-height: 0 !important;
   justify-content: flex-start !important;
+  align-items: flex-start !important;
 }
 
-.studio-preview__with-image .studio-preview__text {
+.studio-preview__with-image .studio-preview__text,
+.studio-preview__with-image .studio-preview__topics {
   display: flex !important;
   flex-direction: column !important;
+  justify-content: flex-start !important;
+  align-self: start !important;
   width: 100% !important;
   height: 100% !important;
   flex: 1 1 0 !important;
   min-height: 0 !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.studio-preview__with-image .studio-preview__text > :first-child,
+.studio-preview__with-image .studio-preview__text > .studio-inline-edit:first-child,
+.studio-preview__with-image .studio-preview__topics > p:first-child,
+.studio-preview__with-image .studio-preview__topics > p:first-child .studio-inline-edit {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
 }
 
 .studio-preview__image--editable {
   position: relative;
   cursor: pointer;
   height: 100%;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
   flex: 1 1 0;
   min-height: 0;
 }
@@ -1952,14 +1970,18 @@
 .studio-preview__image-container {
   position: relative;
   display: flex;
-  width: 100%;
-  height: 100%;
-  flex: 1 1 0;
+  width: 100% !important;
+  height: auto !important;
+  max-height: calc(100% - 2.2cqw) !important;
+  aspect-ratio: 3 / 4;
+  flex: 0 1 auto !important;
   min-height: 0;
+  margin: 0 !important;
   border-radius: 0.6cqw;
   overflow: hidden;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-  background: #f1f5f9;
+  background: transparent !important;
+  border: none !important;
 }
 
 .studio-preview__image-container img {
@@ -1971,11 +1993,19 @@
   min-height: 0;
   max-height: none !important;
   border-radius: 0.6cqw;
+  border: none !important;
+  background: transparent !important;
+}
+
+.studio-preview__image-container[data-fit="contain"] {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .studio-preview__image-container[data-fit="contain"] img {
   object-fit: contain !important;
-  background: #f8fafc !important;
+  object-position: top left !important;
+  background: transparent !important;
 }
 
 /* Barra superior flutuante: Proporção (3:4, 1:1, 4:3, 16:9) + Enquadramento (Preencher / Inteira) direto no slide */
