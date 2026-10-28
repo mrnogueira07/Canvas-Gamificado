@@ -83,9 +83,32 @@ export async function extractPageImagesFromPdf(buffer: ArrayBuffer): Promise<Ext
         if (operation === OPS.restore) { transform = stack.pop() || [1, 0, 0, 1, 0, 0]; continue; }
         if (operation === OPS.transform) { transform = multiply(transform, args as number[]); continue; }
         if (operation !== OPS.paintImageXObject && operation !== OPS.paintInlineImageXObject) continue;
-        const value = operation === OPS.paintImageXObject
-          ? (typeof args[0] === "string" && page.objs.has(args[0]) ? page.objs.get(args[0]) : undefined)
-          : args[0];
+        let value: unknown;
+        if (operation === OPS.paintImageXObject) {
+          const objName = typeof args[0] === "string" ? args[0] : "";
+          if (objName) {
+            const commonObjs = (page as unknown as { commonObjs?: typeof page.objs }).commonObjs;
+            const store = objName.startsWith("g_") && commonObjs ? commonObjs : page.objs;
+            if (store.has(objName)) {
+              value = store.get(objName);
+            } else {
+              value = await new Promise<unknown>((resolve) => {
+                const timer = setTimeout(() => resolve(undefined), 2500);
+                try {
+                  store.get(objName, (resolved: unknown) => {
+                    clearTimeout(timer);
+                    resolve(resolved);
+                  });
+                } catch {
+                  clearTimeout(timer);
+                  resolve(undefined);
+                }
+              });
+            }
+          }
+        } else {
+          value = args[0];
+        }
         if (!value || typeof value !== "object") continue;
         const url = pdfImageDataUrl(value as PdfPageImage);
         if (!url) continue;
@@ -325,31 +348,128 @@ export function extractImagesFromPdf(buffer: ArrayBuffer): ExtractedReferenceIma
 }
 
 /**
- * Extrai as imagens originais de um documento Word (.docx).
+ * Extrai as imagens originais de um documento Word (.docx) preservando a ordem do documento,
+ * legendas, fontes ("Fonte: ...") e o texto dos parágrafos ao redor de cada imagem.
  */
 export async function extractImagesFromDocx(buffer: ArrayBuffer): Promise<ExtractedReferenceImage[]> {
   const images: ExtractedReferenceImage[] = [];
   try {
     const zip = await JSZip.loadAsync(buffer);
+    const decodeXml = (raw: string) =>
+      raw
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    // 1. Mapeia relacionamentos rId -> word/media/*
+    const relMap = new Map<string, string>();
+    const relsFile = zip.file("word/_rels/document.xml.rels");
+    if (relsFile) {
+      const relsXml = await relsFile.async("string");
+      for (const relMatch of relsXml.matchAll(/<Relationship\b[^>]*>/gi)) {
+        const tag = relMatch[0];
+        const id = tag.match(/\bId="([^"]+)"/i)?.[1];
+        const target = tag.match(/\bTarget="([^"]+)"/i)?.[1];
+        if (id && target) {
+          const cleanTarget = target.replace(/^\/+/, "").replace(/^word\//i, "");
+          if (/^media\/.+\.(png|jpe?g|webp|gif|bmp|jfif)$/i.test(cleanTarget)) {
+            relMap.set(id, `word/${cleanTarget}`);
+          }
+        }
+      }
+    }
+
+    // 2. Lê parágrafos de word/document.xml para ordenar imagens e extrair contexto, legenda e fonte
+    const mediaMeta = new Map<string, { caption?: string; source?: string; context?: string }>();
+    const orderedPaths: string[] = [];
+    const docFile = zip.file("word/document.xml");
+    if (docFile && relMap.size > 0) {
+      const docXml = await docFile.async("string");
+      const rawParagraphs = docXml.match(/<w:p[\s>][\s\S]*?<\/w:p>/g) || [];
+      const paragraphs = rawParagraphs.map(pXml => {
+        const textParts = Array.from(pXml.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g), m => m[1]);
+        const text = decodeXml(textParts.join(""));
+        const rIds: string[] = [];
+        for (const rMatch of pXml.matchAll(/\b(?:r:embed|r:id|o:relid)="([^"]+)"/gi)) {
+          if (relMap.has(rMatch[1])) rIds.push(rMatch[1]);
+        }
+        const docPrDescr = pXml.match(/<wp:docPr\b[^>]*\b(?:descr|title)="([^"]+)"/i)?.[1];
+        return { text, rIds, altText: docPrDescr ? decodeXml(docPrDescr) : undefined };
+      });
+
+      paragraphs.forEach((para, idx) => {
+        if (!para.rIds.length) return;
+        const nearbyWindow = paragraphs.slice(Math.max(0, idx - 2), Math.min(paragraphs.length, idx + 4));
+        const afterWindow = paragraphs.slice(idx, Math.min(paragraphs.length, idx + 4));
+        const nearbyTexts = nearbyWindow.map(p => p.text).filter(Boolean);
+        const afterTexts = afterWindow.map(p => p.text).filter(Boolean);
+
+        const sourceLine = afterTexts.find(t => /(?:^|\b)(?:fonte|cr[eé]dito|acervo|dispon[ií]vel em)\s*:\s*\S/i.test(t))
+          || nearbyTexts.find(t => /(?:^|\b)(?:fonte|cr[eé]dito|acervo|dispon[ií]vel em)\s*:\s*\S/i.test(t));
+        let source: string | undefined;
+        if (sourceLine) {
+          const extractedSource = sourceLine.match(/(?:fonte|cr[eé]dito|acervo|dispon[ií]vel em)\s*:\s*(.+)$/i)?.[1]?.trim();
+          if (extractedSource) source = `Fonte: ${extractedSource}`;
+        }
+
+        const captionLine =
+          afterTexts.find(t => /^(?:figura|imagem|foto|ilustra[cç][aã]o|mapa|quadro|gr[aá]fico|gravura|pintura)\b/i.test(t)) ||
+          (para.altText && !/\.(png|jpe?g|webp|gif|bmp)$/i.test(para.altText) ? para.altText : undefined) ||
+          afterTexts.find(t => t.length >= 10 && t.length <= 130 && !/^(?:fonte|cr[eé]dito)\s*:/i.test(t));
+
+        const context = paragraphs
+          .slice(Math.max(0, idx - 3), Math.min(paragraphs.length, idx + 4))
+          .map(p => p.text)
+          .filter(Boolean)
+          .join(" ")
+          .slice(0, 900);
+
+        for (const rId of para.rIds) {
+          const mediaPath = relMap.get(rId);
+          if (!mediaPath) continue;
+          if (!orderedPaths.includes(mediaPath)) orderedPaths.push(mediaPath);
+          if (!mediaMeta.has(mediaPath)) {
+            mediaMeta.set(mediaPath, { caption: captionLine, source, context });
+          }
+        }
+      });
+    }
+
+    const allMediaFiles = Object.keys(zip.files)
+      .filter(path => /^word\/media\/.+\.(png|jpe?g|webp|gif|bmp|jfif)$/i.test(path))
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+    for (const path of allMediaFiles) {
+      if (!orderedPaths.includes(path)) orderedPaths.push(path);
+    }
+
     let index = 1;
-    const mediaFiles = Object.keys(zip.files).filter(path => /^word\/media\/.+\.(png|jpe?g|webp|gif|bmp)$/i.test(path));
-    for (const path of mediaFiles) {
+    for (const path of orderedPaths) {
       const file = zip.file(path);
       if (!file) continue;
       const arrayBuffer = await file.async("arraybuffer");
-      if (arrayBuffer.byteLength < 1500) continue;
+      if (arrayBuffer.byteLength < 1000) continue;
       const ext = path.split(".").pop()?.toLowerCase() || "png";
-      const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/png";
+      const mime = ext === "jpg" || ext === "jpeg" || ext === "jfif" ? "image/jpeg" : ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/png";
       const u8 = new Uint8Array(arrayBuffer);
       let b64 = "";
       for (let i = 0; i < u8.length; i += 8192) {
         b64 += String.fromCharCode(...u8.subarray(i, i + 8192));
       }
+      const meta = mediaMeta.get(path);
+      const num = index++;
       images.push({
-        id: `docx-img-${index++}`,
-        name: `Imagem ${index - 1} (${path.split("/").pop() || "Word"})`,
+        id: `docx-img-${num}`,
+        name: meta?.caption ? meta.caption.slice(0, 90) : `Imagem ${num} (${path.split("/").pop() || "Word"})`,
         url: `data:${mime};base64,${btoa(b64)}`,
         sizeBytes: arrayBuffer.byteLength,
+        caption: meta?.caption,
+        source: meta?.source,
+        context: meta?.context,
       });
     }
   } catch (err) {
@@ -580,8 +700,19 @@ export async function readStudioReference(file: File): Promise<StudioReferenceDo
       console.warn("Não foi possível relacionar imagens às páginas do PDF:", error);
     }
     // Older or malformed PDFs can contain JPEG streams that PDF.js cannot expose.
-    // Keep those available for manual selection, but do not guess their page.
-    if (!rawImages.length) rawImages = extractImagesFromPdf(buffer);
+    // Keep those available for manual selection, and complement any missed streams.
+    const streamImages = extractImagesFromPdf(buffer);
+    if (!rawImages.length) {
+      rawImages = streamImages;
+    } else if (streamImages.length > rawImages.length) {
+      const existingSizes = new Set(rawImages.map(img => img.sizeBytes || 0));
+      for (const sImg of streamImages) {
+        if (rawImages.length >= streamImages.length) break;
+        if (!sImg.sizeBytes || !existingSizes.has(sImg.sizeBytes)) {
+          rawImages.push(sImg);
+        }
+      }
+    }
     let binary = "";
     const bytes = new Uint8Array(buffer);
     for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));

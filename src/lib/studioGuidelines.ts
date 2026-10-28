@@ -39,10 +39,9 @@ SUA MISSÃO CENTRAL: **Resumir o arquivo/apostila enviado e criar uma aula compl
 - IMAGENS:
   - Devem ser colocadas preferencialmente ao lado esquerdo do layout (layout topicos_com_imagem).
   - A fonte da imagem deve ser indicada obrigatoriamente na parte inferior, em Montserrat 40pt. Use o crédito original quando estiver no material; caso contrário, identifique a apostila e a página sem inventar autoria.
-  - Use somente imagens realmente extraídas do material enviado. A imagem escolhida e os tópicos do mesmo slide devem tratar da mesma ideia; confira a página, a legenda e o texto ao redor da imagem no catálogo.
-  - Para cada imagem usada, retorne "imagem":{"id":"ID exato do catálogo","descricao":"o que a imagem mostra"}. Use layout "topicos_com_imagem" e apresente os tópicos correspondentes ao conteúdo ilustrado. Não atribua uma imagem a um slide só para preencher espaço.
+  - OBRIGATÓRIO: Se houver itens na lista 'imagens_extraidas', você DEVE vincular essas imagens originais aos slides de desenvolvimento (tipo conteudo, gancho ou interacao). Use o ID exato da lista em "imagem":{"id":"ID exato do catálogo","descricao":"o que a imagem mostra"} e use layout "topicos_com_imagem".
   - Em "fonte_pag", informe a página do conteúdo de cada slide. Se usar uma imagem, inclua a página da imagem e mantenha o texto visível coerente com o contexto dessa página.
-  - Quando não houver imagem pertinente ou a relação com o texto for incerta, use um layout sem imagem. Nunca crie imagem, legenda, página ou crédito inexistentes.
+  - Para slides conceituais em que não houver imagem no documento, use um layout sem imagem (ex: topicos, topicos_com_barras ou caixas_contorno).
 - TÓPICOS, SEPARAÇÃO DE CONTEÚDO E GRAFISMOS:
   - Para separação visual de parágrafos/tópicos, usar layouts como:
     - 'topicos_com_barras': tópicos com barras laterais coloridas alternadas (Laranja #F79646, Roxo #7030A0, Verde #9BBB59).
@@ -141,6 +140,14 @@ export function studioPrompt(project: StudioProject): string {
     exercicio_escolhido: project.exercise,
     observacoes: project.observations,
     quantidade_slides_solicitada: project.targetSlideCount || 10,
+    imagens_extraidas: (project.referenceImages || []).map(image => ({
+      id: image.id,
+      nome: image.name,
+      pagina: image.page || "",
+      legenda: image.caption || "",
+      fonte: image.source || "",
+      contexto: (image.context || "").slice(0, 500),
+    })),
     material_apostila: project.sourceContent
   };
   return [CORE_PROMPT, LINE_PROMPTS[line] || LINE_PROMPTS["Konectar.me"], OUTPUT_PROMPT, sceneFormat, "# VARIÁVEIS DO CONSULTOR (dados JSON)", JSON.stringify(briefing)].join("\n\n");

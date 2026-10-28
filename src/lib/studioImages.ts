@@ -4,9 +4,16 @@ import { auth, functions, storage } from "./firebase";
 import { model as geminiModel } from "./gemini";
 import type { StudioProject, StudioSlide } from "./studioProjects";
 
+export type StudioImageProvider = "magnific" | "gemini" | "openai";
+
 const generateImageCallable = httpsCallable<{
-  projectId: string; slideId: string; description: string; context: string;
-}, { url: string }>(functions, "generateStudioImage", { timeout: 110000 });
+  projectId: string;
+  slideId: string;
+  description: string;
+  context: string;
+  provider?: StudioImageProvider;
+  aspectRatio?: StudioImageAspectRatio;
+}, { url: string; provider?: string; providerLabel?: string }>(functions, "generateStudioImage", { timeout: 140000 });
 
 export type MagnificEngine = "photographic" | "cinematic" | "painting" | "illustration" | "science";
 export type MagnificCreativity = "low" | "medium" | "high";
@@ -26,6 +33,7 @@ export interface GenerateImageOptions {
   aspectRatio?: StudioImageAspectRatio;
   isUpscale?: boolean;
   sourceImageUrl?: string;
+  provider?: StudioImageProvider;
 }
 
 const ENGINE_PROMPT_MAP: Record<MagnificEngine, {
@@ -91,6 +99,20 @@ const ASPECT_RATIO_MAP: Record<StudioImageAspectRatio, string> = {
   "1:1": "square_1_1",
   "4:3": "classic_4_3",
   "16:9": "widescreen_16_9",
+};
+
+const OPENAI_SIZE: Record<StudioImageAspectRatio, string> = {
+  "3:4": "1024x1536",
+  "1:1": "1024x1024",
+  "4:3": "1536x1024",
+  "16:9": "1536x1024",
+};
+
+const DALLE3_SIZE: Record<StudioImageAspectRatio, string> = {
+  "3:4": "1024x1792",
+  "1:1": "1024x1024",
+  "4:3": "1792x1024",
+  "16:9": "1792x1024",
 };
 
 /**
@@ -214,12 +236,108 @@ export async function generateStudioImage(
 
   let url: string | undefined;
   let provider = "Magnific AI";
-  const magnificKey = import.meta.env.VITE_MAGNIFIC_API_KEY;
+  const selectedProvider: StudioImageProvider = options?.provider || "magnific";
 
-  // 1. GERAÇÃO OU REFINO DIRETO COM A API MAGNIFIC (MYSTIC / IMAGE-UPSCALER)
-  if (magnificKey) {
+  // 1. OPENAI (GPT-IMAGE-1 COM FALLBACK DALL-E-3)
+  const tryOpenAI = async (): Promise<boolean> => {
+    const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    if (!openaiKey) return false;
     try {
-      // Caso seja solicitação de Refino / Upscale com imagem existente
+      const call = async (body: Record<string, unknown>) => {
+        const res = await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openaiKey}`,
+          },
+          signal: AbortSignal.timeout(120000),
+          body: JSON.stringify(body),
+        });
+        const json = (await res.json().catch(() => ({}))) as {
+          data?: { b64_json?: string; url?: string }[];
+          error?: { message?: string };
+        };
+        if (!res.ok) throw new Error(json.error?.message || `OpenAI HTTP ${res.status}`);
+        return json.data?.[0];
+      };
+
+      let item: { b64_json?: string; url?: string } | undefined;
+      try {
+        item = await call({
+          model: "gpt-image-1",
+          prompt: fullPrompt.slice(0, 3000),
+          size: OPENAI_SIZE[selectedRatio] || "1024x1536",
+          quality: "high",
+          n: 1,
+        });
+      } catch (err) {
+        console.warn("gpt-image-1 indisponível no cliente, tentando dall-e-3:", err);
+        item = await call({
+          model: "dall-e-3",
+          prompt: fullPrompt.slice(0, 3900),
+          size: DALLE3_SIZE[selectedRatio] || "1024x1792",
+          quality: "hd",
+          response_format: "b64_json",
+          n: 1,
+        });
+      }
+
+      if (item?.b64_json) {
+        const directDataUrl = `data:image/png;base64,${item.b64_json}`;
+        if (auth.currentUser) {
+          try {
+            const binary = atob(item.b64_json);
+            const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+            url = await uploadStudioImage(
+              auth.currentUser.uid,
+              project.id,
+              slide.id,
+              new File([bytes], `openai-${engine}.png`, { type: "image/png" })
+            );
+            cacheImageDataUrl(url, directDataUrl);
+          } catch {
+            url = directDataUrl;
+          }
+        } else {
+          url = directDataUrl;
+        }
+        cacheImageDataUrl(url, directDataUrl);
+        provider = "OpenAI (GPT)";
+        return true;
+      }
+
+      if (item?.url) {
+        url = item.url;
+        if (auth.currentUser && url.startsWith("http")) {
+          try {
+            const fetchImg = await fetch(url);
+            if (fetchImg.ok) {
+              const blob = await fetchImg.blob();
+              url = await uploadStudioImage(
+                auth.currentUser.uid,
+                project.id,
+                slide.id,
+                new File([blob], `openai-${engine}.png`, { type: "image/png" })
+              );
+            }
+          } catch {
+            /* mantem url direta */
+          }
+        }
+        provider = "OpenAI (GPT)";
+        return true;
+      }
+    } catch (err) {
+      console.warn("Falha no gerador OpenAI direto:", err);
+    }
+    return false;
+  };
+
+  // 2. MAGNIFIC AI (MYSTIC / IMAGE-UPSCALER)
+  const tryMagnific = async (): Promise<boolean> => {
+    const magnificKey = import.meta.env.VITE_MAGNIFIC_API_KEY;
+    if (!magnificKey) return false;
+    try {
       if (options?.isUpscale && options?.sourceImageUrl && options.sourceImageUrl.startsWith("http")) {
         const upscalerRes = await fetch("https://api.magnific.com/v1/ai/image-upscaler", {
           method: "POST",
@@ -238,7 +356,7 @@ export async function generateStudioImage(
         });
 
         if (upscalerRes.ok) {
-          const upPayload = await upscalerRes.json() as { data?: { task_id?: string; generated?: string[] } };
+          const upPayload = (await upscalerRes.json()) as { data?: { task_id?: string; generated?: string[] } };
           const taskId = upPayload.data?.task_id;
           if (taskId) {
             for (let i = 0; i < 30; i++) {
@@ -247,11 +365,11 @@ export async function generateStudioImage(
                 headers: { "x-magnific-api-key": magnificKey },
               });
               if (poll.ok) {
-                const pollData = await poll.json() as { data?: { status?: string; generated?: string[] } };
+                const pollData = (await poll.json()) as { data?: { status?: string; generated?: string[] } };
                 if (pollData.data?.status === "COMPLETED" && pollData.data.generated?.[0]) {
                   url = pollData.data.generated[0];
                   provider = "Magnific AI (Upscale)";
-                  break;
+                  return true;
                 }
                 if (pollData.data?.status === "FAILED") break;
               }
@@ -260,7 +378,6 @@ export async function generateStudioImage(
         }
       }
 
-      // Se não for upscale ou se upscale não retornou, gera com Magnific Mystic
       if (!url) {
         const mysticRes = await fetch("https://api.magnific.com/v1/ai/mystic", {
           method: "POST",
@@ -278,108 +395,148 @@ export async function generateStudioImage(
         });
 
         if (mysticRes.ok) {
-          const payload = await mysticRes.json() as { data?: { task_id?: string; generated?: string[] } };
+          const payload = (await mysticRes.json()) as { data?: { task_id?: string; generated?: string[] } };
           const taskId = payload.data?.task_id;
           if (payload.data?.generated?.[0]) {
             url = payload.data.generated[0];
           } else if (taskId) {
-            // Polling do resultado do Mystic
             for (let i = 0; i < 35; i++) {
               await new Promise(r => setTimeout(r, 1800));
               const poll = await fetch(`https://api.magnific.com/v1/ai/mystic/${taskId}`, {
                 headers: { "x-magnific-api-key": magnificKey },
               });
               if (poll.ok) {
-                const pollData = await poll.json() as { data?: { status?: string; generated?: string[] } };
+                const pollData = (await poll.json()) as { data?: { status?: string; generated?: string[] } };
                 if (pollData.data?.status === "COMPLETED" && pollData.data.generated?.[0]) {
                   url = pollData.data.generated[0];
                   provider = "Magnific AI (Mystic)";
                   break;
                 }
-                if (pollData.data?.status === "FAILED") {
-                  console.warn("[Magnific Mystic] Tarefa falhou:", pollData.data);
-                  break;
-                }
+                if (pollData.data?.status === "FAILED") break;
               }
             }
           }
-        } else {
-          console.warn("[Magnific Mystic] Erro HTTP:", mysticRes.status);
         }
       }
 
-      // Se obtivemos URL externa da Magnific, fazemos download e upload para Storage próprio para garantir persistência
       if (url && url.startsWith("http") && auth.currentUser) {
         try {
           const fetchImg = await fetch(url);
           if (fetchImg.ok) {
             const blob = await fetchImg.blob();
-            url = await uploadStudioImage(auth.currentUser.uid, project.id, slide.id, new File([blob], `magnific-${engine}.jpg`, { type: "image/jpeg" }));
+            url = await uploadStudioImage(
+              auth.currentUser.uid,
+              project.id,
+              slide.id,
+              new File([blob], `magnific-${engine}.jpg`, { type: "image/jpeg" })
+            );
           }
-        } catch (uploadErr) {
-          console.warn("Upload da imagem Magnific para Storage falhou, mantendo URL direta:", uploadErr);
+        } catch {
+          /* mantem URL direta */
         }
       }
-    } catch (magErr) {
-      console.warn("Falha no pipeline Magnific AI, iniciando fallback Gemini:", magErr);
-    }
-  }
 
-  // 2. FALLBACK PARA GEMINI COM AS MESMAS DIRETRIZES MAGNIFIC
-  if (!url) {
+      if (url) {
+        provider = "Magnific AI";
+        return true;
+      }
+    } catch (err) {
+      console.warn("Falha no gerador Magnific direto:", err);
+    }
+    return false;
+  };
+
+  // 3. GEMINI AI (FLASH IMAGE)
+  const tryGemini = async (): Promise<boolean> => {
     const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (geminiKey) {
-      try {
-        provider = "Gemini AI";
-        const geminiInstruction = `Crie uma imagem de altíssima definição no estilo ${engineConfig.title}.
+    if (!geminiKey) return false;
+    try {
+      const geminiInstruction = `Crie uma imagem de altíssima definição no estilo ${engineConfig.title}.
 Diretrizes Visuais da Cena: ${fullPrompt}
 Composição: cobrir toda a margem do slide (${selectedRatio}).
 Restrições estritas: Proibido qualquer texto, legenda, moldura, barra preta ou logotipo.`;
 
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent", {
+      const response = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent",
+        {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
           signal: AbortSignal.timeout(90000),
           body: JSON.stringify({
-            contents: [{
-              role: "user",
-              parts: [{
-                text: `${geminiInstruction}\nDescrição detalhada: ${JSON.stringify(description.slice(0, 4000))}\nContexto: ${context}`
-              }]
-            }],
-            generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    text: `${geminiInstruction}\nDescrição detalhada: ${JSON.stringify(description.slice(0, 4000))}\nContexto: ${context}`,
+                  },
+                ],
+              },
+            ],
+            generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
           }),
-        });
+        }
+      );
 
-        if (response.ok) {
-          const data = await response.json() as { candidates?: { content?: { parts?: { inlineData?: { mimeType: string; data: string } }[] } }[] };
-          const image = data.candidates?.[0]?.content?.parts?.find(part => part.inlineData?.mimeType?.startsWith("image/"))?.inlineData;
-          if (image && ["image/png", "image/jpeg", "image/webp"].includes(image.mimeType)) {
-            const binary = atob(image.data);
-            if (binary.length <= 10 * 1024 * 1024) {
-              const directDataUrl = `data:${image.mimeType};base64,${image.data}`;
-              if (auth.currentUser) {
-                try {
-                  const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
-                  url = await uploadStudioImage(auth.currentUser.uid, project.id, slide.id, new File([bytes], `generated-${engine}.jpg`, { type: image.mimeType }));
-                  cacheImageDataUrl(url, directDataUrl);
-                } catch {
-                  url = directDataUrl;
-                }
-              } else {
+      if (response.ok) {
+        const data = (await response.json()) as {
+          candidates?: { content?: { parts?: { inlineData?: { mimeType: string; data: string } }[] } }[];
+        };
+        const image = data.candidates?.[0]?.content?.parts?.find(part =>
+          part.inlineData?.mimeType?.startsWith("image/")
+        )?.inlineData;
+        if (image && ["image/png", "image/jpeg", "image/webp"].includes(image.mimeType)) {
+          const binary = atob(image.data);
+          if (binary.length <= 10 * 1024 * 1024) {
+            const directDataUrl = `data:${image.mimeType};base64,${image.data}`;
+            if (auth.currentUser) {
+              try {
+                const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+                url = await uploadStudioImage(
+                  auth.currentUser.uid,
+                  project.id,
+                  slide.id,
+                  new File([bytes], `generated-${engine}.jpg`, { type: image.mimeType })
+                );
+                cacheImageDataUrl(url, directDataUrl);
+              } catch {
                 url = directDataUrl;
               }
-              cacheImageDataUrl(url, directDataUrl);
+            } else {
+              url = directDataUrl;
             }
+            cacheImageDataUrl(url, directDataUrl);
+            provider = "Gemini AI";
+            return true;
           }
         }
-      } catch (gemErr) {
-        console.warn("Fallback Gemini falhou:", gemErr);
       }
+    } catch (err) {
+      console.warn("Falha no gerador Gemini direto:", err);
+    }
+    return false;
+  };
+
+  // Executa o provedor escolhido pelo usuário primeiro; depois os demais como reserva
+  const priorityOrder: StudioImageProvider[] = [
+    selectedProvider,
+    ...(["magnific", "gemini", "openai"] as StudioImageProvider[]).filter(p => p !== selectedProvider),
+  ];
+
+  for (const prov of priorityOrder) {
+    if (prov === "openai") {
+      const ok = await tryOpenAI();
+      if (ok && url) break;
+    } else if (prov === "magnific") {
+      const ok = await tryMagnific();
+      if (ok && url) break;
+    } else if (prov === "gemini") {
+      const ok = await tryGemini();
+      if (ok && url) break;
     }
   }
 
-  // 3. FALLBACK FINAL PARA FIREBASE CLOUD FUNCTION
+  // 4. FALLBACK FINAL PARA FIREBASE CLOUD FUNCTION (COM O PROVEDOR SELECIONADO)
   if (!url) {
     try {
       const response = await generateImageCallable({
@@ -387,9 +544,11 @@ Restrições estritas: Proibido qualquer texto, legenda, moldura, barra preta ou
         slideId: slide.id,
         description: `${description.slice(0, 3500)}. ${engineConfig.clause}`,
         context,
+        provider: selectedProvider,
+        aspectRatio: selectedRatio,
       });
       url = response.data?.url;
-      provider = "Servidor Studio";
+      provider = response.data?.providerLabel || "Servidor Studio";
     } catch (cause) {
       throw new Error(cause instanceof Error ? cause.message : "Não foi possível gerar a imagem com IA.");
     }

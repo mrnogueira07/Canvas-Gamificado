@@ -204,7 +204,12 @@ function SlidesFlow({
                 </span>
                 <span className="studio-slides-file__meta">
                   <strong>{project.sourceFileName || "Material de referência"}</strong>
-                  <small>{project.sourceContent.length.toLocaleString("pt-BR")} caracteres carregados</small>
+                  <small>
+                    {project.sourceContent.length.toLocaleString("pt-BR")} caracteres carregados
+                    {project.referenceImages && project.referenceImages.length > 0
+                      ? ` · ${project.referenceImages.length} imagem(ns) original(is) extraída(s)`
+                      : ""}
+                  </small>
                 </span>
                 <button type="button" disabled={importing} aria-label="Remover material" onClick={() => onUpdate({ sourceContent: "", sourceFileName: undefined, referenceImages: [] })}>
                   <X size={17} />
@@ -408,6 +413,10 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
     const unsavedResult = completedJob?.status === "error" ? completedJob.result : undefined;
     return unsavedResult ?? initial ?? completedJob?.result ?? newProject(kind, ["Konectar.me", "Konecta Kids", "Educa\u00e7\u00e3o Corporativa"].includes(searchParams.get("linha") || "") ? searchParams.get("linha")! : "Konectar.me");
   });
+  const projectRef = useRef<StudioProject>(project);
+  useEffect(() => {
+    projectRef.current = project;
+  }, [project]);
   const [recentProjects, setRecentProjects] = useState<StudioProject[]>(() => getStudioProjects(userId).filter(item => item.kind === "slides").slice(0, 6));
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState("");
@@ -586,45 +595,62 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
       setError("O conteúdo de referência está vazio. Insira um texto ou envie um arquivo.");
       return;
     }
+    const currentBase = projectRef.current;
+    const imagesToStore = referenceImages !== undefined ? referenceImages : (currentBase.referenceImages || []);
+
+    // Atualiza imediatamente o rascunho com o conteúdo e as imagens extraídas para garantir que nunca sejam perdidas
+    const immediateProject: StudioProject = {
+      ...currentBase,
+      sourceContent: trimmed,
+      sourceFileName: fileName || currentBase.sourceFileName || (fileName === undefined && !currentBase.sourceFileName ? "Texto inserido" : currentBase.sourceFileName),
+      referenceImages: imagesToStore,
+      updatedAt: new Date().toISOString(),
+    };
+    const immediateSaved = saveStudioProject(userId, immediateProject);
+    projectRef.current = immediateSaved;
+    setProject(immediateSaved);
+    setDirty(false);
+
     setImporting(true);
     setError("");
     setMessage("");
-    setImportStatus(referenceImages?.length ? `Lendo documento e ${referenceImages.length} imagens originais…` : "Lendo conteúdo de referência…");
+    setImportStatus(imagesToStore.length ? `Lendo documento e ${imagesToStore.length} imagens originais…` : "Lendo conteúdo de referência…");
 
     try {
       // 1. Extrair briefing com IA a partir do conteúdo de referência
       setImportStatus("Identificando tema e dados do briefing…");
       let extracted = {};
       try {
-        extracted = await extractStudioBriefing(trimmed, project.line || "Konectar.me");
+        extracted = await extractStudioBriefing(trimmed, immediateSaved.line || "Konectar.me");
       } catch (cause) {
         console.warn("Extração de briefing automática parcial:", cause);
       }
 
       if (!alive.current) return;
 
-      const patch = mergeStudioBriefing(project, extracted);
-      const corporate = project.line === "Educação Corporativa";
-      const kids = project.line === "Konecta Kids";
+      const latestBase = projectRef.current;
+      const patch = mergeStudioBriefing(latestBase, extracted);
+      const corporate = latestBase.line === "Educação Corporativa";
+      const kids = latestBase.line === "Konecta Kids";
 
-      const title = project.title.trim() || patch.title?.trim() || "Aula a partir da Referência";
-      const subject = project.subject.trim() || patch.subject?.trim() || "Geral";
-      const gradeLevel = project.gradeLevel || patch.gradeLevel || (corporate ? "" : "Fundamental 2");
-      const objective = project.objective.trim() || patch.objective?.trim() || `Compreender os conceitos essenciais de ${title}`;
-      const exercise = project.exercise?.trim() || patch.exercise?.trim() || (project.line === "Konectar.me" && kind === "slides" ? "" : "Exercício prático de fixação e reflexão sobre o conteúdo");
-      const schoolYear = project.schoolYear?.trim() || patch.schoolYear?.trim() || (corporate ? "" : "Ano regular");
-      const bimester = project.bimester?.trim() || patch.bimester?.trim() || (corporate ? "" : "1º Bimestre");
-      const subtitle = project.subtitle?.trim() || patch.subtitle?.trim() || (corporate ? "Capacitação Profissional" : "");
-      const teacher = project.teacher?.trim() || patch.teacher?.trim() || (kids ? "Professor(a)" : "");
-      const curriculum = project.curriculum?.trim() || patch.curriculum?.trim() || "";
-      const observations = project.observations?.trim() || patch.observations?.trim() || "";
-      const imagesToStore = referenceImages !== undefined ? referenceImages : (project.referenceImages || []);
+      const title = latestBase.title.trim() || patch.title?.trim() || "Aula a partir da Referência";
+      const subject = latestBase.subject.trim() || patch.subject?.trim() || "Geral";
+      const gradeLevel = latestBase.gradeLevel || patch.gradeLevel || (corporate ? "" : "Fundamental 2");
+      const objective = latestBase.objective.trim() || patch.objective?.trim() || `Compreender os conceitos essenciais de ${title}`;
+      const exercise = latestBase.exercise?.trim() || patch.exercise?.trim() || (latestBase.line === "Konectar.me" && kind === "slides" ? "" : "Exercício prático de fixação e reflexão sobre o conteúdo");
+      const schoolYear = latestBase.schoolYear?.trim() || patch.schoolYear?.trim() || (corporate ? "" : "Ano regular");
+      const bimester = latestBase.bimester?.trim() || patch.bimester?.trim() || (corporate ? "" : "1º Bimestre");
+      const subtitle = latestBase.subtitle?.trim() || patch.subtitle?.trim() || (corporate ? "Capacitação Profissional" : "");
+      const teacher = latestBase.teacher?.trim() || patch.teacher?.trim() || (kids ? "Professor(a)" : "");
+      const curriculum = latestBase.curriculum?.trim() || patch.curriculum?.trim() || "";
+      const observations = latestBase.observations?.trim() || patch.observations?.trim() || "";
+      const finalImages = imagesToStore.length > 0 ? imagesToStore : (latestBase.referenceImages || []);
 
       const updatedProject: StudioProject = {
-        ...project,
+        ...latestBase,
         sourceContent: trimmed,
-        sourceFileName: fileName || project.sourceFileName || (fileName === undefined && !project.sourceFileName ? "Texto inserido" : project.sourceFileName),
-        referenceImages: imagesToStore,
+        sourceFileName: fileName || latestBase.sourceFileName || (fileName === undefined && !latestBase.sourceFileName ? "Texto inserido" : latestBase.sourceFileName),
+        referenceImages: finalImages,
         title,
         subject,
         gradeLevel,
@@ -640,12 +666,13 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
       };
 
       const saved = saveStudioProject(userId, updatedProject);
+      projectRef.current = saved;
       setProject(saved);
       setDirty(false);
 
       const actionLabel = kind === "slides" ? "Criar aula com IA" : "Gerar estrutura da aula";
-      setMessage(imagesToStore.length > 0
-        ? `Material carregado (${imagesToStore.length} imagem(ns) extraída(s))! Clique em "${actionLabel}" para continuar.`
+      setMessage(finalImages.length > 0
+        ? `Material carregado (${finalImages.length} imagem(ns) original(is) extraída(s))! Clique em "${actionLabel}" para continuar.`
         : `Material carregado com sucesso! Clique em "${actionLabel}" para continuar.`);
     } catch (cause) {
       if (alive.current) setError(cause instanceof Error ? cause.message : "Não foi possível processar o conteúdo. Tente novamente.");
@@ -677,29 +704,32 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
   }
 
   const generate = useCallback(async () => {
-    if (!project.sourceContent?.trim()) {
+    const currentBase = projectRef.current.sourceContent?.trim() ? projectRef.current : project;
+    if (!currentBase.sourceContent?.trim()) {
       setError("Insira o conteúdo de referência (envie um documento PDF/Word ou cole o texto) para que a IA preencha os slides.");
       return;
     }
     setError("");
-    const corporate = project.line === "Educação Corporativa";
-    const kids = project.line === "Konecta Kids";
+    const corporate = currentBase.line === "Educação Corporativa";
+    const kids = currentBase.line === "Konecta Kids";
     const projectToGenerate: StudioProject = {
-      ...project,
-      title: project.title.trim() || "Aula a partir da Referência",
-      subject: project.subject.trim() || "Geral",
-      gradeLevel: project.gradeLevel || (corporate ? "" : "Fundamental 2"),
-      objective: project.objective.trim() || `Compreender os conceitos de ${project.title.trim() || "conteúdo de referência"}`,
-      exercise: project.exercise?.trim() || (project.line === "Konectar.me" && kind === "slides" ? "" : "Exercício prático de fixação dos conceitos"),
-      schoolYear: project.schoolYear?.trim() || (corporate ? "" : "Ano regular"),
-      bimester: project.bimester?.trim() || (corporate ? "" : "1º Bimestre"),
-      subtitle: project.subtitle?.trim() || (corporate ? "Capacitação" : ""),
-      teacher: project.teacher?.trim() || (kids ? "Professor(a)" : ""),
-      targetSlideCount: project.targetSlideCount || 10,
+      ...currentBase,
+      referenceImages: (currentBase.referenceImages && currentBase.referenceImages.length > 0) ? currentBase.referenceImages : (project.referenceImages || []),
+      title: currentBase.title.trim() || "Aula a partir da Referência",
+      subject: currentBase.subject.trim() || "Geral",
+      gradeLevel: currentBase.gradeLevel || (corporate ? "" : "Fundamental 2"),
+      objective: currentBase.objective.trim() || `Compreender os conceitos de ${currentBase.title.trim() || "conteúdo de referência"}`,
+      exercise: currentBase.exercise?.trim() || (currentBase.line === "Konectar.me" && kind === "slides" ? "" : "Exercício prático de fixação dos conceitos"),
+      schoolYear: currentBase.schoolYear?.trim() || (corporate ? "" : "Ano regular"),
+      bimester: currentBase.bimester?.trim() || (corporate ? "" : "1º Bimestre"),
+      subtitle: currentBase.subtitle?.trim() || (corporate ? "Capacitação" : ""),
+      teacher: currentBase.teacher?.trim() || (kids ? "Professor(a)" : ""),
+      targetSlideCount: currentBase.targetSlideCount || 10,
       updatedAt: new Date().toISOString(),
     };
     try {
       const saved = saveStudioProject(userId, projectToGenerate);
+      projectRef.current = saved;
       setProject(saved);
       setDirty(false);
       startStudioJob(userId, saved);

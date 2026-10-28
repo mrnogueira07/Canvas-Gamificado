@@ -380,21 +380,37 @@ export function saveStudioProject(userId: string, project: StudioProject): Studi
   } catch (quotaErr) {
     console.warn("Cota do localStorage atingida. Projeto completo preservado em IndexedDB/memória. Compactando localStorage:", quotaErr);
     try {
-      // Tenta salvar mantendo o projeto atual completo e removendo imagens grandes de rascunhos antigos
+      // 1. Mantém o projeto atual `saved` completo (com imagens) e remove dados pesados apenas dos rascunhos antigos
       const compactList = updatedList.slice(0, 5).map(item => {
         if (item.id === saved.id) return item;
-        return { ...item, referenceImages: [] };
+        return {
+          ...item,
+          referenceImages: [],
+          slides: item.slides.map(s => ({
+            ...s,
+            image: s.image?.url?.startsWith("data:") ? { ...s.image, url: undefined } : s.image,
+          })),
+        };
       });
       localStorage.setItem(storageKey(userId), JSON.stringify(compactList));
     } catch {
       try {
-        // Se ainda exceder, salva apenas metadados no localStorage
-        const metadataOnly = updatedList.slice(0, 5).map(item => ({
-          ...item,
-          referenceImages: [],
-          slides: item.slides.map(s => ({ ...s, image: s.image ? { ...s.image, url: undefined } : undefined }))
-        }));
-        localStorage.setItem(storageKey(userId), JSON.stringify(metadataOnly));
+        // 2. Se o projeto atual com todas as imagens brutas exceder a cota, preserva todas as imagens dos slides do projeto atual
+        // e descarta apenas `referenceImages` do localStorage (já preservadas 100% no IndexedDB e na memória)
+        const slidePreserved = updatedList.slice(0, 5).map(item => {
+          if (item.id === saved.id) {
+            return { ...item, referenceImages: [] };
+          }
+          return {
+            ...item,
+            referenceImages: [],
+            slides: item.slides.map(s => ({
+              ...s,
+              image: s.image?.url?.startsWith("data:") ? { ...s.image, url: undefined } : s.image,
+            })),
+          };
+        });
+        localStorage.setItem(storageKey(userId), JSON.stringify(slidePreserved));
       } catch {
         // Projeto continua 100% íntegro em memória e no IndexedDB
       }

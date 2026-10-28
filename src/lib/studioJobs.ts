@@ -16,35 +16,76 @@ export function matchReferenceImage(slide: StudioSlide, images: ExtractedReferen
   if (["capa", "objetivo_bncc", "encerramento", "exercicio", "gabarito"].includes(slide.type || "")) return;
   const available = images.filter(image => !usedIds.has(image.id));
   if (!available.length) return;
-  const id = slide.image?.referenceId;
-  const byId = id ? available.find(image => image.id === id) : undefined;
-  if (byId) {
-    return byId;
-  }
   const slidePages = pageNumbers(slide.sourcePages || slide.image?.page);
   const slideWords = imageTokens([slide.title, slide.content, slide.image?.description || "", slide.image?.caption || ""].join(" "));
+
+  const id = slide.image?.referenceId;
+  const byId = id ? available.find(image => image.id === id) : undefined;
+  if (id) {
+    if (!byId) return undefined;
+    const byPages = pageNumbers(byId.page);
+    const bySamePage = Boolean(slidePages.size && byPages.size && [...slidePages].some(page => byPages.has(page)));
+    const byCaptionMatches = overlap(slideWords, imageTokens(`${byId.caption || ""} ${byId.label || ""} ${byId.name || ""}`));
+    const byContextMatches = overlap(slideWords, imageTokens(byId.context || ""));
+    const byHasMeta = Boolean(byId.caption?.trim() || byId.context?.trim());
+    if (byHasMeta && byCaptionMatches === 0 && byContextMatches === 0) return undefined;
+    if (slidePages.size && byPages.size && !bySamePage) return undefined;
+    return byId;
+  }
+
   let best: { image: ExtractedReferenceImage; score: number } | undefined;
   for (const image of available) {
     const imagePages = pageNumbers(image.page);
     const samePage = Boolean(slidePages.size && imagePages.size && [...slidePages].some(page => imagePages.has(page)));
+    if (slidePages.size && imagePages.size && !samePage) continue;
     const captionMatches = overlap(slideWords, imageTokens(`${image.caption || ""} ${image.label || ""} ${image.name || ""}`));
     const contextMatches = overlap(slideWords, imageTokens(image.context || ""));
+    const hasMeta = Boolean(image.caption?.trim() || image.context?.trim());
+    if (hasMeta && captionMatches === 0 && contextMatches === 0) continue;
     const score = (samePage ? 4 : 0) + captionMatches * 3 + Math.min(contextMatches, 4);
     if (score > (best?.score || 0)) {
       best = { image, score };
     }
   }
   if (best && best.score >= 2) return best.image;
-  // Se o slide pediu imagem explicitamente e há imagens disponíveis no material sem conflito, vincula a próxima disponível
-  if (slide.image?.description || ["imagem_esquerda_texto_direita", "topicos_com_imagem"].includes(slide.layout || "")) {
-    return available[0];
+
+  // Fallback seguro: imagens sem metadados específicos de catálogo vinculam ao slide que pede imagem
+  const anonymous = available.filter(img => !img.caption && !img.context);
+  if (anonymous.length && (slide.image?.description || ["imagem_esquerda_texto_direita", "topicos_com_imagem"].includes(slide.layout || ""))) {
+    return anonymous[0];
   }
   return undefined;
 }
 
+function applyMatchedImageToSlide(slide: StudioSlide, match: ExtractedReferenceImage, sourceFileName?: string): StudioSlide {
+  const source = match.source && hasOriginalCredit(match.source)
+    ? match.source
+    : hasOriginalCredit(slide.image?.source) ? slide.image!.source
+    : `Fonte: ${sourceFileName || "material enviado"}${match.page ? `, p. ${match.page}` : ""}`;
+  const pending = (slide.pending || []).filter(item => !/imagem/i.test(item));
+  if (!hasOriginalCredit(match.source) && !hasOriginalCredit(slide.image?.source)) pending.push("Confirme o crédito original da imagem no material enviado.");
+  const description = slide.image?.description && !/^(?:imagem|figura|ilustra[cç][aã]o)(?:\s+(?:do|da|de)\s+(?:material|apostila|refer[eê]ncia))?(?:\s+(?:enviado|original))?\s*$/i.test(slide.image.description.trim())
+    ? slide.image.description
+    : match.caption || (!/^Imagem\s+\d+/i.test(match.name) ? match.name : slide.title);
+  return {
+    ...slide,
+    layout: "imagem_esquerda_texto_direita",
+    image: {
+      description,
+      source,
+      status: "Imagem original do material",
+      referenceId: match.id,
+      page: match.page || slide.image?.page,
+      caption: match.caption || slide.image?.caption,
+      url: match.url,
+    },
+    pending,
+  };
+}
+
 export function associateReferenceImages(slides: StudioSlide[], images: ExtractedReferenceImage[], sourceFileName?: string): StudioSlide[] {
   const used = new Set<string>();
-  return slides.map(slide => {
+  const firstPass = slides.map(slide => {
     if (["capa", "objetivo_bncc", "encerramento"].includes(slide.type || "")) return slide;
     const match = matchReferenceImage(slide, images, used);
     if (!match) {
@@ -52,29 +93,26 @@ export function associateReferenceImages(slides: StudioSlide[], images: Extracte
       return { ...slide, image: undefined, pending: [...(slide.pending || []), "Imagem sugerida sem correspondência segura com o texto e o material enviado. Selecione a imagem correta na galeria."] };
     }
     used.add(match.id);
-    const source = match.source && hasOriginalCredit(match.source)
-      ? match.source
-      : hasOriginalCredit(slide.image?.source) ? slide.image!.source
-      : `Fonte: ${sourceFileName || "material enviado"}${match.page ? `, p. ${match.page}` : ""}`;
-    const pending = (slide.pending || []).filter(item => !/imagem/i.test(item));
-    if (!hasOriginalCredit(match.source) && !hasOriginalCredit(slide.image?.source)) pending.push("Confirme o crédito original da imagem no material enviado.");
-    const description = slide.image?.description && !/^(?:imagem|figura|ilustra[cç][aã]o)(?:\s+(?:do|da|de)\s+(?:material|apostila|refer[eê]ncia))?(?:\s+(?:enviado|original))?\s*$/i.test(slide.image.description.trim())
-      ? slide.image.description
-      : match.caption || (!/^Imagem\s+\d+/i.test(match.name) ? match.name : slide.title);
-    return {
-      ...slide,
-      layout: "imagem_esquerda_texto_direita",
-      image: {
-        description,
-        source,
-        status: "Imagem original do material",
-        referenceId: match.id,
-        page: match.page || slide.image?.page,
-        caption: match.caption || slide.image?.caption,
-        url: match.url,
-      },
-      pending,
-    };
+    return applyMatchedImageToSlide(slide, match, sourceFileName);
+  });
+
+  // 2ª passada: se houver imagens de DOCX/streams ainda não utilizadas (sem restrição de página),
+  // distribui automaticamente nos slides de desenvolvimento/conteúdo que ainda estão sem imagem.
+  const unusedFlexible = images.filter(img => !img.page && !used.has(img.id));
+  if (!unusedFlexible.length) return firstPass;
+
+  let nextFlexIdx = 0;
+  return firstPass.map(slide => {
+    if (nextFlexIdx >= unusedFlexible.length) return slide;
+    if (slide.image?.url) return slide;
+    const isContentSlide = ["conteudo", "gancho", "interacao"].includes(slide.type || "");
+    const hasSpecialLayout = ["comparacao", "linha_do_tempo", "formula", "formula_com_espaco"].includes(slide.layout || "")
+      || Boolean(slide.columns?.length || slide.timelineItems?.length || slide.formula?.trim());
+    if (!isContentSlide || hasSpecialLayout) return slide;
+
+    const match = unusedFlexible[nextFlexIdx++];
+    used.add(match.id);
+    return applyMatchedImageToSlide(slide, match, sourceFileName);
   });
 }
 
@@ -165,13 +203,20 @@ async function run(job: StudioJob, project: StudioProject) {
       result = parseGeneratedContent(fixed.response.text(), project.kind);
     }
     publish({ ...job, status: "reviewing", progressStep: 1, message: "Montando a estrutura obrigatória do modelo…" });
-    const actionable = (candidate: typeof result) => studioWarnings({ ...project, ...candidate }).filter(warning => !/VALIDAR|BUSCAR|Competência desenvolvida a definir/.test(warning));
+    const refImages = project.referenceImages || [];
+    if (refImages.length > 0 && project.kind !== "roteiro") {
+      result = { ...result, slides: associateReferenceImages(result.slides, refImages, project.sourceFileName) };
+    }
+    const actionable = (candidate: typeof result) => studioWarnings({ ...project, ...candidate }).filter(warning => !/VALIDAR|BUSCAR|Competência desenvolvida a definir|imagem do material não localizada|informe a fonte da imagem/i.test(warning));
     const corrections = actionable(result);
     if (corrections.length && project.kind !== "roteiro" && !repaired) {
       publish({ ...job, status: "reviewing", progressStep: 1, message: "Estrutura criada. Revisando o checklist…" });
       try {
         const revised = await withStudioDeadline(request(`${prompt}\n# CORREÇÃO DO CHECKLIST\nCorrija estes problemas sem inventar informação e devolva o JSON completo no mesmo formato:\n${JSON.stringify(corrections)}\nResposta anterior:\n${response.response.text()}`), 45000);
-        const candidate = parseGeneratedContent(revised.response.text(), project.kind);
+        let candidate = parseGeneratedContent(revised.response.text(), project.kind);
+        if (refImages.length > 0) {
+          candidate = { ...candidate, slides: associateReferenceImages(candidate.slides, refImages, project.sourceFileName) };
+        }
         const remaining = actionable(candidate);
         const emptySlidesFixed = actionable(result).filter(item => /conteúdo principal vazio/i.test(item)).every(item => !remaining.includes(item));
         if (remaining.length < corrections.length || corrections.every(item => !remaining.includes(item)) || emptySlidesFixed) result = candidate;
@@ -185,7 +230,6 @@ async function run(job: StudioJob, project: StudioProject) {
     let failedImages = 0;
     if (project.kind !== "roteiro") {
       publish({ ...job, status: "illustrating", progressStep: 2, result: completed, message: "Conferindo imagens e referências da apostila…" });
-      const refImages = project.referenceImages || [];
       if (refImages.length > 0) {
         completed = { ...completed, slides: associateReferenceImages(completed.slides, refImages, project.sourceFileName) };
       }

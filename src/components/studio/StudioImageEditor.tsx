@@ -30,6 +30,7 @@ import type {
   MagnificHdr,
   MagnificLighting,
   StudioImageAspectRatio,
+  StudioImageProvider,
 } from "../../lib/studioImages";
 import {
   enhancePromptWithMagnific,
@@ -37,6 +38,12 @@ import {
   uploadStudioImage,
 } from "../../lib/studioImages";
 import type { StudioProject, StudioSlide } from "../../lib/studioProjects";
+
+const AI_PROVIDERS: { id: StudioImageProvider; label: string; sub: string; badge?: string }[] = [
+  { id: "magnific", label: "Magnific AI", sub: "Ultra-definição e texturas hiper-realistas", badge: "Padrão" },
+  { id: "gemini", label: "Gemini AI", sub: "Google 2.5 Flash Image rápida e precisa" },
+  { id: "openai", label: "OpenAI GPT", sub: "GPT Image-1 / DALL-E 3 de alta fidelidade" },
+];
 
 const MAGNIFIC_ENGINES: {
   id: MagnificEngine;
@@ -109,7 +116,8 @@ export function StudioImageEditor({
   // Tabs: ia, material, upload
   const [activeTab, setActiveTab] = useState<"ia" | "material" | "upload">("ia");
 
-  // Ferramentas e parâmetros da IA
+  // Motor e parâmetros da IA
+  const [selectedProvider, setSelectedProvider] = useState<StudioImageProvider>("magnific");
   const [selectedEngine, setSelectedEngine] = useState<MagnificEngine>("photographic");
   const [selectedCreativity, setSelectedCreativity] = useState<MagnificCreativity>("medium");
   const [selectedHdr, setSelectedHdr] = useState<MagnificHdr>("standard");
@@ -232,6 +240,7 @@ export function StudioImageEditor({
             },
           };
       const generated = await generateStudioImage(project, promptSlide, {
+        provider: selectedProvider,
         engine: selectedEngine,
         creativity: selectedCreativity,
         hdr: isUpscale ? "ultra" : selectedHdr,
@@ -516,6 +525,36 @@ export function StudioImageEditor({
           {/* ABA 1: GERAR COM IA */}
           {activeTab === "ia" && (
             <div className="studio-image-editor__tab-panel studio-image-editor__tab-panel--ia">
+              {/* SELEÇÃO DO MOTOR DE IA */}
+              <div className="studio-image-editor__step-box">
+                <div className="studio-image-editor__section-header">
+                  <span className="studio-image-editor__section-title">
+                    <Sparkles size={13} style={{ color: "#38bdf8" }} />
+                    Motor de Inteligência Artificial
+                  </span>
+                </div>
+                <div className="studio-image-editor__provider-row">
+                  {AI_PROVIDERS.map(pOpt => {
+                    const isSelected = selectedProvider === pOpt.id;
+                    return (
+                      <button
+                        key={pOpt.id}
+                        type="button"
+                        className={`studio-image-editor__provider-btn ${isSelected ? "studio-image-editor__provider-btn--active" : ""}`}
+                        onClick={() => setSelectedProvider(pOpt.id)}
+                        title={pOpt.sub}
+                      >
+                        <div className="studio-image-editor__provider-btn-header">
+                          <span className="studio-image-editor__provider-btn-title">{pOpt.label}</span>
+                          {pOpt.badge && <span className="studio-image-editor__provider-btn-badge">{pOpt.badge}</span>}
+                        </div>
+                        <span className="studio-image-editor__provider-btn-sub">{pOpt.sub}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* PASSO 1: DESCRIÇÃO / PROMPT DA CENA */}
               <div className="studio-image-editor__step-box">
                 <div className="studio-image-editor__prompt-header">
@@ -685,8 +724,8 @@ export function StudioImageEditor({
                       {busy && busyAction === "generate"
                         ? "Gerando imagem..."
                         : activeImage.url
-                          ? "Gerar nova versão com IA"
-                          : `Gerar imagem com IA ${selectedMilestone ? `(${selectedMilestone.label})` : ""}`}
+                          ? `Gerar nova versão (${selectedProvider === "magnific" ? "Magnific AI" : selectedProvider === "gemini" ? "Gemini AI" : "OpenAI GPT"})`
+                          : `Gerar com ${selectedProvider === "magnific" ? "Magnific AI" : selectedProvider === "gemini" ? "Gemini AI" : "OpenAI GPT"}${selectedMilestone ? ` (${selectedMilestone.label})` : ""}`}
                     </span>
                   </button>
 
