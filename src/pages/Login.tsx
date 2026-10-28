@@ -36,28 +36,32 @@ const Login: React.FC = () => {
         return;
       }
       const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
-      if (!userDoc.exists()) {
-        await setDoc(userDocRef, {
-          uid: user.uid,
-          name: user.displayName || user.email.split("@")[0] || "",
-          email: user.email,
-          photoURL: user.photoURL || null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          passwordSet: false,
-        });
-      } else {
-        await setDoc(
-          userDocRef,
-          {
-            name: user.displayName || userDoc.data()?.name || user.email.split("@")[0] || "",
+      try {
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+          await setDoc(userDocRef, {
+            uid: user.uid,
+            name: user.displayName || user.email.split("@")[0] || "",
             email: user.email,
-            photoURL: user.photoURL || userDoc.data()?.photoURL || null,
+            photoURL: user.photoURL || null,
+            createdAt: new Date(),
             updatedAt: new Date(),
-          },
-          { merge: true }
-        );
+            passwordSet: false,
+          });
+        } else {
+          await setDoc(
+            userDocRef,
+            {
+              name: user.displayName || userDoc.data()?.name || user.email.split("@")[0] || "",
+              email: user.email,
+              photoURL: user.photoURL || userDoc.data()?.photoURL || null,
+              updatedAt: new Date(),
+            },
+            { merge: true }
+          );
+        }
+      } catch (firestoreErr) {
+        console.warn("Aviso ao sincronizar perfil do usuário no Firestore:", firestoreErr);
       }
       navigate("/inicio");
     } catch (err: unknown) {
@@ -66,6 +70,7 @@ const Login: React.FC = () => {
         "auth/popup-closed-by-user": "A janela do Google foi fechada. Tente novamente quando quiser.",
         "auth/cancelled-popup-request": "Outra tentativa de acesso está em andamento.",
         "auth/popup-blocked": "Permita a abertura da janela do Google no navegador para continuar.",
+        "auth/unauthorized-domain": "Este domínio ainda não estava autorizado no Firebase Authentication. Tente novamente.",
         "auth/network-request-failed": "Verifique sua conexão e tente novamente.",
         "auth/too-many-requests": "Muitas tentativas. Aguarde um instante e tente novamente.",
         "auth/user-disabled": "Esta conta foi desativada. Entre em contato com o suporte.",
