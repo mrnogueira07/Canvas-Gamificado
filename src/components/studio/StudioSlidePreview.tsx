@@ -119,7 +119,7 @@ export function StudioSlideFrame({
   const [trimmedOverride, setTrimmedOverride] = useState<{ sourceUrl: string; trimmedUrl: string } | null>(null);
   const displayImageUrl =
     getCachedTrimmedImage(resolvedImageUrl) ||
-    (trimmedOverride?.sourceUrl === resolvedImageUrl ? trimmedOverride.trimmedUrl : undefined) ||
+    (trimmedOverride && trimmedOverride.sourceUrl === resolvedImageUrl ? trimmedOverride.trimmedUrl : undefined) ||
     resolvedImageUrl;
 
   useEffect(() => {
