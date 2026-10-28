@@ -1,0 +1,529 @@
+/* ==========================================================================
+   MIND CANVAS — TELA DE LOGIN & BACKGROUND DE CONEXÕES
+   Harmonizado com o layout principal (Dark Slate, Lexend, Acentos Roxos)
+   ========================================================================== */
+
+.mind-login {
+  position: relative;
+  isolation: isolate;
+  color-scheme: dark;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+  color: #f0f1f5;
+  background: #0b0c0e;
+  background-image:
+    radial-gradient(1200px 600px at 15% 10%, rgba(139, 92, 246, 0.08), transparent 70%),
+    radial-gradient(1000px 500px at 85% 90%, rgba(99, 102, 241, 0.06), transparent 60%);
+  font-family: 'Teachers', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Background Flow */
+.mind-login-flow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.mind-login-flow svg {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  opacity: 0.35;
+}
+
+.mind-login-flow svg > g:first-of-type {
+  transform-origin: center;
+  animation: mind-lines-float 18s ease-in-out infinite alternate;
+}
+
+.mind-login-flow svg path {
+  stroke-dasharray: 1100 160;
+  animation: mind-lines-flow 32s linear infinite;
+}
+
+.mind-login-flow svg path:nth-child(even) {
+  animation-direction: reverse;
+  animation-duration: 40s;
+}
+
+.mind-login-flow svg > g:last-of-type {
+  animation: mind-lines-float 18s ease-in-out infinite alternate;
+}
+
+@keyframes mind-lines-flow {
+  to {
+    stroke-dashoffset: -2520;
+  }
+}
+
+@keyframes mind-lines-float {
+  from {
+    transform: translate(-12px, 10px) rotate(-1deg);
+  }
+  to {
+    transform: translate(16px, -14px) rotate(1deg);
+  }
+}
+
+.mind-login-glow {
+  position: absolute;
+  width: 540px;
+  height: 540px;
+  border-radius: 50%;
+  filter: blur(85px);
+  animation: mind-glow-drift 22s ease-in-out infinite alternate;
+}
+
+.mind-login-glow-one {
+  left: -220px;
+  top: 15%;
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.mind-login-glow-two {
+  right: -180px;
+  bottom: -260px;
+  background: rgba(99, 102, 241, 0.1);
+  animation-delay: -11s;
+}
+
+@keyframes mind-glow-drift {
+  to {
+    transform: translate(35px, -35px) scale(1.12);
+  }
+}
+
+/* Header */
+.mind-login-header {
+  position: relative;
+  z-index: 10;
+  width: min(1280px, 100%);
+  margin: 0 auto;
+  padding: 32px 48px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mind-login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.mind-login-brand-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #181920;
+  box-shadow: none;
+}
+
+.mind-login-brand-title {
+  display: block;
+  font-size: 18.7px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.mind-login-brand-caption {
+  display: block;
+  font-size: 10.45px;
+  letter-spacing: 0.14em;
+  font-weight: 600;
+  color: #a78bfa;
+}
+
+.mind-login-innyx {
+  width: 130px;
+  height: auto;
+  aspect-ratio: 500 / 184;
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+/* Main Layout */
+.mind-login-main {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(380px, 460px);
+  align-items: center;
+  gap: clamp(32px, 5vw, 80px);
+  width: min(1280px, 100%);
+  margin: 0 auto;
+  padding: 24px 48px 48px;
+}
+
+/* Left Hero */
+.mind-login-intro {
+  padding: 10px 0;
+}
+
+.mind-login-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 12.1px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #c084fc;
+}
+
+.mind-login-eyebrow > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a855f7;
+  box-shadow: 0 0 10px #c084fc;
+}
+
+.mind-login-intro h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(41.8px, 4.62vw, 63.8px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.12;
+}
+
+.mind-login-intro h1 > span {
+  background: linear-gradient(115deg, #c084fc 0%, #a855f7 50%, #e879f9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.mind-login-description {
+  max-width: 520px;
+  margin: 20px 0 0;
+  color: #9da1b2;
+  font-size: 15.95px;
+  line-height: 1.75;
+  font-weight: 400;
+}
+
+.mind-login-formats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mind-login-format {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #14161f;
+  border: 1px solid #232634;
+  color: #ffffff;
+  font-size: 13.2px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.mind-login-format:hover {
+  border-color: #383d4f;
+  transform: translateY(-2px);
+}
+
+.mind-login-format small {
+  display: block;
+  font-size: 10.45px;
+  font-weight: 400;
+  color: #8e92a2;
+  margin-top: 2px;
+}
+
+.mind-login-format-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.mind-login-format-icon.games {
+  background: #1f1930;
+  border: 1px solid #3d2b5e;
+  color: #c084fc;
+}
+
+.mind-login-format-icon.slides {
+  background: #131d2e;
+  border: 1px solid #1e355b;
+  color: #60a5fa;
+}
+
+.mind-login-format-icon.scripts {
+  background: #11221e;
+  border: 1px solid #1a443a;
+  color: #34d399;
+}
+
+.mind-login-intro-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  color: #787d92;
+  font-size: 12.1px;
+}
+
+.mind-login-note-line {
+  width: 24px;
+  height: 1px;
+  background: rgba(168, 85, 247, 0.4);
+}
+
+/* Right Card: Dark Mind Canvas Styling */
+.mind-login-card {
+  width: 100%;
+  padding: 36px 32px 28px;
+  border-radius: 24px;
+  border: 1px solid #212432;
+  background: #13151e;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  animation: mind-card-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes mind-card-pop {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mind-login-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  margin-bottom: 26px;
+}
+
+/* Favicon icon in white */
+.mind-login-card-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  border-radius: 14px;
+  background: #1c1d27;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+
+.mind-login-card-heading h2 {
+  color: #ffffff;
+  font-size: 26.4px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.mind-login-card-heading p {
+  color: #8e93a6;
+  margin: 4px 0 0;
+  font-size: 13.2px;
+  line-height: 1.5;
+}
+
+/* Google Access */
+.mind-login-google-access {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mind-login-access-description {
+  color: #8e93a6;
+  font-size: 13.2px;
+  margin: 0 0 4px;
+}
+
+.mind-login-google {
+  height: 48px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid #2d3144;
+  border-radius: 12px;
+  background: #1a1d29;
+  color: #ffffff;
+  font-size: 14.85px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: none;
+}
+
+.mind-login-google:hover:not(:disabled) {
+  background: #232738;
+  border-color: #4a506d;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.mind-login-google:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Security Verification (Turnstile) */
+.mind-login-security {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #1f2230;
+}
+
+.mind-login-security-label {
+  font-size: 11.55px;
+  font-weight: 600;
+  color: #6e7284;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Restricted State */
+.mind-login-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.mind-login-state-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  margin-bottom: 14px;
+}
+
+.mind-login-state-icon.denied {
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: #fb7185;
+}
+
+.mind-login-state h3 {
+  margin: 0 0 6px;
+  font-size: 18.7px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.mind-login-state p {
+  margin: 0 0 18px;
+  font-size: 13.75px;
+  line-height: 1.6;
+  color: #8e93a6;
+}
+
+/* Message Alert */
+.mind-login-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13.2px;
+  line-height: 1.5;
+  margin-top: 16px;
+}
+
+.mind-login-message.error {
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.28);
+  color: #fda4af;
+}
+
+/* Card Footer */
+.mind-login-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #1f2230;
+  color: #6e7284;
+  font-size: 12.1px;
+}
+
+/* Bottom Footer */
+.mind-login-footer {
+  position: relative;
+  z-index: 10;
+  width: min(1280px, 100%);
+  margin: 0 auto;
+  padding: 16px 48px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12.1px;
+  color: #6e7284;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mind-login-footer-dot {
+  margin: 0 4px;
+  opacity: 0.5;
+}
+
+/* Responsive */
+@media (max-width: 960px) {
+  .mind-login-main {
+    grid-template-columns: 1fr;
+    padding: 16px 24px 32px;
+    gap: 36px;
+  }
+  .mind-login-header {
+    padding: 24px 24px 12px;
+  }
+  .mind-login-footer {
+    padding: 16px 24px 24px;
+  }
+}

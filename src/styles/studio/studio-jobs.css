@@ -1,0 +1,15 @@
+.studio-jobs { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: grid; gap: 12px; width: min(400px, calc(100vw - 32px)); max-height: 60vh; overflow-y: auto; }
+.studio-jobs:empty { display: none; }
+.studio-job { display: flex; align-items: flex-start; gap: 12px; padding: 18px; border: 1px solid #cdd9ee; border-radius: 14px; background: #fff; color: #234678; box-shadow: 0 8px 32px #172d4926; font-family: inherit; }
+.studio-job > svg { flex-shrink: 0; margin-top: 2px; }
+.studio-job > div { flex: 1; min-width: 0; }
+.studio-job strong { font-size: 15.4px; overflow-wrap: anywhere; }
+.studio-job p { font-size: 13.2px; line-height: 1.6; margin: 6px 0; }
+.studio-job a { font-size: 13.2px; font-weight: 650; text-decoration: underline; }
+.studio-job button { border: 0; padding: 2px; background: transparent; color: inherit; cursor: pointer; }
+.studio-job--ready { border-color: #b4ddc5; color: #216246; }
+.studio-job--error { border-color: #ecc6b9; color: #923f28; }
+.studio-job__spinner { animation: studio-job-spin 1s linear infinite; }
+@keyframes studio-job-spin { to { transform: rotate(360deg); } }
+@media (max-width: 620px) { .studio-jobs { bottom: 16px; right: 16px; } }
+@media (prefers-reduced-motion: reduce) { .studio-job__spinner { animation: none; } }

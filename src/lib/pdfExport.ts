@@ -1,7 +1,7 @@
 /**
- * pdfExport.ts - V3 (Estabilização de Layout + Suporte de Cor)
+ * pdfExport.ts - V3 (Estabilizacao de Layout + Suporte de Cor)
  * ─────────────────────────────────────────────────────────────────────────────
- * Estratégia: Snapshot de Layout & Cor (Full Computed Bake)
+ * Estrategia: Snapshot de Layout & Cor (Full Computed Bake)
  */
 
 import html2canvas from 'html2canvas';
@@ -59,7 +59,7 @@ function resolveModernColorsInValue(val: string): string {
   return val.replace(regex, (m) => modernColorToRgb(m));
 }
 
-// ─── Exportação de PDF ────────────────────────────────────────────────────────
+// ─── Exportacao de PDF ────────────────────────────────────────────────────────
 export async function generatePDFBlob(elementId: string, title: string) {
   const input = document.getElementById(elementId);
   if (!input) return null;
@@ -88,56 +88,92 @@ export async function generatePDFBlob(elementId: string, title: string) {
       });
     });
 
-    // 2. RENDERIZAÇÃO
+    // 2. RENDERIZACAO
     const canvas = await html2canvas(input as HTMLElement, {
-      scale: 2,
+      scale: 2.5, // Leve aumento de qualidade para textos mais nitidos
       useCORS: true,
-      backgroundColor: '#ffffff',
+      backgroundColor: '#f8fafc', // Fundo slate-50 combinando com o PDF para blending perfeito das bordas arredondadas
       imageTimeout: 35000,
       onclone: (clonedDoc) => {
         // Limpa folhas de estilo residuais que podem ter oklch no clone
-        // Mantemos apenas fontes aqui se necessário, mas o "bake" já resolveu o layout
+        // Mantemos apenas fontes aqui se necessario, mas o "bake" ja resolveu o layout
         Array.from(clonedDoc.querySelectorAll('link[rel="stylesheet"], style')).forEach(el => {
           if (!el.textContent?.includes('@font-face')) {
             el.remove();
           }
         });
         
+        // Oculta os elementos marcados para nao serem exportados no clone
+        Array.from(clonedDoc.querySelectorAll('.export-hide')).forEach(el => {
+          (el as HTMLElement).style.display = 'none';
+        });
+
+        // Define opacidade total para os elementos com a classe export-full-opacity
+        Array.from(clonedDoc.querySelectorAll('.export-full-opacity')).forEach(el => {
+          (el as HTMLElement).style.opacity = '1';
+        });
+
         const el = clonedDoc.getElementById(elementId);
         if (el) {
-          el.style.width = '1200px'; // Força largura fixa para consistência no PDF
+          el.style.width = '1200px'; // Forca largura fixa para consistencia no PDF
           el.style.height = 'auto';
           el.style.overflow = 'visible';
+          el.style.margin = '0';
+          el.style.transform = 'none'; // Previne problemas de escala
         }
       }
     });
 
-    // 3. RESTAURAÇÃO
+    // 3. RESTAURACAO
     restoreMap.forEach((original, node) => {
       if (original) node.setAttribute('style', original);
       else node.removeAttribute('style');
     });
 
-    // 4. CONSTRUÇÃO DO PDF (Folha Única)
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    // 4. CONSTRUCAO DO PDF (Layout Elegante e Centralizado)
+    const imgData = canvas.toDataURL('image/jpeg', 0.98); // Qualidade maxima para evitar artefatos
     
-    // Calculamos o tamanho da folha A4 em mm
+    // Dimensoes A4 em mm
     const a4Width = 210;
-    const a4Height = 297;
     
-    // Proporção do canvas para o PDF
+    // Margens elegantes (em mm)
+    const marginX = 15;
+    const marginY = 20; // Margem vertical ligeiramente maior para o footer
+    
+    // Largura util para o conteudo
+    const contentWidth = a4Width - (marginX * 2);
+    
+    // Proporcao do canvas gerado
     const canvasAspectRatio = canvas.height / canvas.width;
     
-    // Calculamos a altura final baseada na largura da página A4
-    const finalPdfHeight = a4Width * canvasAspectRatio;
+    // Altura do conteudo baseada na largura util e na proporcao
+    const contentHeight = contentWidth * canvasAspectRatio;
+
+    // Altura final da pagina englobando conteudo + margens superiores e inferiores
+    const finalPageHeight = contentHeight + (marginY * 2);
 
     const pdf = new jsPDF({
       orientation: 'p',
       unit: 'mm',
-      format: [a4Width, Math.max(a4Height, finalPdfHeight)]
+      format: [a4Width, finalPageHeight]
     });
 
-    pdf.addImage(imgData, 'JPEG', 0, 0, a4Width, finalPdfHeight, undefined, 'FAST');
+    // Fundo da pagina com um cinza muito suave (Tailwind slate-50) para dar contraste
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(0, 0, a4Width, finalPageHeight, 'F');
+
+    // Adiciona a imagem perfeitamente centralizada e com margens
+    pdf.addImage(imgData, 'JPEG', marginX, marginY, contentWidth, contentHeight, undefined, 'FAST');
+
+    // Adiciona um Footer elegante e centralizado
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(148, 163, 184); // slate-400
+    
+    const dateStr = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const footerText = `${title.toUpperCase()}   •   GERADO EM ${dateStr.toUpperCase()}`;
+    
+    pdf.text(footerText, a4Width / 2, finalPageHeight - 8, { align: 'center' });
 
     return { 
       blob: pdf.output('blob'), 
@@ -145,9 +181,9 @@ export async function generatePDFBlob(elementId: string, title: string) {
       pdf 
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[PDF Export Error]', error);
-    alert('Erro ao gerar PDF: ' + error.message);
+    alert('Erro ao gerar PDF: ' + (error instanceof Error ? error.message : String(error)));
     return null;
   }
 }

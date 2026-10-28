@@ -11,5 +11,20 @@ service firebase.storage {
     match /exports/{userId}/{fileName} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // Logos são legíveis publicamente (com L maiúsculo e minúsculo)
+    match /Logos/{allPaths=**} {
+      allow read: if true;
+    }
+
+    match /logos/{allPaths=**} {
+      allow read: if true;
+    }
+
+    // Pasta de consulta da BNCC: apenas usuários logados podem ler
+    match /{folderName}/{allPaths=**} {
+      allow read: if (folderName == "consulta BNCC" || folderName == "consulta%20BNCC") && request.auth != null;
+      allow write: if false;
+    }
   }
 }

@@ -8,9 +8,16 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+functions/node_modules
+functions/lib
 dist
 dist-ssr
 *.local
+
+# Temporary and backup directories
+.tmp
+tmp
+backups
 
 # Editor directories and files
 .vscode/*
@@ -22,6 +29,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets & Environment
 .env
 .env.*
+functions/.env
+functions/.env.*
 .firebase

@@ -1,6 +1,24 @@
 @import "tailwindcss";
 
+/* Increase the system type scale by 10% without enlarging spacing. */
+@theme {
+  --text-xs: 0.825rem;
+  --text-sm: 0.9625rem;
+  --text-base: 1.1rem;
+  --text-lg: 1.2375rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.65rem;
+  --text-3xl: 2.0625rem;
+  --text-4xl: 2.475rem;
+  --text-5xl: 3.3rem;
+  --text-6xl: 4.125rem;
+  --text-7xl: 4.95rem;
+  --text-8xl: 6.6rem;
+  --text-9xl: 8.8rem;
+}
+
 :root {
+  color-scheme: dark;
   /* Colors */
   --primary: #6366f1;
   --primary-hover: #4f46e5;
@@ -23,7 +41,7 @@
 
   /* Typography */
   --font-sans:
-    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Teachers", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
 
   /* Spacing & Layout */
@@ -41,7 +59,9 @@
 }
 
 @layer base {
+  button, input, select, textarea { font-family: inherit; }
   body {
+    font-size: 1.1rem;
     background-color: var(--background);
     color: var(--text);
     font-family: var(--font-sans);
@@ -60,7 +80,6 @@
   }
 }
 
-/* Custom Animation Keyframes */
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -74,3 +93,172 @@
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 4s linear infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes animated-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  animation: animated-gradient 4s ease infinite;
+  background-size: 200% 200%;
+}
+
+@keyframes liquid-blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(20px, -20px) scale(1.2); }
+  66% { transform: translate(-20px, 20px) scale(0.8); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.animate-liquid-blob {
+  animation: liquid-blob 8s ease-in-out infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Custom Premium Scrollbar Styles (Applied globally and to .custom-scrollbar) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(109, 40, 217, 0.18) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar,
+::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track,
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb {
+  background-color: rgba(109, 40, 217, 0.18) !important;
+  border-radius: 9999px !important;
+  border: 2px solid transparent !important;
+  background-clip: content-box !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(109, 40, 217, 0.4) !important;
+}
+
+/* Print layout optimizations */
+@media print {
+  @page {
+    margin: 10mm 10mm 15mm 10mm; /* Margens balanceadas sem desperdício de espaço */
+    size: A4 portrait;
+  }
+  
+  html, body, #root {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #main-page-wrapper,
+  main,
+  #canvas-content,
+  #document-view {
+    display: block !important;
+    visibility: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  /* Evita quebras no meio de cada cartão individual (sem travar o container todo) */
+  .canvas-section-card,
+  .export-compact-header,
+  .print-break-inside-avoid,
+  .print\:break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Imagens, gráficos e ícones */
+  img, canvas, svg, picture {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    max-width: 100% !important;
+  }
+
+  /* Esconde apenas elementos de ação, botões interativos e ícones de edição */
+  .export-hide,
+  .print\:hidden,
+  .group\/btn span,
+  .group\/btn svg,
+  .group\/field svg,
+  button:not(.print-keep) {
+    display: none !important;
+  }
+
+  /* Garante cores legíveis nos textos */
+  h1, h2, h3, h4, span, p, div {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+

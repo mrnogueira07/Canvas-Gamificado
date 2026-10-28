@@ -1,0 +1,557 @@
+/* ==========================================================================
+   MIND CANVAS — PRÉVIA DOS SLIDES (MODAL DECK)
+   Harmonizado com o tema dark pedagógico do Mind Canvas
+   ========================================================================== */
+
+.studio-deck {
+  width: min(1440px, calc(100vw - 48px));
+  height: min(920px, calc(100dvh - 48px));
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 1px solid #282c3c;
+  border-radius: 18px;
+  color: #f1f3f9;
+  background: #11131a;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+  font-family: 'Teachers', sans-serif;
+  overflow: hidden;
+}
+
+.studio-deck[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.studio-deck::backdrop {
+  background: rgba(5, 6, 9, 0.75);
+  backdrop-filter: blur(8px);
+}
+
+.studio-deck button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.studio-deck button:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Header */
+.studio-deck__header {
+  padding: 18px 24px;
+  background: #151722;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #222534;
+}
+
+.studio-deck__header p {
+  margin: 0 0 4px;
+  color: #a78bfa;
+  font-size: 11px;
+  letter-spacing: 1.8px;
+  font-weight: 700;
+}
+
+.studio-deck__header h2 {
+  margin: 0;
+  font-size: 19.8px;
+  color: #ffffff;
+  font-weight: 650;
+}
+
+.studio-deck__header button {
+  display: grid;
+  place-items: center;
+  border: 1px solid #2a2e40;
+  border-radius: 8px;
+  background: #1e212e;
+  padding: 8px;
+  color: #9da1b4;
+  transition: all 0.15s ease;
+}
+
+.studio-deck__header button:hover {
+  background: #2a2e40;
+  color: #ffffff;
+  border-color: #3d435c;
+}
+
+/* Main Area */
+.studio-deck__main {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+/* Left List of Slides */
+.studio-deck__list {
+  padding: 16px 12px;
+  overflow-y: auto;
+  border-right: 1px solid #222534;
+  background: #13141d;
+}
+
+.studio-deck__list h3 {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #6e7284;
+  text-transform: uppercase;
+  margin: 14px 6px 6px;
+}
+
+.studio-deck__list h3:first-child {
+  margin-top: 0;
+}
+
+.studio-deck__list button {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #8e93a6;
+  margin-bottom: 4px;
+  transition: all 0.15s ease;
+}
+
+.studio-deck__list button:hover {
+  background: #1b1d28;
+  color: #ffffff;
+}
+
+.studio-deck__list button[aria-current] {
+  border-color: rgba(168, 85, 247, 0.45);
+  background: rgba(168, 85, 247, 0.12);
+  color: #d8b4fe;
+}
+
+.studio-deck__list span {
+  font-size: 12.1px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.studio-deck__list strong {
+  font-size: 13.2px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+
+.studio-deck__list strong small {
+  display: block;
+  font-size: 11px;
+  opacity: 0.7;
+  font-weight: normal;
+}
+
+/* Canvas Stage */
+.studio-deck__stage {
+  overflow: auto;
+  padding: 24px;
+  background: #0b0c10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.studio-deck__canvas {
+  width: 100%;
+  max-width: min(100%, calc((100dvh - 310px) * 1.77));
+  margin: 0 auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.studio-deck__caption {
+  text-align: center;
+  font-size: 13.2px;
+  margin: 16px 0 12px;
+  color: #8e93a6;
+}
+
+/* Notes Drawer */
+.studio-deck__notes {
+  width: 100%;
+  max-width: min(100%, calc((100dvh - 310px) * 1.77));
+  margin: 0 auto;
+  padding: 14px 16px;
+  background: #151722;
+  border: 1px solid #272a3a;
+  border-radius: 10px;
+  font-size: 13.2px;
+  color: #cbd5e1;
+  transition: all 0.2s ease;
+}
+
+.studio-deck__notes summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #60a5fa;
+  user-select: none;
+  outline: none;
+}
+
+.studio-deck__notes p {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  margin: 10px 0 0;
+  color: #cbd5e1;
+}
+
+/* Footer */
+.studio-deck__footer {
+  padding: 16px 24px;
+  background: #151722;
+  border-top: 1px solid #222534;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.studio-deck__footer p {
+  font-size: 12.1px;
+  color: #787d92;
+  line-height: 1.7;
+  max-width: 620px;
+  margin: 0;
+}
+
+.studio-deck__footer > div {
+  display: flex;
+  gap: 10px;
+}
+
+.studio-deck__footer button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: 1px solid #2d3144;
+  border-radius: 9px;
+  background: #1c1e2a;
+  color: #ffffff;
+  font-size: 13.2px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.studio-deck__footer button:hover:not(:disabled) {
+  background: #272a3b;
+  border-color: #3d435c;
+  color: #d8b4fe;
+}
+
+.studio-deck__footer button:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+@media (max-width: 720px) {
+  .studio-deck {
+    width: calc(100vw - 16px);
+    height: calc(100dvh - 16px);
+    border-radius: 12px;
+  }
+  .studio-deck__main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  .studio-deck__list {
+    display: flex;
+    max-height: 92px;
+    gap: 8px;
+    border-right: 0;
+    border-bottom: 1px solid #222534;
+  }
+  .studio-deck__list button {
+    min-width: 150px;
+    max-width: 190px;
+    margin: 0;
+    padding: 8px;
+  }
+  .studio-deck__stage {
+    padding: 16px;
+  }
+  .studio-deck__footer {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px;
+  }
+  .studio-deck__header {
+    padding: 16px;
+  }
+  .studio-deck__header h2 {
+    font-size: 16.5px;
+  }
+}
+
+/* Konectar.me uses a 53.45 × 30.22 in slide. Keep its preview in the same
+   3/4-width content area used by the editable PowerPoint export. */
+.studio-preview--konectar .studio-preview__body {
+  inset: 9.93% 27% 13.96% 5.61%;
+  font-family: Montserrat, sans-serif;
+  font-size: 2.08cqw;
+  font-weight: 500;
+  line-height: 1.15;
+  color: #000;
+}
+
+.studio-preview--konectar .studio-preview__body:not(.studio-preview__body--objective) > h4 {
+  min-height: auto !important;
+  margin-bottom: 1.2cqw !important;
+  font-size: 2.08cqw !important;
+  font-weight: 500;
+  color: #2796e1;
+}
+
+.studio-preview--konectar .studio-preview__cover--konectar {
+  inset: 27.5% 25% 12% 21.5%;
+  font-family: Montserrat, sans-serif;
+  font-size: 2.08cqw;
+  line-height: 1.2;
+}
+
+.studio-preview--konectar .studio-preview__cover--konectar > strong,
+.studio-preview--konectar .studio-preview__cover--konectar > p,
+.studio-preview--konectar .studio-preview__cover--konectar > .studio-inline-edit {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  font-weight: 500;
+}
+
+.studio-preview--konectar .studio-preview__cover--konectar > strong:first-child {
+  top: 0;
+  color: #257ce1;
+  font-weight: 500;
+  font-size: 2.08cqw;
+}
+
+.studio-preview--konectar .studio-preview__cover--konectar > p:first-of-type,
+.studio-preview--konectar .studio-preview__cover--konectar > .studio-inline-edit--cover-title {
+  top: 3.1cqw;
+  font-weight: 500;
+  color: #000000;
+  font-size: 2.08cqw;
+  line-height: 1.25;
+}
+
+.studio-preview--konectar .studio-preview__cover--konectar > strong:nth-of-type(2) {
+  top: 15.15cqw;
+  color: #257ce1;
+  font-weight: 500;
+  font-size: 2.08cqw;
+}
+
+.studio-preview--konectar .studio-preview__cover--konectar > p:nth-of-type(2),
+.studio-preview--konectar .studio-preview__cover--konectar > .studio-inline-edit--cover-subtitle {
+  top: 18.33cqw;
+  font-weight: 500;
+  color: #000000;
+  font-size: 2.08cqw;
+}
+
+.studio-preview--konectar .studio-preview__content-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.studio-preview--konectar .studio-preview__content-wrap.studio-preview__with-image,
+.studio-preview--konectar .studio-preview__with-image {
+  display: grid !important;
+  grid-template-columns: 46% 49% !important;
+  gap: 5% !important;
+  align-items: stretch !important;
+  height: 100% !important;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+}
+
+.studio-preview--konectar .studio-preview__image {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 0;
+  justify-content: center;
+}
+
+.studio-preview--konectar .studio-preview__image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  border-radius: 0.6cqw;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  background: #f1f5f9;
+  transition: aspect-ratio 0.2s ease, max-height 0.2s ease;
+}
+
+/* Proporções editáveis diretamente no slide */
+.studio-preview__image-container[data-aspect="1:1"],
+.studio-preview--konectar .studio-preview__image-container[data-aspect="1:1"] {
+  aspect-ratio: 1 / 1 !important;
+  height: auto !important;
+  max-height: 92% !important;
+  width: auto !important;
+  max-width: 100% !important;
+  flex: 0 1 auto !important;
+  margin: auto !important;
+}
+
+.studio-preview__image-container[data-aspect="4:3"],
+.studio-preview--konectar .studio-preview__image-container[data-aspect="4:3"] {
+  aspect-ratio: 4 / 3 !important;
+  height: auto !important;
+  max-height: 82% !important;
+  width: 100% !important;
+  flex: 0 0 auto !important;
+  margin: auto 0 !important;
+}
+
+.studio-preview__image-container[data-aspect="16:9"],
+.studio-preview--konectar .studio-preview__image-container[data-aspect="16:9"] {
+  aspect-ratio: 16 / 9 !important;
+  height: auto !important;
+  max-height: 68% !important;
+  width: 100% !important;
+  flex: 0 0 auto !important;
+  margin: auto 0 !important;
+}
+
+.studio-preview--konectar .studio-preview__image img {
+  width: 100% !important;
+  height: 100% !important;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  object-fit: cover !important;
+  border-radius: 0.6cqw;
+  display: block;
+}
+
+.studio-preview__image-container[data-fit="contain"] img,
+.studio-preview--konectar .studio-preview__image-container[data-fit="contain"] img {
+  object-fit: contain !important;
+  background: #f8fafc !important;
+}
+
+.studio-preview--konectar .studio-preview__image-pending {
+  width: 100% !important;
+  height: 100% !important;
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.6cqw;
+}
+
+.studio-preview--konectar .studio-preview__image small,
+.studio-preview--konectar .studio-preview__source {
+  font-family: Montserrat, sans-serif;
+  font-size: 1.04cqw;
+  font-weight: 500;
+  color: #536779;
+  margin-top: 0.35cqw;
+  flex-shrink: 0;
+}
+
+.studio-preview--konectar .studio-preview__topics--topicos_com_imagem p {
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 0.5cqw;
+  background: transparent;
+  font-size: 2.08cqw;
+  line-height: 1.15;
+  color: #000;
+}
+
+.studio-preview--konectar .studio-preview__topics--topicos p,
+.studio-preview--konectar .studio-preview__topics--topicos_com_barras p,
+.studio-preview--konectar .studio-preview__topics--caixas_contorno p,
+.studio-preview--konectar .studio-preview__topics--topicos_com_imagem p,
+.studio-preview--konectar .studio-preview__text,
+.studio-preview--konectar .studio-preview__text p,
+.studio-preview--konectar .studio-preview__body p,
+.studio-preview--konectar .studio-inline-edit--body,
+.studio-preview--konectar .studio-inline-edit--topic,
+.studio-preview--konectar .studio-inline-edit--column-item,
+.studio-preview--konectar .studio-inline-edit--exercise-question,
+.studio-preview--konectar .studio-inline-edit--option-text,
+.studio-preview--konectar .studio-inline-edit--gabarito-just,
+.studio-preview--konectar .studio-inline-edit--objective {
+  font-family: Montserrat, sans-serif;
+  font-size: 2.08cqw;
+  font-weight: 500;
+  line-height: 1.15;
+  color: #000;
+  text-align: justify !important;
+  text-justify: inter-word !important;
+}
+
+.studio-preview--konectar .studio-preview__topics--topicos p { background: transparent; border-radius: 0; }
+.studio-preview--konectar .studio-preview__topics--topicos p:nth-child(3n+1) { border-left-color: #f79646; }
+.studio-preview--konectar .studio-preview__topics--topicos p:nth-child(3n+2) { border-left-color: #7030a0; }
+.studio-preview--konectar .studio-preview__topics--topicos p:nth-child(3n+3) { border-left-color: #9bbb59; }
+
+.studio-preview--konectar .studio-preview__body--objective > h4,
+.studio-preview--konectar .studio-preview__body--objective > p,
+.studio-preview--konectar .studio-preview__body--objective > ul,
+.studio-preview--konectar .studio-preview__body--objective > .studio-inline-edit {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  margin: 0 !important;
+  padding: 0;
+}
+
+.studio-preview--konectar .studio-preview__body--objective > h4 {
+  font-size: 2.08cqw !important;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: #2796e1;
+}
+
+.studio-preview--konectar .studio-preview__body--objective > h4:first-child { top: 0; }
+.studio-preview--konectar .studio-preview__body--objective > p,
+.studio-preview--konectar .studio-preview__body--objective > .studio-inline-edit--objective { top: 4.49cqw; font-size: 2.08cqw !important; }
+.studio-preview--konectar .studio-preview__body--objective > h4:nth-of-type(2) { top: 16.84cqw; }
+.studio-preview--konectar .studio-preview__body--objective > ul,
+.studio-preview--konectar .studio-preview__body--objective > .studio-inline-edit--bncc { top: 21.52cqw; list-style: none; font-size: 2.08cqw !important; }
+.studio-preview--konectar .studio-preview__body--objective > ul li { font-size: 2.08cqw; line-height: 1.15; }
+
+.studio-preview__timeline-card-image,
+.studio-preview__timeline-card-pending {
+  margin-top: 0.45cqw !important;
+}
+

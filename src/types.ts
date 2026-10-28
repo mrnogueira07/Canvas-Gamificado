@@ -26,6 +26,7 @@ export interface GameTarget {
   question?: string; // Pergunta associada (para games baseados em desafios múltiplos)
   options?: string[]; // Alternativas (para quizes na roleta)
   answer?: string; // Resposta correta
+  image?: string; // Imagem associada à questão (Base64 ou URL)
 }
 
 // Estrutura do Conteúdo Gerado pela IA
@@ -37,7 +38,9 @@ export interface GeneratedContent {
     subject: string; // Disciplina
     theme: string; // Tema Principal
     bnccSkills: string; // Códigos da BNCC
-    skillsDescription: string; // Descrição das habilidades
+    bnccSkillsComputing?: string; // Habilidades BNCC Computação
+    bnccSkillsRegional?: string; // Habilidades BNCC Regional
+    skillsDescription?: string; // Descrição das habilidades (legacy)
     bibliography: string; // Referências bibliográficas
     bnccSource?: "web" | "pdf" | "user"; // Fonte da habilidade BNCC
   };
@@ -68,9 +71,6 @@ export interface GeneratedContent {
   // Seção 5: Lógica do Jogo (gerada por tipo de jogo)
   gameLogic: {
     howToPlay: string; // Regras gerais
-    timeLimit: string; // Tempo limite (ex: "45 segundos")
-    levels: string; // Número de fases/níveis (ex: "3 níveis")
-    difficulty: string; // Sistema de dificuldade (ex: "Progressiva")
     targets: GameTarget[]; // Itens do jogo (alvos, pares, perguntas, peças, etc.)
     questionPool?: {
       // Banco de questões reserva extraídas do PDF
@@ -94,7 +94,8 @@ export interface GeneratedContent {
       pieceCount: number;
     }[];
     referenceImages?: string[]; // Array of base64 image strings
-    roletaSegments?: any[]; // Segmentos específicos para o preview da roleta (dicas, penalidades, bônus)
+    roletaSegments?: Record<string, unknown>[]; // Segmentos específicos para o preview da roleta (dicas, penalidades, bônus)
+    developerNotes?: string; // Observações ao desenvolvedor
   };
 
   // Seção 6: Mecânicas e Tarefas
@@ -128,4 +129,7 @@ export interface Project {
   updatedAt: Date | string;
   folderId?: string | null;
   order?: number;
+  pdfFileName?: string | null;
+  pdfBase64?: string | null;
+  pdfTextContent?: string | null;
 }

@@ -1,0 +1,85 @@
+{
+  "arquivo": "AP_GEO_3ANO_1BIM_PRODUÇÃO AGROPECUÁRIA E IMPACTOS AMBIENTAIS",
+  "linha": "Konectar.me",
+  "duracao_estimada_min": 12,
+  "capa": {
+    "tema": "Agricultura",
+    "disciplina": "Geografia"
+  },
+  "slides": [
+    {
+      "numero": 1,
+      "etapa": "introducao",
+      "tipo": "capa",
+      "nota_apresentador": "Apresente-se e anuncie o tema da aula: a produção agrícola e seus impactos no ambiente.",
+      "tempo_seg": 20
+    },
+    {
+      "numero": 2,
+      "etapa": "introducao",
+      "tipo": "objetivo_bncc",
+      "objetivo": "Compreender a produção agrícola e seus impactos ambientais.",
+      "habilidade": "(EM13CHS302) Analisar e avaliar criticamente os impactos econômicos e socioambientais de cadeias produtivas ligadas à exploração de recursos naturais e às atividades agropecuárias.",
+      "nota_apresentador": "Leia o objetivo e explique, com suas palavras, o que a habilidade espera do estudante.",
+      "tempo_seg": 50,
+      "pendencias": []
+    },
+    {
+      "numero": 3,
+      "etapa": "desenvolvimento",
+      "tipo": "gancho",
+      "layout": "so_texto",
+      "titulo": "De onde vem o seu almoço?",
+      "texto": ["Pense no prato de ontem: arroz, feijão, salada.", "Quanta terra, água e trabalho foram necessários?"],
+      "nota_apresentador": "Faça a pergunta e dê alguns segundos de pausa antes de seguir.",
+      "tempo_seg": 45
+    },
+    {
+      "numero": 4,
+      "etapa": "desenvolvimento",
+      "tipo": "conteudo",
+      "layout": "imagem_esquerda_texto_direita",
+      "titulo": "Produção agrícola",
+      "texto": ["Agricultura é a atividade humana de cultivar vegetais para consumo."],
+      "imagem": {"descricao": "Caixa de legumes colhidos", "fonte": "Fonte: Freepik.", "status": "[BUSCAR IMAGEM]"},
+      "nota_apresentador": "Explique o conceito e relacione com os alimentos que o estudante consome.",
+      "tempo_seg": 60
+    },
+    {
+      "numero": 5,
+      "etapa": "desenvolvimento",
+      "tipo": "conteudo",
+      "layout": "caixas_contorno",
+      "titulo": "Elementos da agricultura",
+      "texto": ["Extensiva: pouco investimento, depende da natureza.", "Intensiva: alta tecnologia e investimento."],
+      "nota_apresentador": "Compare os dois modelos com exemplos da região.",
+      "tempo_seg": 70
+    },
+    {
+      "numero": 6,
+      "etapa": "desenvolvimento",
+      "tipo": "conteudo",
+      "layout": "topicos_com_barras",
+      "titulo": "Impactos ambientais",
+      "texto": ["Desmatamento", "Erosão do solo", "Contaminação da água"],
+      "nota_apresentador": "Comente cada impacto e peça ao estudante que pense em um exemplo local.",
+      "tempo_seg": 70
+    },
+    {
+      "numero": 7,
+      "etapa": "conclusao",
+      "tipo": "resumo",
+      "layout": "so_texto",
+      "titulo": "Resumo da aula",
+      "texto": ["Agricultura extensiva e intensiva", "Impactos: desmatamento, erosão e contaminação"],
+      "nota_apresentador": "Recapitule os tópicos de forma objetiva.",
+      "tempo_seg": 45
+    },
+    {
+      "numero": 8,
+      "etapa": "encerramento",
+      "tipo": "encerramento",
+      "tempo_seg": 5
+    }
+  ]
+}
