@@ -150,6 +150,116 @@ export function StudioSlideFrame({
   const imageCredit = slide.image
     ? `${slide.image.caption ? `${slide.image.caption} · ` : ""}${displayedImageSource}${imagePage && !displayedImageSource.includes(`p. ${imagePage}`) ? ` · p. ${imagePage}` : ""}`
     : "";
+
+  const [isRepositioningImage, setIsRepositioningImage] = useState(false);
+  const [isPanningImage, setIsPanningImage] = useState(false);
+
+  // Reseta o modo de reposicionamento ao trocar de slide
+  useEffect(() => {
+    setIsRepositioningImage(false);
+    setIsPanningImage(false);
+  }, [slide.id]);
+
+  const handleSetImagePosition = (posX: number, posY: number) => {
+    onSlideChange?.({
+      image: {
+        description: slide.image?.description || slide.title,
+        source: slide.image?.source || "",
+        status: slide.image?.status || "Pronta",
+        ...slide.image,
+        url: displayImageUrl,
+        positionX: posX,
+        positionY: posY,
+      },
+    });
+  };
+
+  const handleImagePointerDown = (e: React.PointerEvent<HTMLImageElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const imgEl = e.currentTarget;
+    try {
+      imgEl.setPointerCapture(e.pointerId);
+    } catch {}
+    const container = imgEl.parentElement;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const initialPosX = slide.image?.positionX ?? 50;
+    const initialPosY = slide.image?.positionY ?? 50;
+    setIsPanningImage(true);
+
+    const onPointerMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      const deltaXPercent = (dx / (rect.width || 1)) * 100;
+      const deltaYPercent = (dy / (rect.height || 1)) * 100;
+      const nextPosX = Math.max(0, Math.min(100, Math.round(initialPosX - deltaXPercent)));
+      const nextPosY = Math.max(0, Math.min(100, Math.round(initialPosY - deltaYPercent)));
+      handleSetImagePosition(nextPosX, nextPosY);
+    };
+
+    const onPointerUp = (ev: PointerEvent) => {
+      try {
+        imgEl.releasePointerCapture(ev.pointerId);
+      } catch {}
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      setIsPanningImage(false);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+  };
+
+  const nudgeBoxOffset = (box: "image" | "text", delta: number) => {
+    const current = (box === "image" ? slide.imageOffsetY : slide.textOffsetY) || 0;
+    const next = Math.max(0, Math.min(18, Math.round((current + delta) * 10) / 10));
+    if (box === "image") {
+      onSlideChange?.({ imageOffsetY: next });
+    } else {
+      onSlideChange?.({ textOffsetY: next });
+    }
+  };
+
+  const handleBoxPointerDown = (box: "image" | "text", e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const handleEl = e.currentTarget;
+    try {
+      handleEl.setPointerCapture(e.pointerId);
+    } catch {}
+    const slideFrame = handleEl.closest(".studio-preview__frame") as HTMLElement;
+    const slideRect = slideFrame?.getBoundingClientRect();
+    const startY = e.clientY;
+    const initialOffset = (box === "image" ? slide.imageOffsetY : slide.textOffsetY) || 0;
+    const cqwFactor = slideRect ? 100 / (slideRect.width || 1) : 0.1;
+
+    const onPointerMove = (ev: PointerEvent) => {
+      const deltaYPx = ev.clientY - startY;
+      const deltaYCqw = deltaYPx * cqwFactor;
+      let nextOffset = initialOffset + deltaYCqw;
+      // Mantém estritamente no slide: entre 0 e 18cqw
+      nextOffset = Math.max(0, Math.min(18, Math.round(nextOffset * 10) / 10));
+      if (box === "image") {
+        onSlideChange?.({ imageOffsetY: nextOffset });
+      } else {
+        onSlideChange?.({ textOffsetY: nextOffset });
+      }
+    };
+
+    const onPointerUp = (ev: PointerEvent) => {
+      try {
+        handleEl.releasePointerCapture(ev.pointerId);
+      } catch {}
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+  };
   const topics = slide.content.split("\n").map(line => line.trim()).filter(Boolean);
   const basePath = (import.meta.env.BASE_URL || "/").replace(/\/+$/, "");
 
@@ -545,35 +655,115 @@ export function StudioSlideFrame({
                     className={`studio-preview__image ${isEditable ? "studio-preview__image--editable" : ""}`}
                     data-aspect={currentAspect}
                     data-fit={currentFit}
+                    style={{
+                      transform: slide.imageOffsetY ? `translateY(${slide.imageOffsetY}cqw)` : undefined,
+                    }}
                     onClick={() => {
-                      if (isEditable && onOpenImageEditor) {
+                      if (isEditable && !isRepositioningImage && onOpenImageEditor) {
                         onOpenImageEditor();
                       }
                     }}
-                    title={isEditable ? "Clique para gerenciar, gerar com IA ou trocar a imagem" : undefined}
+                    title={isEditable && !isRepositioningImage ? "Clique para gerenciar, gerar com IA ou trocar a imagem" : undefined}
                   >
+                    {isEditable && (
+                      <div
+                        className="studio-preview__box-handle studio-preview__box-handle--image"
+                        onPointerDown={e => handleBoxPointerDown("image", e)}
+                        onClick={e => e.stopPropagation()}
+                        title="Arraste para mover a caixa da imagem para cima ou para baixo"
+                      >
+                        <span className="studio-preview__box-handle-title">⋮⋮ ↕ Imagem</span>
+                        <div className="studio-preview__box-handle-actions">
+                          <button
+                            type="button"
+                            title="Subir imagem"
+                            onClick={e => {
+                              e.stopPropagation();
+                              nudgeBoxOffset("image", -1.5);
+                            }}
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            title="Descer imagem"
+                            onClick={e => {
+                              e.stopPropagation();
+                              nudgeBoxOffset("image", 1.5);
+                            }}
+                          >
+                            ▼
+                          </button>
+                          {Boolean(slide.imageOffsetY) && (
+                            <button
+                              type="button"
+                              className="studio-preview__box-handle-reset"
+                              title="Alinhar ao topo (resetar)"
+                              onClick={e => {
+                                e.stopPropagation();
+                                onSlideChange?.({ imageOffsetY: 0 });
+                              }}
+                            >
+                              ↺
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {timelineImages.length > 1 ? (
                       <div className={`studio-preview__image-grid studio-preview__image-grid--${Math.min(4, timelineImages.length)}`}>
                         {timelineImages.slice(0, 4).map((imgItem, idx) => (
                           <div key={idx} className="studio-preview__image-grid-item">
                             <span className="studio-preview__image-grid-tag">{imgItem.label}</span>
-                            <img src={imgItem.image!.url} alt={imgItem.image!.description || imgItem.label} />
+                            <img
+                              src={imgItem.image!.url}
+                              alt={imgItem.image!.description || imgItem.label}
+                              draggable={false}
+                              onDragStart={e => e.preventDefault()}
+                            />
                           </div>
                         ))}
                       </div>
                     ) : imageIsVisible ? (
                       <div
-                        className={`studio-preview__image-container studio-preview__image-container--aspect-${currentAspect.replace(":", "-")} studio-preview__image-container--fit-${currentFit}`}
+                        className={`studio-preview__image-container studio-preview__image-container--aspect-${currentAspect.replace(":", "-")} studio-preview__image-container--fit-${currentFit} ${isRepositioningImage ? "is-repositioning" : ""}`}
                         data-aspect={currentAspect}
                         data-fit={currentFit}
                       >
+                        {isRepositioningImage && (
+                          <div className="studio-preview__image-reposition-banner" onClick={e => e.stopPropagation()}>
+                            <div className="studio-preview__reposition-hint">
+                              <span>✋ Arraste para enquadrar</span>
+                            </div>
+                            <div className="studio-preview__reposition-presets">
+                              <button type="button" onClick={() => handleSetImagePosition(50, 0)} title="Alinhar ao topo">▲ Topo</button>
+                              <button type="button" onClick={() => handleSetImagePosition(50, 50)} title="Centralizar">⦿ Centro</button>
+                              <button type="button" onClick={() => handleSetImagePosition(50, 100)} title="Alinhar à base">▼ Base</button>
+                            </div>
+                            <button
+                              type="button"
+                              className="studio-preview__reposition-done-btn"
+                              onClick={() => setIsRepositioningImage(false)}
+                            >
+                              ✓ Pronto
+                            </button>
+                          </div>
+                        )}
                         <img
                           src={displayImageUrl}
                           alt={slide.image?.description || timelineImages[0]?.image?.description || slide.title}
+                          draggable={false}
+                          onDragStart={e => e.preventDefault()}
+                          style={{
+                            objectPosition: `${slide.image?.positionX ?? 50}% ${slide.image?.positionY ?? 50}%`,
+                            cursor: isRepositioningImage ? (isPanningImage ? "grabbing" : "grab") : undefined,
+                            userSelect: "none",
+                          }}
+                          onPointerDown={isRepositioningImage ? handleImagePointerDown : undefined}
                         />
                         {isEditable && (
                           <>
-                            {/* Barra superior flutuante: Proporção e Enquadramento direto no slide */}
+                            {/* Barra superior flutuante: Proporção, Enquadramento e Reposicionamento direto no slide */}
                             <div
                               className="studio-preview__image-aspect-bar"
                               onClick={e => e.stopPropagation()}
@@ -625,6 +815,17 @@ export function StudioSlideFrame({
                                 }}
                               >
                                 {currentFit === "contain" ? "⤢ Inteira" : "⬚ Preencher"}
+                              </button>
+                              <button
+                                type="button"
+                                className={`studio-preview__image-reposition-btn ${isRepositioningImage ? "is-active" : ""}`}
+                                title={isRepositioningImage ? "Concluir reposicionamento" : "Reposicionar imagem dentro do quadro (arraste para enquadrar)"}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setIsRepositioningImage(!isRepositioningImage);
+                                }}
+                              >
+                                {isRepositioningImage ? "✓ Concluir" : "✋ Reposicionar"}
                               </button>
                             </div>
 
@@ -700,7 +901,58 @@ export function StudioSlideFrame({
                     </small>
                   </div>
                 )}
-                {slide.type === "exercicio" ? (
+                <div
+                  className="studio-preview__text-wrapper"
+                  style={{
+                    transform: slide.textOffsetY ? `translateY(${slide.textOffsetY}cqw)` : undefined,
+                  }}
+                >
+                  {isEditable && (
+                    <div
+                      className="studio-preview__box-handle studio-preview__box-handle--text"
+                      onPointerDown={e => handleBoxPointerDown("text", e)}
+                      onClick={e => e.stopPropagation()}
+                      title="Arraste para mover a caixa de texto para cima ou para baixo"
+                    >
+                      <span className="studio-preview__box-handle-title">⋮⋮ ↕ Texto</span>
+                      <div className="studio-preview__box-handle-actions">
+                        <button
+                          type="button"
+                          title="Subir texto"
+                          onClick={e => {
+                            e.stopPropagation();
+                            nudgeBoxOffset("text", -1.5);
+                          }}
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          title="Descer texto"
+                          onClick={e => {
+                            e.stopPropagation();
+                            nudgeBoxOffset("text", 1.5);
+                          }}
+                        >
+                          ▼
+                        </button>
+                        {Boolean(slide.textOffsetY) && (
+                          <button
+                            type="button"
+                            className="studio-preview__box-handle-reset"
+                            title="Alinhar ao topo (resetar)"
+                            onClick={e => {
+                              e.stopPropagation();
+                              onSlideChange?.({ textOffsetY: 0 });
+                            }}
+                          >
+                            ↺
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {slide.type === "exercicio" ? (
                   <div className={`studio-preview__exercise ${exerciseFitClass}`}>
                     {isEditable ? (
                       <StudioInlineTextarea
@@ -1070,6 +1322,7 @@ export function StudioSlideFrame({
                     )}
                   </div>
                 )}
+                </div>
               </div>
             </>
           )}

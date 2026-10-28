@@ -583,3 +583,208 @@
   margin-top: 0.45cqw !important;
 }
 
+/* ==========================================================================
+   ALINHAMENTO, REPOSICIONAMENTO E DRAG & DROP CONTROLADO DAS CAIXAS
+   ========================================================================== */
+
+/* Prevenção de arrasto nativo de imagens para fora do slide */
+.studio-preview__frame img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  user-select: none;
+}
+
+/* Wrapper da caixa de texto */
+.studio-preview__text-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  flex: 1 1 0;
+  min-height: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  position: relative;
+  transition: transform 0.15s ease-out;
+}
+
+/* Alça de movimentação vertical das caixas (Imagem e Texto) */
+.studio-preview__box-handle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35cqw;
+  padding: 0.2cqw 0.55cqw;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.35cqw;
+  color: #e2e8f0;
+  font-family: 'Teachers', Montserrat, sans-serif;
+  font-size: 0.82cqw;
+  font-weight: 600;
+  cursor: grab;
+  user-select: none;
+  margin-bottom: 0.35cqw;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  z-index: 5;
+  transition: all 0.15s ease;
+}
+
+.studio-preview__box-handle:hover {
+  background: rgba(30, 41, 59, 0.98);
+  border-color: #a78bfa;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.25);
+}
+
+.studio-preview__box-handle:active {
+  cursor: grabbing;
+}
+
+.studio-preview__box-handle-title {
+  display: flex;
+  align-items: center;
+  gap: 0.25cqw;
+  letter-spacing: 0.2px;
+}
+
+.studio-preview__box-handle-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.18cqw;
+  margin-left: 0.25cqw;
+}
+
+.studio-preview__box-handle-actions button {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.22cqw;
+  color: #cbd5e1;
+  font-size: 0.72cqw;
+  padding: 0.12cqw 0.32cqw;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.12s ease;
+}
+
+.studio-preview__box-handle-actions button:hover {
+  background: #7c3aed;
+  border-color: #a78bfa;
+  color: #ffffff;
+}
+
+.studio-preview__box-handle-actions .studio-preview__box-handle-reset {
+  color: #f87171 !important;
+}
+
+.studio-preview__box-handle-actions .studio-preview__box-handle-reset:hover {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+}
+
+/* Banner de reposicionamento dentro do quadro da imagem */
+.studio-preview__image-reposition-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(168, 85, 247, 0.45);
+  padding: 0.35cqw 0.55cqw;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35cqw;
+  z-index: 10;
+  color: #f1f5f9;
+  font-size: 0.8cqw;
+  border-radius: 0.6cqw 0.6cqw 0 0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  animation: studioFadeIn 0.15s ease-out;
+}
+
+.studio-preview__reposition-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.25cqw;
+  font-weight: 600;
+  color: #d8b4fe;
+}
+
+.studio-preview__reposition-presets {
+  display: flex;
+  align-items: center;
+  gap: 0.2cqw;
+}
+
+.studio-preview__reposition-presets button {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  font-size: 0.72cqw;
+  font-weight: 500;
+  padding: 0.12cqw 0.32cqw;
+  border-radius: 0.22cqw;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.studio-preview__reposition-presets button:hover {
+  background: #7c3aed;
+  border-color: #a78bfa;
+  color: #ffffff;
+}
+
+.studio-preview__reposition-done-btn {
+  background: #16a34a !important;
+  border: 1px solid #22c55e !important;
+  color: #ffffff !important;
+  font-size: 0.78cqw !important;
+  font-weight: 700 !important;
+  padding: 0.15cqw 0.45cqw !important;
+  border-radius: 0.25cqw !important;
+  cursor: pointer !important;
+  transition: all 0.12s ease !important;
+}
+
+.studio-preview__reposition-done-btn:hover {
+  background: #15803d !important;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.45) !important;
+}
+
+/* Botão de reposicionar na barra de aspecto */
+.studio-preview__image-reposition-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.25cqw;
+  padding: 0.15cqw 0.4cqw;
+  color: #e2e8f0;
+  font-size: 0.75cqw;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.studio-preview__image-reposition-btn:hover {
+  background: #7c3aed;
+  color: #ffffff;
+  border-color: #a78bfa;
+}
+
+.studio-preview__image-reposition-btn.is-active {
+  background: #2563eb;
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+/* Estado de reposicionamento no container da imagem */
+.studio-preview__image-container.is-repositioning {
+  outline: 2px dashed #a855f7;
+  outline-offset: -2px;
+}
+

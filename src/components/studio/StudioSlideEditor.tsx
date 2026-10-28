@@ -385,6 +385,87 @@ export function StudioSlideEditor({
               </>
             )}
 
+            {!["capa", "encerramento"].includes(selected.type || "") && (
+              <div className="studio-toolbar__item studio-toolbar__item--position" title="Ajuste o alinhamento vertical das caixas no slide">
+                <span>Posição</span>
+                <div className="studio-toolbar__nudge-group">
+                  {Boolean(selected.image?.url) && (
+                    <div className="studio-toolbar__nudge-subgroup" title="Mover caixa da imagem para cima ou para baixo">
+                      <span className="studio-toolbar__nudge-label">🖼️</span>
+                      <button
+                        type="button"
+                        className="studio-toolbar__nudge-btn"
+                        title="Subir imagem"
+                        onClick={() => {
+                          const current = selected.imageOffsetY || 0;
+                          patch({ imageOffsetY: Math.max(0, Math.round((current - 1.5) * 10) / 10) });
+                        }}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        className="studio-toolbar__nudge-btn"
+                        title="Descer imagem"
+                        onClick={() => {
+                          const current = selected.imageOffsetY || 0;
+                          patch({ imageOffsetY: Math.min(18, Math.round((current + 1.5) * 10) / 10) });
+                        }}
+                      >
+                        ▼
+                      </button>
+                      {Boolean(selected.imageOffsetY) && (
+                        <button
+                          type="button"
+                          className="studio-toolbar__nudge-btn studio-toolbar__nudge-btn--reset"
+                          title="Resetar imagem ao topo"
+                          onClick={() => patch({ imageOffsetY: 0 })}
+                        >
+                          ↺
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="studio-toolbar__nudge-subgroup" title="Mover caixa de texto para cima ou para baixo">
+                    <span className="studio-toolbar__nudge-label">📝</span>
+                    <button
+                      type="button"
+                      className="studio-toolbar__nudge-btn"
+                      title="Subir texto"
+                      onClick={() => {
+                        const current = selected.textOffsetY || 0;
+                        patch({ textOffsetY: Math.max(0, Math.round((current - 1.5) * 10) / 10) });
+                      }}
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      className="studio-toolbar__nudge-btn"
+                      title="Descer texto"
+                      onClick={() => {
+                        const current = selected.textOffsetY || 0;
+                        patch({ textOffsetY: Math.min(18, Math.round((current + 1.5) * 10) / 10) });
+                      }}
+                    >
+                      ▼
+                    </button>
+                    {Boolean(selected.textOffsetY) && (
+                      <button
+                        type="button"
+                        className="studio-toolbar__nudge-btn studio-toolbar__nudge-btn--reset"
+                        title="Resetar texto ao topo"
+                        onClick={() => patch({ textOffsetY: 0 })}
+                      >
+                        ↺
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <label className="studio-toolbar__item studio-toolbar__item--duration">
               <span>Duração</span>
               <input

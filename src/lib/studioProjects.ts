@@ -33,7 +33,12 @@ export interface StudioSlide {
     caption?: string;
     aspectRatio?: StudioSlideImageAspect;
     fit?: StudioSlideImageFit;
+    positionX?: number;
+    positionY?: number;
   };
+  imageOffsetY?: number;
+  textOffsetY?: number;
+  lockToBounds?: boolean;
   images?: { url: string; description?: string; source?: string }[];
   formula?: string;
   objective?: string;

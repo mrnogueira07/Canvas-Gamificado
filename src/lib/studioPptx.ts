@@ -221,16 +221,18 @@ function fillSlide(xml: string, slide: StudioSlide, project: StudioProject, pict
     } else if ((["imagem_esquerda_texto_direita", "topicos_com_imagem"].includes(slide.layout || "") || picture) && (slide.image?.description || slide.image?.url)) {
       const imageW = style.w * .46;
       const sourceSize = line === "Educação Corporativa" ? 10 : 40;
-      const imageH = bodyH - 1.2;
+      const imgShift = Math.max(0, Math.min(bodyH - 2, ((slide.imageOffsetY || 0) / 56.25) * bodyH));
+      const textShift = Math.max(0, Math.min(bodyH - 2, ((slide.textOffsetY || 0) / 56.25) * bodyH));
+      const imageH = Math.max(1.5, bodyH - 1.2 - imgShift);
       if (picture) {
-        addPicture(doc, id++, picture.relationship, style.x, bodyY, imageW, imageH, slide.image.description || slide.title);
+        addPicture(doc, id++, picture.relationship, style.x, bodyY + imgShift, imageW, imageH, slide.image.description || slide.title);
       } else {
-        addText(doc, id++, `[BUSCAR IMAGEM]\n${slide.image.description || slide.title}`, style.x, bodyY, imageW, imageH, style.font, style.bodySize, highlight ? "FFFFFF" : "000000", false, "l");
+        addText(doc, id++, `[BUSCAR IMAGEM]\n${slide.image.description || slide.title}`, style.x, bodyY + imgShift, imageW, imageH, style.font, style.bodySize, highlight ? "FFFFFF" : "000000", false, "l");
       }
       const imageCredit = slide.image.source || "Fonte não informada";
       const imagePage = slide.image.page && !imageCredit.includes(`p. ${slide.image.page}`) ? ` · p. ${slide.image.page}` : "";
-      addText(doc, id++, `${slide.image.caption ? `${slide.image.caption} · ` : ""}${imageCredit}${imagePage}`, style.x, bodyY + imageH + 0.15, imageW, 0.9, style.font, sourceSize, highlight ? "FFFFFF" : "000000", false, "l");
-      addText(doc, id++, slide.content, style.x + imageW + style.w * .04, bodyY, style.w * .50, bodyH, style.font, style.bodySize, highlight ? "FFFFFF" : "000000", false, "just");
+      addText(doc, id++, `${slide.image.caption ? `${slide.image.caption} · ` : ""}${imageCredit}${imagePage}`, style.x, bodyY + imageH + 0.15 + imgShift, imageW, 0.9, style.font, sourceSize, highlight ? "FFFFFF" : "000000", false, "l");
+      addText(doc, id++, slide.content, style.x + imageW + style.w * .04, bodyY + textShift, style.w * .50, Math.max(1.5, bodyH - textShift), style.font, style.bodySize, highlight ? "FFFFFF" : "000000", false, "just");
     } else if (["topicos_com_barras", "caixas_contorno", "topicos", "mapa_resumo"].includes(slide.layout || "") && slide.content.trim()) {
       const items = slide.content.split("\n").filter(Boolean);
       const corporate = line === "Educação Corporativa";
