@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, Check, ChevronLeft, ChevronRight, Download, FileText, Gamepad2, Images, LoaderCircle, MonitorPlay, Package, Pencil, Plus, Presentation, RotateCcw, Save, Sparkles, Trash2, Upload, Video, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, Check, ChevronLeft, ChevronRight, Download, FileText, FolderOpen, Gamepad2, Images, LoaderCircle, MonitorPlay, Package, Pencil, Plus, Presentation, RotateCcw, Save, Sparkles, Trash2, Upload, Video, X } from "lucide-react";
 import { Layout } from "../components/ui/Layout";
 import { auth } from "../lib/firebase";
 import { getStudioJobs, subscribeStudioJobs, isStudioJobRunning, startStudioJob, markStudioJobSaved, removeStudioJob, withStudioDeadline } from "../lib/studioJobs";
@@ -105,9 +105,19 @@ function SlidesFlow({
           <h1>Projetos recentes</h1>
           <p>Abra uma apresentação para continuar ou crie uma nova aula estruturada pela IA.</p>
         </div>
-        <button type="button" className="studio-slides-primary" onClick={() => onStage("prepare")}>
-          <Plus size={17} /> Nova apresentação
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Link
+            to="/projetos"
+            className="studio-slides-nav-recent"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            title="Ver central completa de projetos e materiais"
+          >
+            <FolderOpen size={16} /> Ver todos os projetos
+          </Link>
+          <button type="button" className="studio-slides-primary" onClick={() => onStage("prepare")}>
+            <Plus size={17} /> Nova apresentação
+          </button>
+        </div>
       </div>
       {recentProjects.length ? (
         <div className="studio-slides-recent-grid">
@@ -403,10 +413,10 @@ function SlidesFlow({
 }
 
 function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId: string; projectId: string | null }) {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
-  const returnPath = searchParams.get("from") === "projetos" || location.state?.from === "/projetos" ? "/projetos" : "/inicio";
-  const returnLabel = returnPath === "/projetos" ? "Voltar para Meus Projetos" : "Voltar ao início";
+
   const [initial] = useState(() => getStudioProjects(userId).find((item) => item.id === projectId && item.kind === kind));
   const [project, setProject] = useState<StudioProject>(() => {
     const completedJob = getStudioJobs().find(job => job.userId === userId && job.projectId === projectId);
@@ -434,9 +444,42 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
     if (kind === "slides" && !searchParams.has("linha")) return "recent";
     return "prepare";
   });
+
+  const isFromProjetos = searchParams.get("from") === "projetos" || location.state?.from === "/projetos";
+  // Quando estiver em slides e em edição/preparação/progresso/resultado, voltar leva para a listagem "Projetos recentes" dos slides (/studio/slides).
+  // Se já estiver na tela de recentes ou vier de /projetos, voltar leva para /projetos (Meus Projetos & Materiais Didáticos).
+  const returnPath = isFromProjetos
+    ? "/projetos"
+    : kind === "slides" && stage !== "recent"
+      ? "/studio/slides"
+      : "/projetos";
+  const returnLabel = returnPath === "/studio/slides"
+    ? "Voltar para Projetos Recentes"
+    : "Voltar para Meus Projetos";
+
+  const executeBack = (replace = false) => {
+    if (isFromProjetos) {
+      navigate("/projetos", { replace });
+      return;
+    }
+    if (kind === "slides" && stage !== "recent") {
+      setStage("recent");
+      navigate("/studio/slides", { replace });
+      return;
+    }
+    navigate("/projetos", { replace });
+  };
+
+  const handleBack = () => {
+    if (dirty || generating) {
+      setShowUnsavedModal(true);
+      return;
+    }
+    executeBack();
+  };
+
   const [importing, setImporting] = useState(false);
   const [importStatus, setImportStatus] = useState("");
-  const navigate = useNavigate();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showResendModal, setShowResendModal] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
@@ -460,8 +503,10 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
     const urlStage = searchParams.get("stage");
     if (urlStage === "edit" || urlStage === "prepare" || urlStage === "progress" || urlStage === "result" || urlStage === "recent") {
       setStage(urlStage);
+    } else if (!searchParams.get("id") && kind === "slides" && !searchParams.has("linha")) {
+      setStage("recent");
     }
-  }, [searchParams]);
+  }, [searchParams, kind]);
 
   useEffect(() => {
     const refreshRecentProjects = () => {
@@ -556,7 +601,7 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
     deleteStudioProject(userId, project.id);
     removeStudioJob(userId, project.id);
     setDirty(false);
-    navigate(returnPath, { replace: true });
+    executeBack(true);
   }
 
   async function download(format: "pptx" | "pdf" | "roteiro" = "pptx") {
@@ -882,7 +927,7 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
               type="button"
               aria-label={returnLabel}
               title={returnLabel}
-              onClick={() => (dirty || generating) ? setShowUnsavedModal(true) : navigate(returnPath)}
+              onClick={handleBack}
             >
               <ArrowLeft size={18} />
             </button>
@@ -1002,7 +1047,7 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
                     onClick={() => {
                       save();
                       setShowUnsavedModal(false);
-                      navigate(returnPath);
+                      executeBack();
                     }}
                   >
                     Salvar e sair
@@ -1012,7 +1057,7 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
                     className="generator-action-btn w-full justify-center py-2.5 text-slate-300"
                     onClick={() => {
                       setShowUnsavedModal(false);
-                      navigate(returnPath);
+                      executeBack();
                     }}
                   >
                     Sair sem salvar

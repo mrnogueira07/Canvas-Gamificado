@@ -7,7 +7,7 @@ import type { GeneratorFormData, GeneratedContent } from '../types';
 import { CheckCircle, AlertTriangle, Sliders, FileText, ArrowLeft, Gamepad2, BookOpen, Layers3, RefreshCw } from 'lucide-react';
 import { model } from '../lib/gemini';
 import type { Part } from '@google/generative-ai';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { auth, db, storage } from '../lib/firebase';
 import { ref as storageRef, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -566,9 +566,8 @@ function sanitizeContent(input: unknown, gameType?: string, gradeLevel?: string,
 const GeneratorPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const location = useLocation();
-    const returnPath = searchParams.get('from') === 'projetos' || location.state?.from === '/projetos' ? '/projetos' : '/inicio';
-    const returnLabel = returnPath === '/projetos' ? 'Voltar para Meus Projetos' : 'Voltar ao início';
+    const returnPath = '/projetos';
+    const returnLabel = 'Voltar para Meus Projetos';
 
     // Controle de abas para visualização adaptativa no celular / tablet
     const [mobileTab, setMobileTab] = useState<'form' | 'document'>('form');
