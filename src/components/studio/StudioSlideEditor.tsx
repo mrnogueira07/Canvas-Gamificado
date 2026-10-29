@@ -1,34 +1,13 @@
 import { useState, useEffect } from "react";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Plus, Trash2, Image as ImageIcon, X, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
-import type { StudioProject, StudioSlide, StudioSlideImageAspect, StudioSlideImageFit } from "../../lib/studioProjects";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Clock, Plus, Trash2, Image as ImageIcon, X, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
+import type { StudioProject, StudioSlide } from "../../lib/studioProjects";
 import { createStudioId } from "../../lib/studioProjects";
 import { orderedStudioSlides, slideTypeLabels, studioCategories } from "../../lib/studioNavigation";
-import { slideLayouts } from "../../lib/studioGeneration";
 import { slideTypes } from "../../lib/studioGuidelines";
 import { uploadStudioImage } from "../../lib/studioImages";
 import { StudioSlideFrame } from "./StudioSlidePreview";
 import { StudioImageEditor } from "./StudioImageEditor";
 import "../../styles/studio/studio-slide-editor.css";
-
-const layoutLabels: Record<string, string> = {
-  so_texto: "Somente texto",
-  imagem_esquerda_texto_direita: "Imagem à esquerda e texto à direita",
-  topicos_com_barras: "Tópicos com barras laterais",
-  caixas_contorno: "Caixas com contorno",
-  formula_com_espaco: "Fórmula com espaço para resolução",
-  capa: "Capa",
-  objetivo_habilidades: "Objetivo e habilidades",
-  topicos_com_imagem: "Tópicos com imagem",
-  topicos: "Tópicos",
-  comparacao: "Comparação",
-  processo: "Processo",
-  linha_do_tempo: "Linha do tempo",
-  mapa_resumo: "Mapa-resumo",
-  formula: "Fórmula",
-  exercicio: "Exercício",
-  gabarito: "Gabarito",
-  encerramento: "Encerramento",
-};
 
 export function StudioSlideEditor({
   project,
@@ -113,24 +92,6 @@ export function StudioSlideEditor({
     if (selected) onSlideChange(selected.id, value);
   };
 
-  const availableLayouts =
-    project.line === "Konectar.me"
-      ? [
-          "so_texto",
-          "imagem_esquerda_texto_direita",
-          "topicos_com_imagem",
-          "topicos",
-          "comparacao",
-          "processo",
-          "linha_do_tempo",
-          "mapa_resumo",
-          "formula",
-          "formula_com_espaco",
-          "exercicio",
-          "gabarito",
-        ]
-      : slideLayouts;
-
   function add(type = "conteudo") {
     const slide: StudioSlide = {
       id: createStudioId(),
@@ -211,6 +172,33 @@ export function StudioSlideEditor({
               <h3>{selected.title || slideTypeLabels[selected.type || "conteudo"]}</h3>
             </div>
             <div className="studio-slide-editor__header-actions">
+              <label className="studio-slide-editor__duration-chip" title="Duração estimada da gravação deste slide">
+                <Clock size={13} />
+                <input
+                  type="number"
+                  min={0}
+                  max={720}
+                  value={selected.duration || 0}
+                  onChange={event =>
+                    patch({ duration: Math.max(0, Math.min(720, Number(event.target.value) || 0)) })
+                  }
+                />
+                <span>seg</span>
+              </label>
+
+              {!["capa", "encerramento"].includes(selected.type || "") && (
+                <label className="studio-slide-editor__type-chip" title="Tipo pedagógico do slide">
+                  <span>Tipo:</span>
+                  <select value={selected.type || "conteudo"} onChange={event => patch({ type: event.target.value })}>
+                    {slideTypes.map(type => (
+                      <option value={type} key={type}>
+                        {slideTypeLabels[type]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
               {!["capa", "encerramento"].includes(selected.type || "") && (
                 <button
                   type="button"
@@ -297,222 +285,6 @@ export function StudioSlideEditor({
             <p className="studio-slide-editor__hint-text">
               ✨ <strong>Edição no slide:</strong> clique diretamente em qualquer texto ou na imagem para editar. Você também pode arrastar uma foto direto para cá.
             </p>
-          </div>
-
-          {/* BARRA DE FERRAMENTAS DO SLIDE */}
-          <div className="studio-slide-editor__toolbar">
-            <label className="studio-toolbar__item">
-              <span>Tipo</span>
-              <select value={selected.type || "conteudo"} onChange={event => patch({ type: event.target.value })}>
-                {slideTypes.map(type => (
-                  <option value={type} key={type}>
-                    {slideTypeLabels[type]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {!["capa", "encerramento"].includes(selected.type || "") && (
-              <label className="studio-toolbar__item">
-                <span>Composição</span>
-                <select
-                  value={
-                    selected.layout && selected.layout !== "so_texto"
-                      ? selected.layout
-                      : selected.image?.url
-                        ? "imagem_esquerda_texto_direita"
-                        : (selected.layout || "so_texto")
-                  }
-                  onChange={event => {
-                    const newLayout = event.target.value;
-                    const updates: Partial<StudioSlide> = { layout: newLayout };
-                    if (newLayout !== "linha_do_tempo" && selected.timelineItems?.length && !selected.content.trim()) {
-                      updates.content = selected.timelineItems
-                        .map(item => `• ${item.label}${item.text ? `: ${item.text}` : ""}`)
-                        .join("\n");
-                    }
-                    if (["imagem_esquerda_texto_direita", "topicos_com_imagem"].includes(newLayout) && !selected.image?.url && selected.timelineItems?.length) {
-                      const firstImg = selected.timelineItems.find(t => t.image?.url)?.image;
-                      if (firstImg) {
-                        updates.image = {
-                          description: firstImg.description || "Imagem",
-                          source: firstImg.source || "",
-                          status: "Pronta",
-                          url: firstImg.url,
-                          aspectRatio: firstImg.aspectRatio,
-                          fit: firstImg.fit,
-                        };
-                      }
-                    }
-                    patch(updates);
-                  }}
-                >
-                  {availableLayouts.map(layout => (
-                    <option value={layout} key={layout}>
-                      {layoutLabels[layout]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            {!["capa", "encerramento", "objetivo_bncc"].includes(selected.type || "") &&
-              (Boolean(selected.image?.url) || ["imagem_esquerda_texto_direita", "topicos_com_imagem"].includes(selected.layout || "")) && (
-              <>
-                <label className="studio-toolbar__item">
-                  <span>Proporção</span>
-                  <select
-                    value={selected.image?.aspectRatio || "3:4"}
-                    onChange={event => {
-                      const nextAspect = event.target.value as StudioSlideImageAspect;
-                      patch({
-                        image: {
-                          description: selected.image?.description || selected.title,
-                          source: selected.image?.source || "",
-                          status: selected.image?.status || "Pronta",
-                          ...selected.image,
-                          aspectRatio: nextAspect,
-                        },
-                      });
-                    }}
-                  >
-                    <option value="3:4">3:4 (Vertical)</option>
-                    <option value="1:1">1:1 (Quadrada)</option>
-                    <option value="4:3">4:3 (Clássica)</option>
-                    <option value="16:9">16:9 (Panorâmica)</option>
-                  </select>
-                </label>
-
-                <label className="studio-toolbar__item">
-                  <span>Ajuste</span>
-                  <select
-                    value={selected.image?.fit || "cover"}
-                    onChange={event => {
-                      const nextFit = event.target.value as StudioSlideImageFit;
-                      patch({
-                        image: {
-                          description: selected.image?.description || selected.title,
-                          source: selected.image?.source || "",
-                          status: selected.image?.status || "Pronta",
-                          ...selected.image,
-                          fit: nextFit,
-                        },
-                      });
-                    }}
-                  >
-                    <option value="cover">Preencher quadro</option>
-                    <option value="contain">Imagem inteira</option>
-                  </select>
-                </label>
-              </>
-            )}
-
-            {!["capa", "encerramento"].includes(selected.type || "") && (
-              <div className="studio-toolbar__item studio-toolbar__item--position" title="Ajuste o alinhamento vertical das caixas no slide">
-                <span>Posição</span>
-                <div className="studio-toolbar__nudge-group">
-                  {Boolean(selected.image?.url) && (
-                    <div className="studio-toolbar__nudge-subgroup" title="Mover caixa da imagem para cima ou para baixo">
-                      <span className="studio-toolbar__nudge-label">🖼️</span>
-                      <button
-                        type="button"
-                        className="studio-toolbar__nudge-btn"
-                        title="Subir imagem"
-                        onClick={() => {
-                          const current = selected.imageOffsetY || 0;
-                          patch({ imageOffsetY: Math.max(0, Math.round((current - 1.5) * 10) / 10) });
-                        }}
-                      >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        className="studio-toolbar__nudge-btn"
-                        title="Descer imagem"
-                        onClick={() => {
-                          const current = selected.imageOffsetY || 0;
-                          patch({ imageOffsetY: Math.min(18, Math.round((current + 1.5) * 10) / 10) });
-                        }}
-                      >
-                        ▼
-                      </button>
-                      {Boolean(selected.imageOffsetY) && (
-                        <button
-                          type="button"
-                          className="studio-toolbar__nudge-btn studio-toolbar__nudge-btn--reset"
-                          title="Resetar imagem ao topo"
-                          onClick={() => patch({ imageOffsetY: 0 })}
-                        >
-                          ↺
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="studio-toolbar__nudge-subgroup" title="Mover caixa de texto para cima ou para baixo">
-                    <span className="studio-toolbar__nudge-label">📝</span>
-                    <button
-                      type="button"
-                      className="studio-toolbar__nudge-btn"
-                      title="Subir texto"
-                      onClick={() => {
-                        const current = selected.textOffsetY || 0;
-                        patch({ textOffsetY: Math.max(0, Math.round((current - 1.5) * 10) / 10) });
-                      }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      className="studio-toolbar__nudge-btn"
-                      title="Descer texto"
-                      onClick={() => {
-                        const current = selected.textOffsetY || 0;
-                        patch({ textOffsetY: Math.min(18, Math.round((current + 1.5) * 10) / 10) });
-                      }}
-                    >
-                      ▼
-                    </button>
-                    {Boolean(selected.textOffsetY) && (
-                      <button
-                        type="button"
-                        className="studio-toolbar__nudge-btn studio-toolbar__nudge-btn--reset"
-                        title="Resetar texto ao topo"
-                        onClick={() => patch({ textOffsetY: 0 })}
-                      >
-                        ↺
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <label className="studio-toolbar__item studio-toolbar__item--duration">
-              <span>Duração</span>
-              <input
-                type="number"
-                min={0}
-                max={720}
-                value={selected.duration || 0}
-                onChange={event =>
-                  patch({ duration: Math.max(0, Math.min(720, Number(event.target.value) || 0)) })
-                }
-              />
-              <span className="studio-toolbar__unit">seg</span>
-            </label>
-
-            {!["capa", "encerramento"].includes(selected.type || "") && (
-              <button
-                type="button"
-                className="studio-toolbar__button studio-toolbar__button--primary"
-                onClick={() => setShowImageModal(true)}
-                title="Abrir gerenciador de imagem / geração com IA / upload"
-              >
-                <ImageIcon size={15} />
-                <span>{selected.image?.url ? "Alterar imagem" : "Inserir imagem"}</span>
-              </button>
-            )}
           </div>
 
           {/* NOTAS DO APRESENTADOR (PowerPoint Notes Pane) */}

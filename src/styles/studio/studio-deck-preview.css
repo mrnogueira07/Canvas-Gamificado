@@ -642,7 +642,70 @@
   box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(59, 130, 246, 0.25);
 }
 
-/* Barra flutuante ancorada na borda inferior do slide */
+/* Container de barras flutuantes na borda inferior do slide (separadas para imagem e texto) */
+.studio-preview__dock-container {
+  position: absolute;
+  bottom: 0.8cqw;
+  left: 5.61%;
+  right: 27%;
+  pointer-events: none;
+  z-index: 35;
+  transition: all 0.2s ease;
+}
+
+.studio-preview--kids .studio-preview__dock-container,
+.studio-preview--corporate .studio-preview__dock-container {
+  left: 4cqw;
+  right: 4cqw;
+}
+
+.studio-preview__dock-container--split {
+  display: grid;
+  grid-template-columns: 46% 49%;
+  gap: 5%;
+  align-items: center;
+}
+
+.studio-preview__dock-container--single {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.studio-preview__dock-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.studio-preview__dock-slot .studio-floatbar {
+  pointer-events: auto;
+  position: static;
+  transform: none;
+  margin: 0;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.studio-preview__dock-slot .studio-floatbar:hover,
+.studio-preview__dock-slot .studio-floatbar.is-pinned {
+  transform: translateY(-2px);
+}
+
+.studio-floatbar--text {
+  gap: 4px;
+}
+
+.studio-floatbar__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  padding: 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Barra flutuante ancorada legada */
 .studio-floatbar--slide-bottom {
   position: absolute;
   bottom: 0.8cqw;
