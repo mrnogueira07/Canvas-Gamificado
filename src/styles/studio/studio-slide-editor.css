@@ -2090,28 +2090,32 @@
 /* Barra superior flutuante: Proporção (3:4, 1:1, 4:3, 16:9) + Enquadramento (Preencher / Inteira) direto no slide */
 .studio-preview__image-aspect-bar {
   position: absolute;
-  top: 0.55cqw;
-  left: 0.55cqw;
-  right: 0.55cqw;
+  top: 8px;
+  left: 8px;
+  right: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.35cqw;
-  padding: 0.3cqw 0.45cqw;
-  background: rgba(15, 23, 42, 0.88);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 0.45cqw;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
   opacity: 0;
-  transform: translateY(-3px);
-  transition: opacity 0.18s ease, transform 0.18s ease;
-  z-index: 8;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 10;
   pointer-events: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
 .studio-preview__image--editable:hover .studio-preview__image-aspect-bar,
-.studio-preview__image--editable:focus-within .studio-preview__image-aspect-bar {
+.studio-preview__image--editable:focus-within .studio-preview__image-aspect-bar,
+.studio-preview__image-container:hover .studio-preview__image-aspect-bar,
+.studio-preview__image-container.is-repositioning .studio-preview__image-aspect-bar {
   opacity: 1;
   transform: translateY(0);
 }
@@ -2119,88 +2123,143 @@
 .studio-preview__image-aspect-group {
   display: inline-flex;
   align-items: center;
-  gap: 0.2cqw;
+  gap: 4px;
 }
 
 .studio-preview__image-aspect-btn {
   background: rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
-  border: 1px solid transparent;
-  padding: 0.18cqw 0.45cqw;
-  border-radius: 0.3cqw;
-  font-size: 0.9cqw;
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.14s ease;
+  transition: all 0.15s ease;
   line-height: 1.2;
 }
 
 .studio-preview__image-aspect-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.22);
   color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 .studio-preview__image-aspect-btn.is-active {
   background: #2563eb;
   color: #ffffff;
   border-color: #60a5fa;
-  box-shadow: 0 1px 6px rgba(37, 99, 235, 0.45);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.5);
 }
 
 .studio-preview__image-fit-btn {
   background: rgba(255, 255, 255, 0.1);
-  color: #e2e8f0;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  padding: 0.18cqw 0.5cqw;
-  border-radius: 0.3cqw;
-  font-size: 0.88cqw;
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.14s ease;
+  transition: all 0.15s ease;
   white-space: nowrap;
   line-height: 1.2;
 }
 
 .studio-preview__image-fit-btn:hover {
-  background: rgba(59, 130, 246, 0.28);
+  background: rgba(59, 130, 246, 0.35);
   border-color: #60a5fa;
   color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .studio-preview__image-fit-btn.is-active {
-  background: rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.3);
   border-color: #34d399;
   color: #6ee7b7;
 }
 
+.studio-preview__image-reposition-btn {
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: #ddd6fe;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.studio-preview__image-reposition-btn:hover {
+  background: #7c3aed;
+  color: #ffffff;
+  border-color: #c4b5fd;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.45);
+  transform: translateY(-1px);
+}
+
+.studio-preview__image-reposition-btn.is-active {
+  background: #2563eb;
+  border-color: #60a5fa;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.5);
+}
+
 .studio-preview__image-edit-badge {
   position: absolute;
-  left: 0.55cqw;
-  right: 0.55cqw;
-  bottom: 0.55cqw;
-  background: rgba(15, 23, 42, 0.88);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  padding: 0.4cqw 0.65cqw;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 6px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   opacity: 0;
-  transform: translateY(3px);
-  transition: opacity 0.18s ease, transform 0.18s ease;
-  border-radius: 0.45cqw;
-  color: #ffffff;
-  font-size: 1.02cqw;
-  font-weight: 600;
-  z-index: 7;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  border-radius: 8px;
+  z-index: 9;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
 .studio-preview__image--editable:hover .studio-preview__image-edit-badge,
-.studio-preview__image--editable:focus-within .studio-preview__image-edit-badge {
+.studio-preview__image--editable:focus-within .studio-preview__image-edit-badge,
+.studio-preview__image-container:hover .studio-preview__image-edit-badge {
   opacity: 1;
   transform: translateY(0);
+}
+
+.studio-preview__image-change-badge-btn {
+  background: rgba(59, 130, 246, 0.22);
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  border-radius: 6px;
+  color: #93c5fd;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.studio-preview__image-change-badge-btn:hover {
+  background: #2563eb;
+  border-color: #60a5fa;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.45);
+  transform: translateY(-1px);
 }
 
 .studio-preview__placeholder-actions {
@@ -2230,22 +2289,27 @@
 }
 
 .studio-preview__image-remove-badge-btn {
-  background: rgba(220, 38, 38, 0.9);
+  background: rgba(220, 38, 38, 0.88);
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 0.25cqw 0.7cqw;
-  border-radius: 0.35cqw;
-  font-size: 1.1cqw;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   pointer-events: auto;
   transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
 }
 
 .studio-preview__image-remove-badge-btn:hover {
   background: #dc2626;
   border-color: #ffffff;
   transform: scale(1.04);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.5);
 }
 
 .studio-preview__image-pending--clickable {
@@ -2398,32 +2462,37 @@
 .studio-toolbar__nudge-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   background: #181b26;
   border: 1px solid var(--studio-border, #282c3c);
   border-radius: 8px;
-  padding: 4px 8px;
+  padding: 4px 10px;
 }
 
 .studio-toolbar__nudge-subgroup {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .studio-toolbar__nudge-label {
-  font-size: 13px;
+  font-size: 14px;
   margin-right: 2px;
 }
 
 .studio-toolbar__nudge-btn {
   background: #222634;
-  border: 1px solid #33394c;
-  color: #cbd5e1;
-  font-size: 11px;
+  border: 1px solid #3b4259;
+  color: #e2e8f0;
+  font-size: 12px;
   font-weight: 700;
-  border-radius: 4px;
-  padding: 3px 6px;
+  border-radius: 5px;
+  min-width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   cursor: pointer;
   line-height: 1;
   transition: all 0.15s ease;
@@ -2433,10 +2502,13 @@
   background: #7c3aed;
   border-color: #a78bfa;
   color: #ffffff;
+  transform: scale(1.06);
 }
 
 .studio-toolbar__nudge-btn--reset {
-  color: #f87171 !important;
+  color: #fca5a5 !important;
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
 }
 
 .studio-toolbar__nudge-btn--reset:hover {

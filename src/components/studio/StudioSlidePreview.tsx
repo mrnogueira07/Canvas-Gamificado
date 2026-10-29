@@ -834,7 +834,17 @@ export function StudioSlideFrame({
 
                             {/* Barra inferior flutuante: Trocar ou Remover */}
                             <div className="studio-preview__image-edit-badge">
-                              <span>🖼️ Alterar imagem</span>
+                              <button
+                                type="button"
+                                className="studio-preview__image-change-badge-btn"
+                                title="Abrir editor para trocar imagem, gerar com IA ou enviar arquivo"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  onOpenImageEditor?.();
+                                }}
+                              >
+                                🖼️ Alterar imagem
+                              </button>
                               <button
                                 type="button"
                                 className="studio-preview__image-remove-badge-btn"
@@ -853,7 +863,7 @@ export function StudioSlideFrame({
                                   });
                                 }}
                               >
-                                &times; Remover
+                                ✕ Remover
                               </button>
                             </div>
                           </>
