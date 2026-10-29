@@ -643,6 +643,25 @@
   box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(59, 130, 246, 0.25);
 }
 
+/* Barra flutuante ancorada na borda inferior do slide */
+.studio-floatbar--slide-bottom {
+  position: absolute;
+  bottom: 0.8cqw;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 35;
+  margin-bottom: 0;
+  max-width: 96%;
+  box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.14);
+  opacity: 0.92;
+}
+
+.studio-floatbar--slide-bottom:hover,
+.studio-floatbar--slide-bottom.is-pinned {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-2px);
+}
+
 /* Alça de arraste */
 .studio-floatbar__grip {
   display: inline-flex;
