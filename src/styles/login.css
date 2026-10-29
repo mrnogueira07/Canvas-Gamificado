@@ -1,6 +1,6 @@
 /* ==========================================================================
    MIND CANVAS — TELA DE LOGIN & BACKGROUND DE CONEXÕES
-   Harmonizado com o layout principal (Dark Slate, Lexend, Acentos Roxos)
+   Harmonizado com a paleta oficial do sistema (Dark Slate, Teachers, Azul Real Educacional)
    ========================================================================== */
 
 .mind-login {
@@ -12,11 +12,11 @@
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: clip;
-  color: #f0f1f5;
-  background: #0b0c0e;
+  color: #f0f2f7;
+  background: #0c0e14;
   background-image:
-    radial-gradient(1200px 600px at 15% 10%, rgba(139, 92, 246, 0.08), transparent 70%),
-    radial-gradient(1000px 500px at 85% 90%, rgba(99, 102, 241, 0.06), transparent 60%);
+    radial-gradient(1200px 600px at 15% 10%, rgba(37, 99, 235, 0.08), transparent 70%),
+    radial-gradient(1000px 500px at 85% 90%, rgba(59, 130, 246, 0.05), transparent 60%);
   font-family: 'Teachers', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -82,13 +82,13 @@
 .mind-login-glow-one {
   left: -220px;
   top: 15%;
-  background: rgba(168, 85, 247, 0.12);
+  background: rgba(37, 99, 235, 0.12);
 }
 
 .mind-login-glow-two {
   right: -180px;
   bottom: -260px;
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(59, 130, 246, 0.08);
   animation-delay: -11s;
 }
 
@@ -123,11 +123,11 @@
   place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 11px;
+  border-radius: 12px;
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #181920;
-  box-shadow: none;
+  border: 1px solid #282b35;
+  background: #1c1e24;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
 }
 
 .mind-login-brand-title {
@@ -144,7 +144,7 @@
   font-size: 10.45px;
   letter-spacing: 0.14em;
   font-weight: 600;
-  color: #a78bfa;
+  color: #60a5fa;
 }
 
 .mind-login-innyx {
@@ -188,7 +188,7 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #c084fc;
+  color: #3b82f6;
 }
 
 .mind-login-eyebrow > span,
@@ -196,8 +196,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #a855f7;
-  box-shadow: 0 0 10px #c084fc;
+  background: #3b82f6;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.55);
 }
 
 .mind-login-intro h1 {
@@ -210,15 +210,16 @@
 }
 
 .mind-login-intro h1 > span {
-  background: linear-gradient(115deg, #c084fc 0%, #a855f7 50%, #e879f9 100%);
+  background: linear-gradient(135deg, #bfdbfe 0%, #60a5fa 50%, #2563eb 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .mind-login-description {
   max-width: 540px;
   margin: 22px 0 0;
-  color: #9da1b2;
+  color: #9da1b4;
   font-size: 15.95px;
   line-height: 1.75;
   font-weight: 400;
@@ -232,7 +233,7 @@
   margin-top: 28px;
   padding-top: 22px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  color: #787d92;
+  color: #7a7f92;
   font-size: 12.5px;
 }
 
@@ -240,19 +241,19 @@
   width: 24px;
   height: 1px;
   flex-shrink: 0;
-  background: rgba(168, 85, 247, 0.45);
+  background: rgba(59, 130, 246, 0.4);
 }
 
 /* Right Card: Dark Mind Canvas Styling (Left-Aligned Editorial Hierarchy) */
 .mind-login-card {
   width: 100%;
   padding: 32px 32px 26px;
-  border-radius: 22px;
-  border: 1px solid #212432;
-  background: #13151e;
+  border-radius: 20px;
+  border: 1px solid #212433;
+  background: #141620;
   color: #ffffff;
   text-align: left;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
   animation: mind-card-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -290,9 +291,9 @@
   height: 48px;
   flex: 0 0 48px;
   border-radius: 13px;
-  background: #1c1d27;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: none;
+  background: #1c1e24;
+  border: 1px solid #282b35;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
 }
 
 .mind-login-card-heading h2 {
@@ -305,7 +306,7 @@
 }
 
 .mind-login-card-heading p {
-  color: #9da1b2;
+  color: #8b90a2;
   margin: 4px 0 0;
   font-size: 13.2px;
   line-height: 1.45;
@@ -315,7 +316,7 @@
   display: block;
   font-size: 11px;
   font-weight: 700;
-  color: #7c8298;
+  color: #8b90a2;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   text-align: left;
@@ -336,9 +337,9 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  border: 1px solid #2d3144;
+  border: 1px solid #25293a;
   border-radius: 12px;
-  background: #1a1d29;
+  background: #181b26;
   color: #ffffff;
   font-size: 14.85px;
   font-weight: 600;
@@ -349,11 +350,11 @@
 }
 
 .mind-login-google:hover:not(:disabled) {
-  background: #232738;
-  border-color: #4a506d;
+  background: #202434;
+  border-color: #3b82f6;
   color: #ffffff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.22);
 }
 
 .mind-login-google:disabled {
@@ -392,9 +393,9 @@
 }
 
 .mind-login-state-icon.denied {
-  background: rgba(244, 63, 94, 0.15);
-  border: 1px solid rgba(244, 63, 94, 0.3);
-  color: #fb7185;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
 }
 
 .mind-login-state h3 {
@@ -408,7 +409,7 @@
   margin: 0 0 18px;
   font-size: 13.75px;
   line-height: 1.6;
-  color: #8e93a6;
+  color: #8b90a2;
 }
 
 /* Message Alert */
@@ -424,9 +425,9 @@
 }
 
 .mind-login-message.error {
-  background: rgba(244, 63, 94, 0.12);
-  border: 1px solid rgba(244, 63, 94, 0.28);
-  color: #fda4af;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  color: #fca5a5;
 }
 
 /* Card Footer */
@@ -438,7 +439,7 @@
   margin-top: 20px;
   padding-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
-  color: #787d92;
+  color: #7a7f92;
   font-size: 12.1px;
 }
 
@@ -455,7 +456,7 @@
   flex-wrap: wrap;
   gap: 12px;
   font-size: 12.1px;
-  color: #6e7284;
+  color: #626779;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
