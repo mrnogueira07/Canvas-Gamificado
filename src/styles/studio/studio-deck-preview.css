@@ -483,7 +483,6 @@
 .studio-preview__image-container[data-fit="contain"] img,
 .studio-preview--konectar .studio-preview__image-container[data-fit="contain"] img {
   object-fit: contain !important;
-  object-position: top left !important;
   background: transparent !important;
 }
 
@@ -842,6 +841,16 @@
 }
 
 /* Grade sutil de terços ao enquadrar a imagem */
+.studio-preview__image-container.is-repositioning {
+  cursor: grab !important;
+  touch-action: none !important;
+  user-select: none !important;
+}
+
+.studio-preview__image-container.is-repositioning:active {
+  cursor: grabbing !important;
+}
+
 .studio-preview__reposition-grid {
   position: absolute;
   inset: 0;

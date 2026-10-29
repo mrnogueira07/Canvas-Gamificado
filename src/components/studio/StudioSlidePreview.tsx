@@ -204,20 +204,25 @@ export function StudioSlideFrame({
     });
   };
 
-  const handleImagePointerDown = (e: React.PointerEvent<HTMLImageElement>) => {
+  const handleImagePointerDown = (e: React.PointerEvent<HTMLElement>) => {
+    if (!isRepositioningImage) return;
     e.stopPropagation();
     e.preventDefault();
-    const imgEl = e.currentTarget;
+    const container = e.currentTarget.closest(".studio-preview__image-container") as HTMLElement;
+    const imgEl = container?.querySelector("img") as HTMLImageElement;
+    if (!container || !imgEl) return;
+
     try {
-      imgEl.setPointerCapture(e.pointerId);
+      e.currentTarget.setPointerCapture(e.pointerId);
     } catch {}
-    const container = imgEl.parentElement;
-    if (!container) return;
+
     const rect = container.getBoundingClientRect();
     const startX = e.clientX;
     const startY = e.clientY;
     const initialPosX = slide.image?.positionX ?? 50;
     const initialPosY = slide.image?.positionY ?? 50;
+    let latestPosX = initialPosX;
+    let latestPosY = initialPosY;
     setIsPanningImage(true);
 
     const onPointerMove = (ev: PointerEvent) => {
@@ -227,16 +232,21 @@ export function StudioSlideFrame({
       const deltaYPercent = (dy / (rect.height || 1)) * 100;
       const nextPosX = Math.max(0, Math.min(100, Math.round(initialPosX - deltaXPercent)));
       const nextPosY = Math.max(0, Math.min(100, Math.round(initialPosY - deltaYPercent)));
-      handleSetImagePosition(nextPosX, nextPosY);
+      latestPosX = nextPosX;
+      latestPosY = nextPosY;
+      // Atualização imediata em tempo real no DOM para resposta fluida a 60fps
+      imgEl.style.objectPosition = `${nextPosX}% ${nextPosY}%`;
     };
 
     const onPointerUp = (ev: PointerEvent) => {
       try {
-        imgEl.releasePointerCapture(ev.pointerId);
+        e.currentTarget.releasePointerCapture(ev.pointerId);
       } catch {}
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       setIsPanningImage(false);
+      // Persiste a posição final no projeto
+      handleSetImagePosition(latestPosX, latestPosY);
     };
 
     window.addEventListener("pointermove", onPointerMove);
@@ -245,7 +255,7 @@ export function StudioSlideFrame({
 
   const nudgeBoxOffset = (box: "image" | "text", delta: number) => {
     const current = (box === "image" ? slide.imageOffsetY : slide.textOffsetY) || 0;
-    const next = Math.max(0, Math.min(18, Math.round((current + delta) * 10) / 10));
+    const next = Math.max(-8, Math.min(18, Math.round((current + delta) * 10) / 10));
     if (box === "image") {
       onSlideChange?.({ imageOffsetY: next });
     } else {
@@ -266,16 +276,20 @@ export function StudioSlideFrame({
     const initialOffset = (box === "image" ? slide.imageOffsetY : slide.textOffsetY) || 0;
     const cqwFactor = slideRect ? 100 / (slideRect.width || 1) : 0.1;
 
+    let latestOffset = initialOffset;
+    const targetEl = box === "image"
+      ? (slideFrame?.querySelector(".studio-preview__image") as HTMLElement)
+      : (slideFrame?.querySelector(".studio-preview__text-wrapper") as HTMLElement);
+
     const onPointerMove = (ev: PointerEvent) => {
       const deltaYPx = ev.clientY - startY;
       const deltaYCqw = deltaYPx * cqwFactor;
       let nextOffset = initialOffset + deltaYCqw;
-      // Mantém estritamente no slide: entre 0 e 18cqw
-      nextOffset = Math.max(0, Math.min(18, Math.round(nextOffset * 10) / 10));
-      if (box === "image") {
-        onSlideChange?.({ imageOffsetY: nextOffset });
-      } else {
-        onSlideChange?.({ textOffsetY: nextOffset });
+      // Permite movimento vertical suave entre -8cqw e 18cqw
+      nextOffset = Math.max(-8, Math.min(18, Math.round(nextOffset * 10) / 10));
+      latestOffset = nextOffset;
+      if (targetEl) {
+        targetEl.style.transform = `translateY(${nextOffset}cqw)`;
       }
     };
 
@@ -285,6 +299,11 @@ export function StudioSlideFrame({
       } catch {}
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
+      if (box === "image") {
+        onSlideChange?.({ imageOffsetY: latestOffset });
+      } else {
+        onSlideChange?.({ textOffsetY: latestOffset });
+      }
     };
 
     window.addEventListener("pointermove", onPointerMove);
@@ -717,6 +736,12 @@ export function StudioSlideFrame({
                         className={`studio-preview__image-container studio-preview__image-container--aspect-${currentAspect.replace(":", "-")} studio-preview__image-container--fit-${currentFit} ${isRepositioningImage ? "is-repositioning" : ""}`}
                         data-aspect={currentAspect}
                         data-fit={currentFit}
+                        onPointerDown={isRepositioningImage ? handleImagePointerDown : undefined}
+                        style={{
+                          cursor: isRepositioningImage ? (isPanningImage ? "grabbing" : "grab") : undefined,
+                          touchAction: isRepositioningImage ? "none" : undefined,
+                          userSelect: "none",
+                        }}
                       >
                         {isRepositioningImage && <div className="studio-preview__reposition-grid" aria-hidden="true" />}
                         <img
@@ -728,8 +753,8 @@ export function StudioSlideFrame({
                             objectPosition: `${slide.image?.positionX ?? 50}% ${slide.image?.positionY ?? 50}%`,
                             cursor: isRepositioningImage ? (isPanningImage ? "grabbing" : "grab") : undefined,
                             userSelect: "none",
+                            touchAction: isRepositioningImage ? "none" : undefined,
                           }}
-                          onPointerDown={isRepositioningImage ? handleImagePointerDown : undefined}
                         />
                       </div>
                     ) : isEditable ? (
@@ -1261,7 +1286,21 @@ export function StudioSlideFrame({
                         type="button"
                         className="studio-floatbar__btn"
                         data-tip="Enquadrar foto (arrastar dentro do quadro)"
-                        onClick={() => setIsRepositioningImage(true)}
+                        onClick={() => {
+                          setIsRepositioningImage(true);
+                          if (currentFit === "contain") {
+                            onSlideChange?.({
+                              image: {
+                                description: slide.image?.description || slide.title,
+                                source: slide.image?.source || "",
+                                status: slide.image?.status || "Pronta",
+                                ...slide.image,
+                                url: displayImageUrl,
+                                fit: "cover",
+                              },
+                            });
+                          }
+                        }}
                       >
                         <Move size={14} /> Enquadrar
                       </button>

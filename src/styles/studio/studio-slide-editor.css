@@ -2083,7 +2083,6 @@
 
 .studio-preview__image-container[data-fit="contain"] img {
   object-fit: contain !important;
-  object-position: top left !important;
   background: transparent !important;
 }
 
