@@ -303,7 +303,9 @@ export default function Dashboard() {
             where("userId", "==", user.uid),
           );
           const querySnapshot = await getDocs(q);
-          projectsData = querySnapshot.docs.map((docSnap) => {
+          projectsData = querySnapshot.docs
+            .filter((docSnap) => !docSnap.data().kind || docSnap.data().kind === "jogo" || docSnap.data().formData)
+            .map((docSnap) => {
             const data = docSnap.data();
             const parseDate = (val: unknown) => {
               if (!val) return new Date();

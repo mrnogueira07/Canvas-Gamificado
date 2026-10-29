@@ -24,7 +24,7 @@ import { collection, deleteDoc, doc, getDocs, onSnapshot, query, setDoc, where }
 import { httpsCallable } from "firebase/functions";
 import { Layout } from "../components/ui/Layout";
 import { auth, db, functions } from "../lib/firebase";
-import { deleteStudioProject, getStudioProjects } from "../lib/studioProjects";
+import { deleteStudioProject, getStudioProjects, isStudioProjectSynced } from "../lib/studioProjects";
 import { removeStudioJob } from "../lib/studioJobs";
 import { isMasterUser } from "../lib/studioNavigation";
 import type { StudioProject } from "../lib/studioProjects";
@@ -128,7 +128,7 @@ function getRows(games: Project[], drafts: StudioProject[], userSlug: string, se
       updatedAt: parseDate(project.updatedAt),
       href: `/studio/${project.kind}?id=${encodeURIComponent(project.id)}&stage=edit${fromParam}`,
       material: project.sourceContent?.trim() ? "Conteúdo-base do projeto" : undefined,
-      local: true,
+      local: !isStudioProjectSynced(project.id),
     })),
   ].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 }
@@ -859,7 +859,14 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
     const unsubscribe = onSnapshot(
       query(collection(db, "projects"), where("userId", "==", user.uid)),
       snapshot => {
-        setGames(snapshot.docs.map(document => ({ ...document.data(), id: document.id }) as Project));
+        const gamesList: Project[] = [];
+        snapshot.docs.forEach(docSnap => {
+          const data = docSnap.data();
+          if (!data.kind || data.kind === "jogo" || data.formData) {
+            gamesList.push({ ...data, id: docSnap.id } as Project);
+          }
+        });
+        setGames(gamesList);
         setLoading(false);
         setError("");
       },
