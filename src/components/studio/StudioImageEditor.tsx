@@ -143,7 +143,7 @@ export function StudioImageEditor({
     fit?: "cover" | "contain";
   } = selectedMilestone?.image || slide.image || { description: "", source: "", status: "" };
 
-  const isTimeline = slide.layout === "linha_do_tempo" || hasTimeline;
+  const isTimeline = slide.layout === "linha_do_tempo" && hasTimeline;
 
   const handleApplyImage = useCallback((newImage: {
     url?: string;
@@ -353,7 +353,7 @@ export function StudioImageEditor({
   return (
     <section className="studio-image-editor">
       {/* SELETOR DE DATAS / MARCOS HISTÓRICOS (QUANDO HOUVER LINHA DO TEMPO) */}
-      {hasTimeline && (
+      {isTimeline && hasTimeline && (
         <div className="studio-image-editor__scope-section">
           <div className="studio-image-editor__scope-header">
             <span className="studio-image-editor__scope-title">

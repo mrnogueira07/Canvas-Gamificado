@@ -22,7 +22,7 @@ SUA MISSÃO CENTRAL: **Resumir o arquivo/apostila enviado e criar uma aula compl
   - Etapa 1: Propósito Claro (Capa + Objetivo BNCC): O aluno sabe exatamente o que vai aprender e qual competência irá desenvolver.
   - Etapa 2: Conexão com a Realidade (Gancho): Conecte o tema a uma pergunta intrigante, curiosidade ou desafio cotidiano antes das teorias.
   - Etapa 3: Construção Passo a Passo (Desenvolvimento 1 e 2): O primeiro slide apresenta o conceito nuclear de forma simples. O segundo aprofunda com desdobramento, exemplo ou fórmula com área de cálculo.
-  - Etapa 4: Consolidação Visual (Síntese / Linha do Tempo): Resumo dos marcos mais importantes para fixar o mapa mental da aula.
+  - Etapa 4: Consolidação Visual (Síntese da Aula): Resumo conciso dos pontos mais importantes para fixar o aprendizado na memória (usando tópicos, caixas de contorno, mapa-resumo, síntese com imagem ou, opcionalmente, linha do tempo).
   - Etapa 5: Prática e Validação (Exercício + Gabarito comentado): O aluno testa o aprendizado com uma questão contextualizada e recebe a justificativa passo a passo.
 
 ## 2. DIRETRIZES VISUAIS E DE DIAGRAMAÇÃO DO MODELO OFICIAL
@@ -62,8 +62,11 @@ Organize o conteúdo resumido em uma progressão lógica de aula completa:
    - Conceito principal resumido em 3-4 tópicos curtos e objetivos.
 5. Desenvolvimento 2 (tipo: conteudo, layout: topicos, caixas_contorno ou formula):
    - Aprofundamento, exemplo prático ou fórmula em destaque com espaço para desenvolvimento.
-6. Síntese / Linha do Tempo / Mapa-Resumo (tipo: resumo, layout: linha_do_tempo ou mapa_resumo):
-   - Síntese rápida dos marcos ou conceitos fundamentais para consolidar o aprendizado na memória.
+6. Síntese da Aula (tipo: resumo):
+   - Resumo rápido dos conceitos fundamentais para consolidar o aprendizado na memória antes do exercício.
+   - A LINHA DO TEMPO NÃO É OBRIGATÓRIA: é opcional e deve ser randômica/variada. Varie os formatos de síntese entre as aulas:
+     - Na maioria dos casos, use layouts conceituais: 'topicos_com_barras', 'caixas_contorno', 'mapa_resumo', 'topicos' ou 'imagem_esquerda_texto_direita';
+     - Use 'linha_do_tempo' (com o array "marcos") apenas opcionalmente e quando o tema tiver uma sequência cronológica histórica indispensável.
 7. Exercício de Fixação (tipo: exercicio, layout: exercicio):
    - Enunciado objetivo e 4 alternativas (A, B, C, D) para o aluno testar o que aprendeu.
 8. Gabarito Comentado (tipo: gabarito, layout: gabarito):
@@ -89,7 +92,7 @@ Responda somente JSON válido no formato:
     {"numero":3,"tipo":"gancho","layout":"topicos","titulo":"Pergunta provocadora","topicos":["Tópico 1","Tópico 2"],"fonte_pag":["Página"],"nota_apresentador":"...","tempo_seg":30},
     {"numero":4,"tipo":"conteudo","layout":"topicos_com_imagem","titulo":"Conceito Central","topicos":["Ponto A","Ponto B","Ponto C"],"imagem":{"id":"ID exato do catálogo","descricao":"Descrição fiel da imagem"},"fonte_pag":["Página"],"nota_apresentador":"...","tempo_seg":45},
     {"numero":5,"tipo":"conteudo","layout":"caixas_contorno","titulo":"Aprofundamento","topicos":["Aspecto 1","Aspecto 2","Aspecto 3"],"fonte_pag":["Página"],"nota_apresentador":"...","tempo_seg":45},
-    {"numero":6,"tipo":"resumo","layout":"linha_do_tempo","titulo":"Síntese da Aula","topicos":["Resumo do conteúdo"],"marcos":[{"rotulo":"Etapa 1","texto":"Descrição"},{"rotulo":"Etapa 2","texto":"Descrição"}],"fonte_pag":["Página"],"nota_apresentador":"...","tempo_seg":35},
+    {"numero":6,"tipo":"resumo","layout":"topicos_com_barras","titulo":"Síntese da Aula","topicos":["Ideia-chave 1: conceito central sintetizado","Ideia-chave 2: aplicação prática consolidada","Ideia-chave 3: conclusão didática da aula"],"fonte_pag":["Página"],"nota_apresentador":"[3:00–3:35] Para fixar os principais pontos da nossa aula...","tempo_seg":35},
     {"numero":7,"tipo":"exercicio","layout":"exercicio","titulo":"Vamos praticar","exerciseQuestion":"Enunciado da questão","alternativas":[{"letra":"A","texto":"Opção A","correta":false},{"letra":"B","texto":"Opção B","correta":true},{"letra":"C","texto":"Opção C","correta":false},{"letra":"D","texto":"Opção D","correta":false}],"fonte_pag":["Página"],"nota_apresentador":"...","tempo_seg":35},
     {"numero":8,"tipo":"gabarito","layout":"gabarito","titulo":"Gabarito comentado","alternativas":[{"letra":"B","texto":"Opção B","correta":true}],"justificativa":"Justificativa didática concisa da resposta.","fonte_pag":["Página"],"nota_apresentador":"...","tempo_seg":30},
     {"numero":9,"tipo":"encerramento","layout":"encerramento","titulo":"Encerramento","topicos":[],"fonte_pag":[],"nota_apresentador":"","tempo_seg":15}
@@ -209,11 +212,11 @@ function studioKonectarWarnings(project: StudioProject): string[] {
   if (types.at(-1) !== "encerramento") warnings.push("O último slide deve ser o encerramento oficial, sem texto.");
   if (types.filter(type => ["conteudo", "interacao", "formula"].includes(type)).length < 2) warnings.push("Inclua pelo menos dois slides de desenvolvimento baseados na apostila.");
   const recap = types.findIndex(type => type === "resumo");
-  if (recap < 0) warnings.push("Inclua um mapa-resumo ou linha do tempo antes do exercício.");
+  if (recap < 0) warnings.push("Inclua um slide de síntese ou mapa-resumo antes do exercício.");
   const exercise = types.indexOf("exercicio");
   const lastExercise = types.lastIndexOf("exercicio");
   if (lastExercise < 0 || types[lastExercise + 1] !== "gabarito") warnings.push("Inclua o exercício da fonte seguido imediatamente pelo gabarito.");
-  if (recap >= 0 && exercise >= 0 && recap > exercise) warnings.push("O mapa-resumo ou linha do tempo deve vir antes do exercício.");
+  if (recap >= 0 && exercise >= 0 && recap > exercise) warnings.push("O slide de síntese deve vir antes do exercício.");
   if (types[1] === "objetivo_bncc") {
     const objective = slides[1]?.objective || project.objective;
     if (!objective?.trim() || !/^[A-Za-zÀ-ÿ]+(?:[- ][A-Za-zÀ-ÿ]+)*r\b/i.test(objective.trim().split(/\s+/)[0])) warnings.push("O objetivo deve começar com um verbo no infinitivo.");

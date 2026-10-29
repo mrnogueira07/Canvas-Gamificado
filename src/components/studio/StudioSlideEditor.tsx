@@ -323,7 +323,29 @@ export function StudioSlideEditor({
                         ? "imagem_esquerda_texto_direita"
                         : (selected.layout || "so_texto")
                   }
-                  onChange={event => patch({ layout: event.target.value })}
+                  onChange={event => {
+                    const newLayout = event.target.value;
+                    const updates: Partial<StudioSlide> = { layout: newLayout };
+                    if (newLayout !== "linha_do_tempo" && selected.timelineItems?.length && !selected.content.trim()) {
+                      updates.content = selected.timelineItems
+                        .map(item => `• ${item.label}${item.text ? `: ${item.text}` : ""}`)
+                        .join("\n");
+                    }
+                    if (["imagem_esquerda_texto_direita", "topicos_com_imagem"].includes(newLayout) && !selected.image?.url && selected.timelineItems?.length) {
+                      const firstImg = selected.timelineItems.find(t => t.image?.url)?.image;
+                      if (firstImg) {
+                        updates.image = {
+                          description: firstImg.description || "Imagem",
+                          source: firstImg.source || "",
+                          status: "Pronta",
+                          url: firstImg.url,
+                          aspectRatio: firstImg.aspectRatio,
+                          fit: firstImg.fit,
+                        };
+                      }
+                    }
+                    patch(updates);
+                  }}
                 >
                   {availableLayouts.map(layout => (
                     <option value={layout} key={layout}>

@@ -85,12 +85,12 @@ export function StudioSlideFrame({
   const highlight = kids && ["gancho", "resumo", "exercicio"].includes(slide.type || "");
   const role = slide.type === "capa" ? "capa" : slide.type === "encerramento" ? "encerramento" : highlight ? "highlight" : "conteudo";
   const formula = slide.type === "formula" || slide.layout === "formula_com_espaco";
-  const isTimeline = Boolean(slide.timelineItems?.length);
-  const timelineImages = (slide.timelineItems || []).filter(item => Boolean(item.image?.url));
+  const isTimeline = slide.layout === "linha_do_tempo" && Boolean(slide.timelineItems?.length);
+  const timelineImages = isTimeline ? (slide.timelineItems || []).filter(item => Boolean(item.image?.url)) : [];
   const coverTitle = slide.title || project.title || "Tema da aula";
 
   // Resolução resiliente da URL da imagem (recupera do referenceImages da apostila caso url tenha sido omitida)
-  let resolvedImageUrl = slide.image?.url || timelineImages[0]?.image?.url;
+  let resolvedImageUrl = slide.image?.url || (isTimeline ? timelineImages[0]?.image?.url : (slide.timelineItems || []).find(item => item.image?.url)?.image?.url);
   if (!resolvedImageUrl && slide.image && slide.image.status !== "Removida" && project.referenceImages?.length) {
     const refImgs = project.referenceImages;
     const byId = slide.image.referenceId ? refImgs.find(r => r.id === slide.image?.referenceId) : undefined;
@@ -260,7 +260,10 @@ export function StudioSlideFrame({
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
   };
-  const topics = slide.content.split("\n").map(line => line.trim()).filter(Boolean);
+  const rawTopics = slide.content.trim()
+    ? slide.content
+    : (slide.timelineItems?.length ? slide.timelineItems.map(m => `• ${m.label}${m.text ? `: ${m.text}` : ""}`).join("\n") : "");
+  const topics = rawTopics.split("\n").map(line => line.trim()).filter(Boolean);
   const basePath = (import.meta.env.BASE_URL || "/").replace(/\/+$/, "");
 
   // Tratamento inteligente de exercício para caber perfeitamente na área útil sem estourar
@@ -1138,9 +1141,9 @@ export function StudioSlideFrame({
                       </section>
                     ))}
                   </div>
-                ) : slide.timelineItems?.length ? (
+                ) : isTimeline ? (
                   <ol className="studio-preview__timeline">
-                    {slide.timelineItems.map((item, index) => {
+                    {slide.timelineItems!.map((item, index) => {
                       const cardImgUrl = item.image?.url || (index === 0 ? slide.image?.url : undefined);
                       const cardImgDesc = item.image?.description || (index === 0 ? slide.image?.description : undefined) || item.text || item.label;
                       const cardImgSource = item.image?.source || (index === 0 ? slide.image?.source : undefined);
@@ -1206,7 +1209,7 @@ export function StudioSlideFrame({
                       );
                     })}
                   </ol>
-                ) : ["topicos_com_barras", "caixas_contorno", "topicos", "topicos_com_imagem", "mapa_resumo", "processo", "linha_do_tempo"].includes(slide.layout || "") ? (
+                ) : ["topicos_com_barras", "caixas_contorno", "topicos", "topicos_com_imagem", "mapa_resumo", "processo", "linha_do_tempo", "imagem_esquerda_texto_direita"].includes(slide.layout || "") ? (
                   <div className={`studio-preview__topics studio-preview__topics--${slide.layout}`}>
                     {topics.map((line, index) => (
                       <p key={index} className="studio-preview__topic-row">
