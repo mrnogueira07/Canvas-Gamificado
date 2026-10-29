@@ -1,4 +1,20 @@
 import { useRef, useEffect, useState } from "react";
+import {
+  ArrowDownToLine,
+  ArrowUpToLine,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Crosshair,
+  GripVertical,
+  Image as ImageIcon,
+  Maximize2,
+  Minimize2,
+  Move,
+  RotateCcw,
+  Trash2,
+  Type,
+} from "lucide-react";
 import type { StudioProject, StudioSlide, StudioSlideImageAspect, StudioSlideImageFit } from "../../lib/studioProjects";
 import { createStudioId } from "../../lib/studioProjects";
 import { formatBnccCodes } from "../../lib/studioBriefing";
@@ -154,6 +170,20 @@ export function StudioSlideFrame({
   const [isRepositioningImage, setIsRepositioningImage] = useState(false);
   const [isPanningImage, setIsPanningImage] = useState(false);
 
+  // Sai do modo "enquadrar" com Esc ou ao trocar de slide
+  useEffect(() => {
+    if (!isRepositioningImage) return;
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape" || ev.key === "Enter") setIsRepositioningImage(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isRepositioningImage]);
+
+  useEffect(() => {
+    setIsRepositioningImage(false);
+  }, [slide.id]);
+
   // Reseta o modo de reposicionamento ao trocar de slide
   useEffect(() => {
     setIsRepositioningImage(false);
@@ -223,7 +253,7 @@ export function StudioSlideFrame({
     }
   };
 
-  const handleBoxPointerDown = (box: "image" | "text", e: React.PointerEvent<HTMLDivElement>) => {
+  const handleBoxPointerDown = (box: "image" | "text", e: React.PointerEvent<HTMLElement>) => {
     e.stopPropagation();
     e.preventDefault();
     const handleEl = e.currentTarget;
@@ -670,47 +700,140 @@ export function StudioSlideFrame({
                   >
                     {isEditable && (
                       <div
-                        className="studio-preview__box-handle studio-preview__box-handle--image"
-                        onPointerDown={e => handleBoxPointerDown("image", e)}
+                        className={`studio-floatbar studio-floatbar--image ${isRepositioningImage ? "is-pinned" : ""}`}
                         onClick={e => e.stopPropagation()}
-                        title="Arraste para mover a caixa da imagem para cima ou para baixo"
+                        onPointerDown={e => e.stopPropagation()}
+                        role="toolbar"
+                        aria-label="Ferramentas da imagem"
                       >
-                        <span className="studio-preview__box-handle-title">⋮⋮ ↕ Imagem</span>
-                        <div className="studio-preview__box-handle-actions">
-                          <button
-                            type="button"
-                            title="Subir imagem"
-                            onClick={e => {
-                              e.stopPropagation();
-                              nudgeBoxOffset("image", -1.5);
-                            }}
-                          >
-                            ▲
-                          </button>
-                          <button
-                            type="button"
-                            title="Descer imagem"
-                            onClick={e => {
-                              e.stopPropagation();
-                              nudgeBoxOffset("image", 1.5);
-                            }}
-                          >
-                            ▼
-                          </button>
-                          {Boolean(slide.imageOffsetY) && (
+                        {isRepositioningImage ? (
+                          <>
+                            <span className="studio-floatbar__hint">
+                              <Move size={14} /> Arraste a foto para enquadrar
+                            </span>
+                            <span className="studio-floatbar__divider" />
+                            <button type="button" className="studio-floatbar__btn" data-tip="Alinhar ao topo" onClick={() => handleSetImagePosition(50, 0)}>
+                              <ArrowUpToLine size={15} />
+                            </button>
+                            <button type="button" className="studio-floatbar__btn" data-tip="Centralizar" onClick={() => handleSetImagePosition(50, 50)}>
+                              <Crosshair size={15} />
+                            </button>
+                            <button type="button" className="studio-floatbar__btn" data-tip="Alinhar à base" onClick={() => handleSetImagePosition(50, 100)}>
+                              <ArrowDownToLine size={15} />
+                            </button>
+                            <span className="studio-floatbar__divider" />
+                            <button type="button" className="studio-floatbar__btn studio-floatbar__btn--success" onClick={() => setIsRepositioningImage(false)}>
+                              <Check size={15} /> Concluir
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span
+                              className="studio-floatbar__grip"
+                              data-tip="Arraste para mover a imagem"
+                              onPointerDown={e => handleBoxPointerDown("image", e)}
+                            >
+                              <GripVertical size={15} />
+                            </span>
+                            <button type="button" className="studio-floatbar__btn" data-tip="Subir" onClick={() => nudgeBoxOffset("image", -1.5)}>
+                              <ChevronUp size={16} />
+                            </button>
+                            <button type="button" className="studio-floatbar__btn" data-tip="Descer" onClick={() => nudgeBoxOffset("image", 1.5)}>
+                              <ChevronDown size={16} />
+                            </button>
+                            {Boolean(slide.imageOffsetY) && (
+                              <button type="button" className="studio-floatbar__btn" data-tip="Voltar ao topo" onClick={() => onSlideChange?.({ imageOffsetY: 0 })}>
+                                <RotateCcw size={14} />
+                              </button>
+                            )}
+                            {imageIsVisible && timelineImages.length <= 1 && (
+                              <>
+                                <span className="studio-floatbar__divider" />
+                                <div className="studio-floatbar__segment" role="group" aria-label="Proporção">
+                                  {SLIDE_ASPECT_OPTIONS.map(opt => (
+                                    <button
+                                      key={opt.id}
+                                      type="button"
+                                      className={`studio-floatbar__seg-btn ${currentAspect === opt.id ? "is-active" : ""}`}
+                                      data-tip={opt.title}
+                                      onClick={() => onSlideChange?.({
+                                        image: {
+                                          description: slide.image?.description || slide.title,
+                                          source: slide.image?.source || "",
+                                          status: slide.image?.status || "Pronta",
+                                          ...slide.image,
+                                          url: displayImageUrl,
+                                          aspectRatio: opt.id,
+                                        },
+                                      })}
+                                    >
+                                      {opt.label}
+                                    </button>
+                                  ))}
+                                </div>
+                                <span className="studio-floatbar__divider" />
+                                <button
+                                  type="button"
+                                  className={`studio-floatbar__btn ${currentFit === "contain" ? "is-active" : ""}`}
+                                  data-tip={currentFit === "cover" ? "Mostrar imagem inteira" : "Preencher o quadro"}
+                                  onClick={() => {
+                                    const nextFit: StudioSlideImageFit = currentFit === "cover" ? "contain" : "cover";
+                                    onSlideChange?.({
+                                      image: {
+                                        description: slide.image?.description || slide.title,
+                                        source: slide.image?.source || "",
+                                        status: slide.image?.status || "Pronta",
+                                        ...slide.image,
+                                        url: displayImageUrl,
+                                        fit: nextFit,
+                                      },
+                                    });
+                                  }}
+                                >
+                                  {currentFit === "contain" ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="studio-floatbar__btn"
+                                  data-tip="Enquadrar foto (arrastar dentro do quadro)"
+                                  onClick={() => setIsRepositioningImage(true)}
+                                >
+                                  <Move size={15} />
+                                </button>
+                              </>
+                            )}
+                            <span className="studio-floatbar__divider" />
                             <button
                               type="button"
-                              className="studio-preview__box-handle-reset"
-                              title="Alinhar ao topo (resetar)"
-                              onClick={e => {
-                                e.stopPropagation();
-                                onSlideChange?.({ imageOffsetY: 0 });
-                              }}
+                              className="studio-floatbar__btn studio-floatbar__btn--primary"
+                              data-tip="Trocar, gerar com IA ou enviar imagem"
+                              onClick={() => onOpenImageEditor?.()}
                             >
-                              ↺
+                              <ImageIcon size={15} /> Trocar
                             </button>
-                          )}
-                        </div>
+                            {imageIsVisible && timelineImages.length <= 1 && (
+                              <button
+                                type="button"
+                                className="studio-floatbar__btn studio-floatbar__btn--danger"
+                                data-tip="Remover imagem do slide"
+                                onClick={() => {
+                                  const nextLayout = slide.layout === "topicos_com_imagem" ? "topicos" : slide.layout === "imagem_esquerda_texto_direita" ? "so_texto" : slide.layout;
+                                  onSlideChange?.({
+                                    image: {
+                                      description: slide.image?.description || slide.title,
+                                      source: slide.image?.source || "",
+                                      status: "Removida",
+                                      url: undefined,
+                                    },
+                                    layout: nextLayout,
+                                  });
+                                }}
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     )}
                     {timelineImages.length > 1 ? (
@@ -733,25 +856,7 @@ export function StudioSlideFrame({
                         data-aspect={currentAspect}
                         data-fit={currentFit}
                       >
-                        {isRepositioningImage && (
-                          <div className="studio-preview__image-reposition-banner" onClick={e => e.stopPropagation()}>
-                            <div className="studio-preview__reposition-hint">
-                              <span>✋ Arraste para enquadrar</span>
-                            </div>
-                            <div className="studio-preview__reposition-presets">
-                              <button type="button" onClick={() => handleSetImagePosition(50, 0)} title="Alinhar ao topo">▲ Topo</button>
-                              <button type="button" onClick={() => handleSetImagePosition(50, 50)} title="Centralizar">⦿ Centro</button>
-                              <button type="button" onClick={() => handleSetImagePosition(50, 100)} title="Alinhar à base">▼ Base</button>
-                            </div>
-                            <button
-                              type="button"
-                              className="studio-preview__reposition-done-btn"
-                              onClick={() => setIsRepositioningImage(false)}
-                            >
-                              ✓ Pronto
-                            </button>
-                          </div>
-                        )}
+                        {isRepositioningImage && <div className="studio-preview__reposition-grid" aria-hidden="true" />}
                         <img
                           src={displayImageUrl}
                           alt={slide.image?.description || timelineImages[0]?.image?.description || slide.title}
@@ -764,110 +869,6 @@ export function StudioSlideFrame({
                           }}
                           onPointerDown={isRepositioningImage ? handleImagePointerDown : undefined}
                         />
-                        {isEditable && (
-                          <>
-                            {/* Barra superior flutuante: Proporção, Enquadramento e Reposicionamento direto no slide */}
-                            <div
-                              className="studio-preview__image-aspect-bar"
-                              onClick={e => e.stopPropagation()}
-                              role="toolbar"
-                              aria-label="Proporção e ajuste da imagem no slide"
-                            >
-                              <div className="studio-preview__image-aspect-group">
-                                {SLIDE_ASPECT_OPTIONS.map(opt => (
-                                  <button
-                                    key={opt.id}
-                                    type="button"
-                                    className={`studio-preview__image-aspect-btn ${currentAspect === opt.id ? "is-active" : ""}`}
-                                    title={opt.title}
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      onSlideChange?.({
-                                        image: {
-                                          description: slide.image?.description || slide.title,
-                                          source: slide.image?.source || "",
-                                          status: slide.image?.status || "Pronta",
-                                          ...slide.image,
-                                          url: displayImageUrl,
-                                          aspectRatio: opt.id,
-                                        },
-                                      });
-                                    }}
-                                  >
-                                    {opt.label}
-                                  </button>
-                                ))}
-                              </div>
-                              <button
-                                type="button"
-                                className={`studio-preview__image-fit-btn ${currentFit === "contain" ? "is-active" : ""}`}
-                                title={currentFit === "cover" ? "Modo atual: Preencher quadro. Clique para mostrar a imagem inteira sem cortes" : "Modo atual: Imagem inteira. Clique para preencher o quadro"}
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  const nextFit: StudioSlideImageFit = currentFit === "cover" ? "contain" : "cover";
-                                  onSlideChange?.({
-                                    image: {
-                                      description: slide.image?.description || slide.title,
-                                      source: slide.image?.source || "",
-                                      status: slide.image?.status || "Pronta",
-                                      ...slide.image,
-                                      url: displayImageUrl,
-                                      fit: nextFit,
-                                    },
-                                  });
-                                }}
-                              >
-                                {currentFit === "contain" ? "⤢ Inteira" : "⬚ Preencher"}
-                              </button>
-                              <button
-                                type="button"
-                                className={`studio-preview__image-reposition-btn ${isRepositioningImage ? "is-active" : ""}`}
-                                title={isRepositioningImage ? "Concluir reposicionamento" : "Reposicionar imagem dentro do quadro (arraste para enquadrar)"}
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setIsRepositioningImage(!isRepositioningImage);
-                                }}
-                              >
-                                {isRepositioningImage ? "✓ Concluir" : "✋ Reposicionar"}
-                              </button>
-                            </div>
-
-                            {/* Barra inferior flutuante: Trocar ou Remover */}
-                            <div className="studio-preview__image-edit-badge">
-                              <button
-                                type="button"
-                                className="studio-preview__image-change-badge-btn"
-                                title="Abrir editor para trocar imagem, gerar com IA ou enviar arquivo"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  onOpenImageEditor?.();
-                                }}
-                              >
-                                🖼️ Alterar imagem
-                              </button>
-                              <button
-                                type="button"
-                                className="studio-preview__image-remove-badge-btn"
-                                title="Remover imagem do slide"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  const nextLayout = slide.layout === "topicos_com_imagem" ? "topicos" : slide.layout === "imagem_esquerda_texto_direita" ? "so_texto" : slide.layout;
-                                  onSlideChange?.({
-                                    image: {
-                                      description: slide.image?.description || slide.title,
-                                      source: slide.image?.source || "",
-                                      status: "Removida",
-                                      url: undefined,
-                                    },
-                                    layout: nextLayout,
-                                  });
-                                }}
-                              >
-                                ✕ Remover
-                              </button>
-                            </div>
-                          </>
-                        )}
                       </div>
                     ) : isEditable ? (
                       <div className="studio-preview__image-pending studio-preview__image-pending--clickable">
@@ -920,49 +921,33 @@ export function StudioSlideFrame({
                     transform: slide.textOffsetY ? `translateY(${slide.textOffsetY}cqw)` : undefined,
                   }}
                 >
-                  {isEditable && (
+                  {isEditable && !isTimeline && !slide.columns?.length && slide.type !== "exercicio" && slide.type !== "gabarito" && (
                     <div
-                      className="studio-preview__box-handle studio-preview__box-handle--text"
-                      onPointerDown={e => handleBoxPointerDown("text", e)}
+                      className="studio-floatbar studio-floatbar--text"
                       onClick={e => e.stopPropagation()}
-                      title="Arraste para mover a caixa de texto para cima ou para baixo"
+                      onPointerDown={e => e.stopPropagation()}
+                      role="toolbar"
+                      aria-label="Ferramentas da caixa de texto"
                     >
-                      <span className="studio-preview__box-handle-title">⋮⋮ ↕ Texto</span>
-                      <div className="studio-preview__box-handle-actions">
-                        <button
-                          type="button"
-                          title="Subir texto"
-                          onClick={e => {
-                            e.stopPropagation();
-                            nudgeBoxOffset("text", -1.5);
-                          }}
-                        >
-                          ▲
+                      <span
+                        className="studio-floatbar__grip"
+                        data-tip="Arraste para mover o texto"
+                        onPointerDown={e => handleBoxPointerDown("text", e)}
+                      >
+                        <GripVertical size={15} />
+                        <Type size={13} />
+                      </span>
+                      <button type="button" className="studio-floatbar__btn" data-tip="Subir" onClick={() => nudgeBoxOffset("text", -1.5)}>
+                        <ChevronUp size={16} />
+                      </button>
+                      <button type="button" className="studio-floatbar__btn" data-tip="Descer" onClick={() => nudgeBoxOffset("text", 1.5)}>
+                        <ChevronDown size={16} />
+                      </button>
+                      {Boolean(slide.textOffsetY) && (
+                        <button type="button" className="studio-floatbar__btn" data-tip="Voltar ao topo" onClick={() => onSlideChange?.({ textOffsetY: 0 })}>
+                          <RotateCcw size={14} />
                         </button>
-                        <button
-                          type="button"
-                          title="Descer texto"
-                          onClick={e => {
-                            e.stopPropagation();
-                            nudgeBoxOffset("text", 1.5);
-                          }}
-                        >
-                          ▼
-                        </button>
-                        {Boolean(slide.textOffsetY) && (
-                          <button
-                            type="button"
-                            className="studio-preview__box-handle-reset"
-                            title="Alinhar ao topo (resetar)"
-                            onClick={e => {
-                              e.stopPropagation();
-                              onSlideChange?.({ textOffsetY: 0 });
-                            }}
-                          >
-                            ↺
-                          </button>
-                        )}
-                      </div>
+                      )}
                     </div>
                   )}
                   {slide.type === "exercicio" ? (
