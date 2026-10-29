@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { buildEncryptedUrl } from "../lib/routeCrypto";
 import {
   ArrowRight,
   BookOpen,
@@ -105,7 +106,6 @@ function parseDate(value: unknown): Date {
 }
 
 function getRows(games: Project[], drafts: StudioProject[], userSlug: string, section: Section = "inicio"): RecentProject[] {
-  const fromParam = section === "projetos" ? "&from=projetos" : "&from=inicio";
   return [
     ...games.map(project => ({
       id: `game-${project.id}`,
@@ -115,7 +115,7 @@ function getRows(games: Project[], drafts: StudioProject[], userSlug: string, se
       subject: project.formData?.subject || "—",
       grade: project.formData?.gradeLevel?.replace("Ensino ", "").replace("Fundamental ", "Fund. ") || "—",
       updatedAt: parseDate(project.updatedAt || project.createdAt),
-      href: `/canvas-generator/${userSlug}?id=${encodeURIComponent(project.id)}${fromParam}`,
+      href: buildEncryptedUrl(`/canvas-generator/${userSlug}`, { id: project.id, from: section === "projetos" ? "projetos" : undefined }),
       material: project.pdfFileName || undefined,
     })),
     ...drafts.map(project => ({
@@ -126,7 +126,7 @@ function getRows(games: Project[], drafts: StudioProject[], userSlug: string, se
       subject: project.subject || "—",
       grade: project.gradeLevel?.replace("Ensino ", "").replace("Fundamental ", "Fund. ") || "—",
       updatedAt: parseDate(project.updatedAt),
-      href: `/studio/${project.kind}?id=${encodeURIComponent(project.id)}&stage=edit${fromParam}`,
+      href: buildEncryptedUrl(`/studio/${project.kind}`, { id: project.id, stage: "edit", from: section === "projetos" ? "projetos" : undefined }),
       material: project.sourceContent?.trim() ? "Conteúdo-base do projeto" : undefined,
       local: !isStudioProjectSynced(project.id),
     })),
@@ -457,7 +457,7 @@ export function StudioHomeView({
                     <h3>{template.line}</h3>
                     <p>{template.description}</p>
                     <span className="studio-template-meta">16:9 <span>•</span> PowerPoint editável</span>
-                    <Link to={`/studio/slides?linha=${encodeURIComponent(template.line)}`}>
+                    <Link to={buildEncryptedUrl("/studio/slides", { linha: template.line })}>
                       Usar este modelo <ArrowRight size={16} />
                     </Link>
                   </div>

@@ -8,6 +8,7 @@ import { CheckCircle, AlertTriangle, Sliders, FileText, ArrowLeft, Gamepad2, Boo
 import { model } from '../lib/gemini';
 import type { Part } from '@google/generative-ai';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { resolveRouteParams, encryptRoute } from '../lib/routeCrypto';
 import { auth, db, storage } from '../lib/firebase';
 import { ref as storageRef, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -727,7 +728,11 @@ const GeneratorPage: React.FC = () => {
 
     // Carrega projeto de Firestore ou localStorage
     useEffect(() => {
-        const projectId = searchParams.get('id');
+        const routeData = resolveRouteParams(searchParams);
+        const projectId = routeData.id;
+        if (routeData.isLegacy && projectId) {
+            setSearchParams({ p: encryptRoute({ id: projectId, from: routeData.from }) }, { replace: true });
+        }
         if (projectId && projectId === savedProjectId) {
             // Already loaded/saved this project, no need to re-fetch
             return;
@@ -1130,7 +1135,7 @@ const GeneratorPage: React.FC = () => {
             }
 
             setSavedProjectId(projectId);
-            setSearchParams({ id: projectId }, { replace: true });
+            setSearchParams({ p: encryptRoute({ id: projectId }) }, { replace: true });
             setIsViewMode(true);
             setIsDirty(false);
             setShowSavedBanner(true);

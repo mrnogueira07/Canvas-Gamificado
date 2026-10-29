@@ -22,6 +22,7 @@ import {
   Book,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { buildEncryptedUrl } from "../lib/routeCrypto";
 import type { Project } from "../types";
 import { motion, AnimatePresence } from "framer-motion";
 import { auth, db } from "../lib/firebase";
@@ -1301,7 +1302,7 @@ export default function Dashboard() {
                         }
                         onClick={(id) => {
                           const userSlug = auth.currentUser?.email?.split('@')[0].replace(/\./g, '-') || 'usuario';
-                          navigate(`/canvas-generator/${userSlug}?id=${id}`);
+                          navigate(buildEncryptedUrl(`/canvas-generator/${userSlug}`, { id }));
                         }}
                         isTrash={view === "trash"}
                         onMoveToFolder={(project) =>

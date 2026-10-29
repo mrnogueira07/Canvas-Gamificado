@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { resolveRouteParams, buildEncryptedUrl, type EncryptedRouteData } from "../lib/routeCrypto";
 import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, Check, ChevronLeft, ChevronRight, Download, FileText, FolderOpen, Gamepad2, Images, LoaderCircle, MonitorPlay, Package, Pencil, Plus, Presentation, RotateCcw, Save, Sparkles, Trash2, Upload, Video, X } from "lucide-react";
 import { Layout } from "../components/ui/Layout";
 import { auth } from "../lib/firebase";
@@ -412,16 +413,15 @@ function SlidesFlow({
   </div>;
 }
 
-function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId: string; projectId: string | null }) {
+function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioKind; userId: string; projectId: string | null; routeData: EncryptedRouteData }) {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
 
   const [initial] = useState(() => getStudioProjects(userId).find((item) => item.id === projectId && item.kind === kind));
   const [project, setProject] = useState<StudioProject>(() => {
     const completedJob = getStudioJobs().find(job => job.userId === userId && job.projectId === projectId);
     const unsavedResult = completedJob?.status === "error" ? completedJob.result : undefined;
-    return unsavedResult ?? initial ?? completedJob?.result ?? newProject(kind, ["Konectar.me", "Konecta Kids", "Educa\u00e7\u00e3o Corporativa"].includes(searchParams.get("linha") || "") ? searchParams.get("linha")! : "Konectar.me");
+    return unsavedResult ?? initial ?? completedJob?.result ?? newProject(kind, ["Konectar.me", "Konecta Kids", "Educa\u00e7\u00e3o Corporativa"].includes(routeData.linha || "") ? routeData.linha! : "Konectar.me");
   });
   const projectRef = useRef<StudioProject>(project);
   useEffect(() => {
@@ -435,17 +435,17 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
   const job = jobs.find(item => item.userId === userId && item.projectId === project.id);
   const generating = isStudioJobRunning(job);
   const [stage, setStage] = useState<"recent" | "prepare" | "progress" | "result" | "edit">(() => {
-    const urlStage = searchParams.get("stage");
+    const urlStage = routeData.stage;
     if (urlStage === "edit" || urlStage === "prepare" || urlStage === "progress" || urlStage === "result" || urlStage === "recent") {
       return urlStage;
     }
     if (job && isStudioJobRunning(job)) return "progress";
     if (projectId) return "edit";
-    if (kind === "slides" && !searchParams.has("linha")) return "recent";
+    if (kind === "slides" && !routeData.linha) return "recent";
     return "prepare";
   });
 
-  const isFromProjetos = searchParams.get("from") === "projetos" || location.state?.from === "/projetos";
+  const isFromProjetos = routeData.from === "projetos" || location.state?.from === "/projetos";
   // Quando estiver em slides e em edição/preparação/progresso/resultado, voltar leva para a listagem "Projetos recentes" dos slides (/studio/slides).
   // Se já estiver na tela de recentes ou vier de /projetos, voltar leva para /projetos (Meus Projetos & Materiais Didáticos).
   const returnPath = isFromProjetos
@@ -456,6 +456,23 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
   const returnLabel = returnPath === "/studio/slides"
     ? "Voltar para Projetos Recentes"
     : "Voltar para Meus Projetos";
+
+  // Sanitização de URL: se a URL contiver parâmetros legados em texto claro (?id=...),
+  // substitui imediatamente por uma URL limpa e criptografada (?p=...)
+  useEffect(() => {
+    if (routeData.isLegacy) {
+      navigate(
+        buildEncryptedUrl(location.pathname, {
+          id: routeData.id,
+          stage: routeData.stage || stage,
+          from: routeData.from,
+          linha: routeData.linha,
+          retry: routeData.retry,
+        }),
+        { replace: true }
+      );
+    }
+  }, [routeData.isLegacy, location.pathname, routeData, stage, navigate]);
 
   const executeBack = (replace = false) => {
     if (isFromProjetos) {
@@ -500,13 +517,13 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
   const hasGeneratedSlides = project.slides.some(slide => Boolean(slide.content?.trim() || slide.notes?.trim()));
 
   useEffect(() => {
-    const urlStage = searchParams.get("stage");
+    const urlStage = routeData.stage;
     if (urlStage === "edit" || urlStage === "prepare" || urlStage === "progress" || urlStage === "result" || urlStage === "recent") {
       setStage(urlStage);
-    } else if (!searchParams.get("id") && kind === "slides" && !searchParams.has("linha")) {
+    } else if (!projectId && kind === "slides" && !routeData.linha) {
       setStage("recent");
     }
-  }, [searchParams, kind]);
+  }, [routeData.stage, projectId, kind, routeData.linha]);
 
   useEffect(() => {
     const refreshRecentProjects = () => {
@@ -591,7 +608,17 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
       setDirty(false);
       setError("");
       setMessage("Rascunho salvo neste navegador.");
-      if (!projectId) setSearchParams({ id: saved.id }, { replace: true });
+      if (!projectId) {
+        navigate(
+          buildEncryptedUrl(location.pathname, {
+            id: saved.id,
+            stage: "edit",
+            from: routeData.from,
+            linha: routeData.linha,
+          }),
+          { replace: true }
+        );
+      }
     } catch (cause) {
       setError(cause instanceof Error && cause.message.startsWith("Não foi possível") ? cause.message : "Não foi possível salvar neste navegador. Verifique o espaço disponível ou exporte seu trabalho.");
     }
@@ -781,14 +808,20 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
       if (kind === "slides") setStage("progress");
       setMessage("A IA está preenchendo os slides a partir do conteúdo de referência...");
       if (!projectId) {
-        const nextParams = new URLSearchParams(searchParams);
-        nextParams.set("id", saved.id);
-        setSearchParams(nextParams, { replace: true });
+        navigate(
+          buildEncryptedUrl(location.pathname, {
+            id: saved.id,
+            stage: "progress",
+            from: routeData.from,
+            linha: routeData.linha,
+          }),
+          { replace: true }
+        );
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Não foi possível iniciar a geração.");
     }
-  }, [project, userId, kind, setError, setProject, setDirty, setStage, setMessage, projectId, searchParams, setSearchParams]);
+  }, [project, userId, kind, setError, setProject, setDirty, setStage, setMessage, projectId, routeData, location.pathname, navigate]);
 
   async function handleResendMaterial({ file, text, updateBriefing }: { file?: File; text?: string; updateBriefing: boolean }) {
     setImporting(true);
@@ -867,7 +900,17 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
       const saved = saveStudioProject(userId, updatedProject);
       setProject(saved);
       setDirty(false);
-      if (!projectId) setSearchParams({ id: saved.id }, { replace: true });
+      if (!projectId) {
+        navigate(
+          buildEncryptedUrl(location.pathname, {
+            id: saved.id,
+            stage: "edit",
+            from: routeData.from,
+            linha: routeData.linha,
+          }),
+          { replace: true }
+        );
+      }
 
       setImportStatus("Gerando nova apresentação a partir do material reenviado…");
       startStudioJob(userId, saved);
@@ -887,17 +930,23 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
   }
 
   useEffect(() => {
-    if (searchParams.get("retry") !== "1" || autoRetried.current || generating) return;
+    if (routeData.retry !== "1" || autoRetried.current || generating) return;
     autoRetried.current = true;
     if (!project.sourceContent?.trim()) {
       setError("A apostila não está mais disponível neste rascunho. Envie o arquivo novamente para tentar gerar a aula.");
       return;
     }
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete("retry");
-    setSearchParams(nextParams, { replace: true });
+    navigate(
+      buildEncryptedUrl(location.pathname, {
+        id: project.id,
+        stage,
+        from: routeData.from,
+        linha: routeData.linha,
+      }),
+      { replace: true }
+    );
     void generate();
-  }, [searchParams, setSearchParams, project.sourceContent, generating, generate]);
+  }, [routeData.retry, generating, project.sourceContent, location.pathname, project.id, stage, routeData.from, routeData.linha, navigate, generate]);
 
   const warnings = studioWarnings(project);
   const editSlide = (id: string, patch: Partial<StudioSlide>) => {
@@ -1125,12 +1174,13 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
               onGenerate={() => void generate()}
               onOpenProject={id => {
                 setStage("edit");
-                const from = searchParams.get("from");
-                const nextParams = new URLSearchParams();
-                nextParams.set("id", id);
-                nextParams.set("stage", "edit");
-                if (from) nextParams.set("from", from);
-                navigate(`/studio/slides?${nextParams.toString()}`);
+                navigate(
+                  buildEncryptedUrl("/studio/slides", {
+                    id,
+                    stage: "edit",
+                    from: routeData.from || "projetos",
+                  })
+                );
               }}
               onOpenResend={() => setShowResendModal(true)}
               onDownload={download}
@@ -1491,9 +1541,18 @@ function StudioWorkspace({ kind, userId, projectId }: { kind: StudioKind; userId
 
 export default function StudioEditor({ kind }: { kind: StudioKind }) {
   const [params] = useSearchParams();
+  const routeData = resolveRouteParams(params);
   const userId = auth.currentUser?.uid || "";
-  const projectId = params.get("id");
-  return <StudioWorkspace key={`${userId}:${kind}:${projectId || params.get("linha") || "new"}`} kind={kind} userId={userId} projectId={projectId} />;
+  const projectId = routeData.id || null;
+  return (
+    <StudioWorkspace
+      key={`${userId}:${kind}:${projectId || routeData.linha || "new"}`}
+      kind={kind}
+      userId={userId}
+      projectId={projectId}
+      routeData={routeData}
+    />
+  );
 }
 
 
