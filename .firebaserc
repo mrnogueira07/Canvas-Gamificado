@@ -1,5 +1,11 @@
 {
   "projects": {
     "default": "canvasgame-2025"
+  },
+  "targets": {},
+  "etags": {
+    "canvasgame-2025": {
+      "extensionInstances": {}
+    }
   }
 }
