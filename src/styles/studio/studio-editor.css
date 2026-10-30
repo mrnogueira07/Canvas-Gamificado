@@ -1697,40 +1697,42 @@
   aspect-ratio: 53.45 / 30.22;
   background: white center / 100% 100% no-repeat;
   overflow: hidden;
-  color: #000;
-  font-family: Teachers, sans-serif;
+  color: #111827;
+  font-family: 'Lexend', 'Teachers', sans-serif;
   border: 1px solid #eae4f0;
 }
 
 .studio-preview--konectar {
-  font-family: Montserrat, sans-serif;
-  font-weight: 500;
-  color: #000000;
+  font-family: 'Lexend', 'Teachers', sans-serif;
+  font-weight: 450;
+  color: #111827;
 }
 
 .studio-preview--konectar .studio-preview__body {
-  font-family: Montserrat, sans-serif;
-  font-weight: 500;
-  font-size: 2.08cqw;
-  color: #000000;
+  font-family: 'Lexend', 'Teachers', sans-serif;
+  font-weight: 450;
+  font-size: clamp(1.6cqw, 1.85cqw, 2.05cqw);
+  line-height: 1.38;
+  color: #111827;
+  text-align: left !important;
 }
 
 .studio-preview--konectar .studio-preview__body h4 {
-  font-family: Montserrat, sans-serif;
-  font-weight: 500;
-  font-size: 2.08cqw !important;
+  font-family: 'Lexend', 'Teachers', sans-serif;
+  font-weight: 600;
+  font-size: 2.1cqw !important;
   color: #2796e1;
 }
 
 .studio-preview--konectar .studio-preview__cover--konectar {
-  font-family: Montserrat, sans-serif;
+  font-family: 'Lexend', 'Teachers', sans-serif;
   font-weight: 500;
   font-size: 2.08cqw;
 }
 
 .studio-preview--konectar strong {
-  font-family: Montserrat, sans-serif;
-  font-weight: 500;
+  font-family: 'Lexend', 'Teachers', sans-serif;
+  font-weight: 600;
 }
 
 .studio-preview--kids {
@@ -2002,15 +2004,14 @@
 .studio-preview__topics--caixas_contorno p {
   padding: 0.5cqw 0.8cqw;
   margin: 0 0 0.5cqw !important;
-  font-family: Montserrat, sans-serif;
-  font-weight: 500;
+  font-family: 'Lexend', 'Teachers', sans-serif;
+  font-weight: 450;
   font-size: 1.4cqw;
   line-height: 1.36;
   border-radius: 0.3cqw;
   background: transparent;
-  text-align: justify !important;
-  text-justify: inter-word !important;
-  color: #000000;
+  text-align: left !important;
+  color: #111827;
 }
 
 .studio-preview__topics--caixas_contorno p:nth-child(3n+1) {
@@ -2030,13 +2031,12 @@
   background: transparent;
   padding: 0.4cqw 0.75cqw;
   margin: 0 0 0.5cqw !important;
-  font-family: Montserrat, sans-serif;
-  font-weight: 500;
+  font-family: 'Lexend', 'Teachers', sans-serif;
+  font-weight: 450;
   font-size: 1.4cqw;
   line-height: 1.36;
-  text-align: justify !important;
-  text-justify: inter-word !important;
-  color: #000000;
+  text-align: left !important;
+  color: #111827;
 }
 
 .studio-preview__topics--topicos_com_barras p:nth-child(3n+1) {

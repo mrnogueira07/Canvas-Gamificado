@@ -14,8 +14,8 @@
   border-radius: 18px;
   color: #f1f3f9;
   background: #11131a;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
-  font-family: 'Teachers', sans-serif;
+  box-shadow: 0 16px 48px -8px rgba(0, 0, 0, 0.45), 0 4px 16px rgba(0, 0, 0, 0.25);
+  font-family: 'Lexend', 'Teachers', sans-serif;
   overflow: hidden;
 }
 
@@ -170,7 +170,7 @@
   width: 100%;
   max-width: min(100%, calc((100dvh - 310px) * 1.77));
   margin: 0 auto;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
   border-radius: 8px;
   overflow: hidden;
   background: #ffffff;
@@ -303,27 +303,28 @@
 /* Konectar.me uses a 53.45 × 30.22 in slide. Keep its preview in the same
    3/4-width content area used by the editable PowerPoint export. */
 .studio-preview--konectar .studio-preview__body {
-  inset: 9.93% 27% 13.96% 5.61%;
-  font-family: Montserrat, sans-serif;
-  font-size: 2.08cqw;
-  font-weight: 500;
-  line-height: 1.15;
-  color: #000;
+  inset: 9% 19% 10% 5.61%;
+  font-family: 'Lexend', 'Teachers', -apple-system, sans-serif;
+  font-size: clamp(1.6cqw, 1.85cqw, 2.05cqw);
+  font-weight: 450;
+  line-height: 1.38;
+  color: #111827;
 }
 
 .studio-preview--konectar .studio-preview__body:not(.studio-preview__body--objective) > h4 {
   min-height: auto !important;
-  margin-bottom: 1.2cqw !important;
-  font-size: 2.08cqw !important;
-  font-weight: 500;
+  margin-bottom: 1.1cqw !important;
+  font-size: 2.1cqw !important;
+  font-weight: 600;
+  font-family: 'Lexend', 'Teachers', -apple-system, sans-serif;
   color: #2796e1;
 }
 
 .studio-preview--konectar .studio-preview__cover--konectar {
-  inset: 27.5% 25% 12% 21.5%;
-  font-family: Montserrat, sans-serif;
+  inset: 27.5% 20% 12% 21.5%;
+  font-family: 'Lexend', 'Teachers', -apple-system, sans-serif;
   font-size: 2.08cqw;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .studio-preview--konectar .studio-preview__cover--konectar > strong,
@@ -413,7 +414,7 @@
   display: flex;
   border-radius: 0.6cqw;
   overflow: hidden;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
   background: transparent !important;
   border: none !important;
   transition: aspect-ratio 0.2s ease, max-height 0.2s ease;
@@ -504,7 +505,7 @@
 .studio-preview--konectar .studio-preview__source {
   display: block !important;
   width: 100% !important;
-  font-family: Montserrat, sans-serif;
+  font-family: 'Lexend', 'Teachers', -apple-system, sans-serif;
   font-size: 1.04cqw;
   font-weight: 500;
   line-height: 1.2;
@@ -519,9 +520,10 @@
   border-radius: 0;
   padding: 0 0 0.5cqw;
   background: transparent;
-  font-size: 2.08cqw;
-  line-height: 1.15;
-  color: #000;
+  font-size: clamp(1.6cqw, 1.85cqw, 2.05cqw);
+  line-height: 1.38;
+  color: #111827;
+  text-align: left !important;
 }
 
 .studio-preview--konectar .studio-preview__topics--topicos p,
@@ -538,13 +540,13 @@
 .studio-preview--konectar .studio-inline-edit--option-text,
 .studio-preview--konectar .studio-inline-edit--gabarito-just,
 .studio-preview--konectar .studio-inline-edit--objective {
-  font-family: Montserrat, sans-serif;
-  font-size: 2.08cqw;
-  font-weight: 500;
-  line-height: 1.15;
-  color: #000;
-  text-align: justify !important;
-  text-justify: inter-word !important;
+  font-family: 'Lexend', 'Teachers', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(1.6cqw, 1.85cqw, 2.05cqw);
+  font-weight: 450;
+  line-height: 1.38;
+  color: #111827;
+  text-align: left !important;
+  letter-spacing: -0.01em;
 }
 
 .studio-preview--konectar .studio-preview__topics--topicos p { background: transparent; border-radius: 0; }
@@ -953,8 +955,23 @@
   pointer-events: none;
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-  z-index: 30;
+  z-index: 50;
   letter-spacing: 0;
+}
+
+/* Evita corte do tooltip nos botões das extremidades */
+.studio-floatbar > *:first-child[data-tip]:hover::after,
+.studio-floatbar > *:first-child [data-tip]:hover::after,
+.studio-floatbar__grip[data-tip]:hover::after {
+  left: 0;
+  transform: none;
+}
+
+.studio-floatbar > *:last-child[data-tip]:hover::after,
+.studio-floatbar > *:last-child [data-tip]:hover::after {
+  left: auto;
+  right: 0;
+  transform: none;
 }
 
 /* Grade sutil de terços ao enquadrar a imagem */
