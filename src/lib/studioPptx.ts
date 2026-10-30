@@ -232,7 +232,7 @@ function fillSlide(xml: string, slide: StudioSlide, project: StudioProject, pict
       const imageCredit = slide.image.source || "Fonte não informada";
       const imagePage = slide.image.page && !imageCredit.includes(`p. ${slide.image.page}`) ? ` · p. ${slide.image.page}` : "";
       addText(doc, id++, `${slide.image.caption ? `${slide.image.caption} · ` : ""}${imageCredit}${imagePage}`, style.x, bodyY + imageH + 0.15 + imgShift, imageW, 0.9, style.font, sourceSize, highlight ? "FFFFFF" : "000000", false, "ctr");
-      addText(doc, id++, slide.content, style.x + imageW + style.w * .04, bodyY + textShift, style.w * .50, Math.max(1.5, bodyH - textShift), style.font, style.bodySize, highlight ? "FFFFFF" : "000000", false, "ctr");
+      addText(doc, id++, slide.content, style.x + imageW + style.w * .04, bodyY + textShift, style.w * .50, Math.max(1.5, bodyH - textShift), style.font, style.bodySize, highlight ? "FFFFFF" : "000000", false, "just");
     } else if (["topicos_com_barras", "caixas_contorno", "topicos", "mapa_resumo"].includes(slide.layout || "") && slide.content.trim()) {
       const items = slide.content.split("\n").filter(Boolean);
       const corporate = line === "Educação Corporativa";
@@ -244,7 +244,7 @@ function fillSlide(xml: string, slide: StudioSlide, project: StudioProject, pict
         const outline = slide.layout === "caixas_contorno";
         const inset = corporate ? .2 : .8;
         separator(doc, id++, style.x, y, outline ? style.w : corporate ? .05 : .2, rowH, colors[index % colors.length], outline);
-        addText(doc, id++, item, style.x + inset, y + gap * .2, style.w - inset * 2, rowH - gap * .4, style.font, style.bodySize, highlight ? "FFFFFF" : "000000", false, "ctr");
+        addText(doc, id++, item, style.x + inset, y + gap * .2, style.w - inset * 2, rowH - gap * .4, style.font, style.bodySize, highlight ? "FFFFFF" : "000000", false, "just");
       });
     } else text(slide.content, bodyY, bodyH);
   }

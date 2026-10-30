@@ -529,7 +529,8 @@
   font-size: clamp(1.6cqw, 1.85cqw, 2.05cqw);
   line-height: 1.38;
   color: #111827;
-  text-align: center !important;
+  text-align: justify !important;
+  text-justify: inter-word !important;
 }
 
 .studio-preview--konectar .studio-preview__topics--topicos p,
@@ -551,7 +552,8 @@
   font-weight: 450;
   line-height: 1.38;
   color: #111827;
-  text-align: center !important;
+  text-align: justify !important;
+  text-justify: inter-word !important;
   letter-spacing: -0.01em;
 }
 

@@ -2010,7 +2010,8 @@
   line-height: 1.36;
   border-radius: 0.3cqw;
   background: transparent;
-  text-align: center !important;
+  text-align: justify !important;
+  text-justify: inter-word !important;
   color: #111827;
 }
 
@@ -2035,7 +2036,8 @@
   font-weight: 450;
   font-size: 1.4cqw;
   line-height: 1.36;
-  text-align: center !important;
+  text-align: justify !important;
+  text-justify: inter-word !important;
   color: #111827;
 }
 

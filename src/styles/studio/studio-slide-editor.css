@@ -1829,7 +1829,8 @@
 .studio-inline-edit--gabarito-just,
 .studio-inline-edit--objective,
 .studio-inline-edit--timeline-text {
-  text-align: center !important;
+  text-align: justify !important;
+  text-justify: inter-word !important;
 }
 
 .studio-preview__text,
@@ -1844,7 +1845,8 @@
 .studio-preview__body--objective p,
 .studio-preview__body--objective ul,
 .studio-preview__body--objective li {
-  text-align: center !important;
+  text-align: justify !important;
+  text-justify: inter-word !important;
 }
 
 .studio-inline-edit--title {
@@ -1933,7 +1935,6 @@
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.4cqw;
 }
 
@@ -2246,7 +2247,6 @@
 .studio-preview__text-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.8cqw;
   margin-top: 0.4cqw;
 }
