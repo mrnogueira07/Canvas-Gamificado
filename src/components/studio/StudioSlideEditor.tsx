@@ -37,19 +37,21 @@ export function StudioSlideEditor({
     initialSlideId && slides.some(s => s.id === initialSlideId) ? initialSlideId : slides[0]?.id
   );
   const [showImageModal, setShowImageModal] = useState(false);
+  const [showDeleteSlideModal, setShowDeleteSlideModal] = useState(false);
   const [isDraggingOverCanvas, setIsDraggingOverCanvas] = useState(false);
   const [isUploadingDirect, setIsUploadingDirect] = useState(false);
 
   useEffect(() => {
-    if (!showImageModal) return;
+    if (!showImageModal && !showDeleteSlideModal) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setShowImageModal(false);
+        setShowDeleteSlideModal(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showImageModal]);
+  }, [showImageModal, showDeleteSlideModal]);
 
   const selectSlide = (id: string) => {
     setSelectedId(id);
@@ -111,6 +113,16 @@ export function StudioSlideEditor({
     const next = [...slides];
     [next[index], next[index + delta]] = [next[index + delta], next[index]];
     onSlidesChange(next);
+  }
+
+  function handleConfirmDeleteSlide() {
+    if (!selected) return;
+    const nextSlides = project.slides.filter(s => s.id !== selected.id);
+    const nextOrdered = orderedStudioSlides(nextSlides);
+    const fallback = nextOrdered[Math.min(index, nextOrdered.length - 1)]?.id || nextOrdered[0]?.id;
+    onSlidesChange(nextSlides);
+    if (fallback) selectSlide(fallback);
+    setShowDeleteSlideModal(false);
   }
 
   return (
@@ -248,15 +260,10 @@ export function StudioSlideEditor({
               </button>
               <button
                 type="button"
+                className="studio-slide-editor__btn-delete-slide"
                 aria-label="Excluir slide"
                 title="Excluir slide"
-                onClick={() => {
-                  const nextSlides = project.slides.filter(s => s.id !== selected.id);
-                  const nextOrdered = orderedStudioSlides(nextSlides);
-                  const fallback = nextOrdered[Math.min(index, nextOrdered.length - 1)]?.id || nextOrdered[0]?.id;
-                  onSlidesChange(nextSlides);
-                  if (fallback) selectSlide(fallback);
-                }}
+                onClick={() => setShowDeleteSlideModal(true)}
               >
                 <Trash2 size={17} />
               </button>
@@ -411,6 +418,49 @@ export function StudioSlideEditor({
           <button type="button" className="studio-button studio-button--primary" onClick={() => add()}>
             Adicionar slide
           </button>
+        </div>
+      )}
+      {showDeleteSlideModal && selected && (
+        <div
+          className="studio-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-slide-title"
+          onClick={() => setShowDeleteSlideModal(false)}
+        >
+          <div className="studio-modal" onClick={e => e.stopPropagation()}>
+            <div className="studio-modal__header">
+              <div className="studio-modal__icon-wrap studio-modal__icon-wrap--danger">
+                <Trash2 size={22} />
+              </div>
+              <div>
+                <h2 id="delete-slide-title">Excluir slide</h2>
+                <p>
+                  Tem certeza de que deseja excluir o <strong>Slide {String(index + 1).padStart(2, "0")} ({selected.title || slideTypeLabels[selected.type || "conteudo"]})</strong>?
+                </p>
+              </div>
+            </div>
+            <p className="studio-modal__desc">
+              Esta ação removerá permanentemente este slide da apresentação.
+            </p>
+            <div className="studio-modal__actions">
+              <button
+                type="button"
+                className="studio-button studio-button--quiet"
+                onClick={() => setShowDeleteSlideModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="studio-button studio-button--danger-solid"
+                onClick={handleConfirmDeleteSlide}
+                autoFocus
+              >
+                Sim, excluir slide
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

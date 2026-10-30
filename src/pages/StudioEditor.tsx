@@ -498,6 +498,15 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
   const [importing, setImporting] = useState(false);
   const [importStatus, setImportStatus] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  useEffect(() => {
+    if (!showDeleteModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowDeleteModal(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showDeleteModal]);
   const [showResendModal, setShowResendModal] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -1055,7 +1064,7 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
                   onClick={() => setShowDeleteModal(true)}
                   title="Excluir projeto"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={14} /> <span>Excluir projeto</span>
                 </button>
               </>
             ) : stage === "prepare" ? (
@@ -1124,10 +1133,16 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
           </div>
         )}
 
-        {/* Modal de exclusao */}
+        {/* Modal de exclusao de projeto */}
         {showDeleteModal && (
-          <div className="studio-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-project-title">
-            <div className="studio-modal">
+          <div
+            className="studio-modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-project-title"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            <div className="studio-modal" onClick={e => e.stopPropagation()}>
               <div className="studio-modal__header">
                 <div className="studio-modal__icon-wrap studio-modal__icon-wrap--danger">
                   <Trash2 size={22} />
@@ -1144,7 +1159,7 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
                 <button type="button" className="studio-button studio-button--quiet" onClick={() => setShowDeleteModal(false)}>
                   Cancelar
                 </button>
-                <button type="button" className="studio-button studio-button--danger-solid" onClick={handleDeleteProject}>
+                <button type="button" className="studio-button studio-button--danger-solid" onClick={handleDeleteProject} autoFocus>
                   Sim, excluir projeto
                 </button>
               </div>

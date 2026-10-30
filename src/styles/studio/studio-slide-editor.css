@@ -327,6 +327,12 @@
   cursor: not-allowed;
 }
 
+.studio-slide-editor__btn-delete-slide:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.45) !important;
+  color: #f87171 !important;
+}
+
 /* Área de palco/cinema onde fica o slide: fundo escuro elegante para destacar o slide branco gerado */
 .studio-slide-editor__canvas {
   position: relative;
