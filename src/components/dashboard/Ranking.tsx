@@ -9,6 +9,7 @@ export interface RankingEntry {
   photoURL: string | null;
   count: number;
   email: string;
+  disabled?: boolean;
 }
 
 const medalColors = [
@@ -168,6 +169,11 @@ export function RankingPanel({
                             {isMaster && (
                               <span className="ml-1.5 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-amber-500/25 text-amber-300 border border-amber-400/40 shadow-sm inline-flex items-center gap-1">
                                 👑 MASTER
+                              </span>
+                            )}
+                            {entry.disabled && (
+                              <span className="ml-1.5 text-[8.8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-rose-500/25 text-rose-300 border border-rose-400/40 shadow-sm inline-flex items-center gap-1">
+                                🚫 Desativado
                               </span>
                             )}
                             {isMe && <span className={`ml-1.5 text-[8.8px] uppercase tracking-wider px-1 py-0.5 rounded-md ${isSidebar ? "bg-violet-500/30 text-violet-300" : "bg-violet-500/40 text-violet-200"}`}>Você</span>}

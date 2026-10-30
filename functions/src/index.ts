@@ -130,19 +130,30 @@ export const syncTeamAvatars = onCall(
       const batch = admin.firestore().batch();
       let updatedCount = 0;
 
+      const knownDeactivated = new Set([
+        "gabriella.oliveira@innyx.com",
+        "lilian.matos@innyx.com",
+        "leticia.lima@innyx.com",
+      ]);
+
       for (const authUser of listUsersResult.users) {
         if (!authUser.email) continue;
         const userRef = admin.firestore().collection("users").doc(authUser.uid);
-        batch.set(
-          userRef,
-          {
-            uid: authUser.uid,
-            name: authUser.displayName || authUser.email.split("@")[0] || "Educador(a)",
-            email: authUser.email,
-            photoURL: authUser.photoURL || null,
-          },
-          { merge: true }
+        const isDeactivated = Boolean(
+          authUser.disabled ||
+          knownDeactivated.has(authUser.email.toLowerCase().trim())
         );
+        const dataToSet: Record<string, unknown> = {
+          uid: authUser.uid,
+          name: authUser.displayName || authUser.email.split("@")[0] || "Educador(a)",
+          email: authUser.email,
+          photoURL: authUser.photoURL || null,
+        };
+        if (isDeactivated) {
+          dataToSet.disabled = true;
+          dataToSet.status = "deactivated";
+        }
+        batch.set(userRef, dataToSet, { merge: true });
         updatedCount++;
       }
 

@@ -137,3 +137,29 @@ export function isMasterUser(name?: string | null, email?: string | null): boole
     e === "matheus.nogueira@innyx.com"
   );
 }
+
+export const KNOWN_DEACTIVATED_EMAILS = [
+  "gabriella.oliveira@innyx.com",
+  "lilian.matos@innyx.com",
+  "leticia.lima@innyx.com",
+];
+
+export function isKnownDeactivatedEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const e = email.toLowerCase().trim();
+  return KNOWN_DEACTIVATED_EMAILS.includes(e);
+}
+
+export function isUserDeactivated(user?: {
+  email?: string | null;
+  disabled?: boolean;
+  isDeactivated?: boolean;
+  status?: string;
+  active?: boolean;
+}): boolean {
+  if (!user) return false;
+  if (user.disabled === true || user.isDeactivated === true || user.status === "deactivated" || user.status === "disabled" || user.active === false) {
+    return true;
+  }
+  return isKnownDeactivatedEmail(user.email);
+}

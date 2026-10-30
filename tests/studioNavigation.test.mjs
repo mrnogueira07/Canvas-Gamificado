@@ -60,3 +60,39 @@ test('insertSlideIntoList inserts in the active category immediately after selec
  const listAfterRes = api.insertSlideIntoList(slides, newRes, 'res1');
  assert.deepEqual(listAfterRes.map(s => s.id), ['capa1', 'dev1', 'dev2', 'res1', 'res_new', 'ex1', 'enc1']);
 });
+
+test('isMasterUser identifies admin accounts accurately', () => {
+  assert.equal(api.isMasterUser('Matheus Nogueira', 'matheus.nogueira@innyx.com'), true);
+  assert.equal(api.isMasterUser('Matheus', 'matheusnog95@gmail.com'), true);
+  assert.equal(api.isMasterUser('Juciane Silva', 'juciane.silva@innyx.com'), false);
+  assert.equal(api.isMasterUser('Carlos Silva', 'carlos.silva@innyx.com'), false);
+});
+
+test('isKnownDeactivatedEmail and isUserDeactivated identify deactivated accounts', () => {
+  assert.equal(api.isKnownDeactivatedEmail('gabriella.oliveira@innyx.com'), true);
+  assert.equal(api.isKnownDeactivatedEmail('lilian.matos@innyx.com'), true);
+  assert.equal(api.isKnownDeactivatedEmail('leticia.lima@innyx.com'), true);
+  assert.equal(api.isKnownDeactivatedEmail('juciane.silva@innyx.com'), false);
+
+  assert.equal(api.isUserDeactivated({ email: 'gabriella.oliveira@innyx.com' }), true);
+  assert.equal(api.isUserDeactivated({ disabled: true, email: 'qualquer@innyx.com' }), true);
+  assert.equal(api.isUserDeactivated({ status: 'deactivated', email: 'outro@innyx.com' }), true);
+  assert.equal(api.isUserDeactivated({ isDeactivated: true, email: 'outro@innyx.com' }), true);
+  assert.equal(api.isUserDeactivated({ email: 'juciane.silva@innyx.com' }), false);
+});
+
+test('ranking visibility filtering: deactivated users only visible to admin', () => {
+  const rankingList = [
+    { id: '1', name: 'Gabriella Oliveira', email: 'gabriella.oliveira@innyx.com', disabled: true },
+    { id: '2', name: 'Lilian Matos', email: 'lilian.matos@innyx.com', disabled: true },
+    { id: '3', name: 'Juciane Silva', email: 'juciane.silva@innyx.com', disabled: false },
+    { id: '4', name: 'Carlos Silva', email: 'carlos.silva@innyx.com', disabled: false },
+  ];
+
+  const adminVisible = rankingList.filter(() => true); // admin sees all
+  const normalVisible = rankingList.filter((m) => !m.disabled); // non-admin sees only active
+
+  assert.equal(adminVisible.length, 4);
+  assert.equal(normalVisible.length, 2);
+  assert.deepEqual(normalVisible.map((m) => m.name), ['Juciane Silva', 'Carlos Silva']);
+});

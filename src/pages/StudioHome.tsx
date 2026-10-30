@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { buildEncryptedUrl } from "../lib/routeCrypto";
 import {
@@ -27,7 +27,7 @@ import { Layout } from "../components/ui/Layout";
 import { auth, db, functions } from "../lib/firebase";
 import { deleteStudioProject, getStudioProjects, isStudioProjectSynced } from "../lib/studioProjects";
 import { removeStudioJob } from "../lib/studioJobs";
-import { isMasterUser } from "../lib/studioNavigation";
+import { isMasterUser, isUserDeactivated } from "../lib/studioNavigation";
 import type { StudioProject } from "../lib/studioProjects";
 import type { Project } from "../types";
 
@@ -54,6 +54,7 @@ interface TeamMember {
   count: number;
   photoURL?: string | null;
   email?: string | null;
+  disabled?: boolean;
 }
 
 const headings: Record<Section, { prefix: string; highlight: string; subtitle: React.ReactNode }> = {
@@ -144,6 +145,7 @@ export function StudioHomeView({
   team = [],
   teamLoading = false,
   teamError = "",
+  onToggleUserDisabled,
 }: {
   section?: Section;
   games?: Project[];
@@ -155,12 +157,27 @@ export function StudioHomeView({
   team?: TeamMember[];
   teamLoading?: boolean;
   teamError?: string;
+  onToggleUserDisabled?: (userId: string, nextDisabled: boolean) => Promise<void> | void;
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKind>("todos");
   const [projectToDelete, setProjectToDelete] = useState<RecentProject | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeactivated, setShowDeactivated] = useState(true);
   const homeRef = useRef<HTMLDivElement>(null);
+
+  const currentUser = auth.currentUser;
+  const isAdmin = isMasterUser(currentUser?.displayName || userName, currentUser?.email || (userSlug ? `${userSlug}@innyx.com` : ""));
+
+  const deactivatedCount = useMemo(() => team.filter(m => Boolean(m.disabled)).length, [team]);
+  const visibleTeam = useMemo(() => {
+    return team.filter(member => {
+      if (member.disabled) {
+        return isAdmin && showDeactivated;
+      }
+      return true;
+    });
+  }, [team, isAdmin, showDeactivated]);
 
   // GSAP micro-animations on mount
   useEffect(() => {
@@ -774,17 +791,38 @@ export function StudioHomeView({
                 <Trophy size={15} /> Projetos salvos pelos educadores
               </span>
             </div>
+
+            {isAdmin && deactivatedCount > 0 && (
+              <div className="studio-ranking-admin-toolbar">
+                <label className="studio-ranking-admin-toggle">
+                  <input
+                    type="checkbox"
+                    checked={showDeactivated}
+                    onChange={(e) => setShowDeactivated(e.target.checked)}
+                  />
+                  <span>
+                    Exibir contas com e-mail desativado ({deactivatedCount}) — <em>visível apenas para o Administrador</em>
+                  </span>
+                </label>
+                <span className="studio-ranking-admin-hint">
+                  {showDeactivated
+                    ? "Educadores comuns não visualizam essas contas no ranking."
+                    : "Modo de visualização pública ativado."}
+                </span>
+              </div>
+            )}
+
             {teamError && <p className="studio-notice" role="alert">{teamError}</p>}
             <div className="studio-leaderboard">
               {teamLoading ? (
                 <div className="studio-empty-state" role="status">Carregando contribuições…</div>
-              ) : team.length ? (
-                team.map((member, index) => {
+              ) : visibleTeam.length ? (
+                visibleTeam.map((member, index) => {
                   const isCurrentUser = auth.currentUser?.uid === member.id;
                   const initial = (member.name || "E").slice(0, 1).toUpperCase();
                   return (
                     <motion.div
-                      className={`studio-leader-row ${isCurrentUser ? "is-current-user" : ""}`}
+                      className={`studio-leader-row ${isCurrentUser ? "is-current-user" : ""} ${member.disabled ? "is-disabled" : ""}`}
                       key={member.id}
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -819,10 +857,25 @@ export function StudioHomeView({
                           {isMasterUser(member.name, member.email) && (
                             <span className="studio-leader-badge-master" title="Usuário Administrador MASTER">👑 MASTER</span>
                           )}
+                          {member.disabled && (
+                            <span className="studio-leader-badge-disabled" title="Conta com e-mail desativado (visível apenas para o Administrador)">
+                              🚫 Desativado
+                            </span>
+                          )}
                           {isCurrentUser && <span className="studio-leader-badge-you">Você</span>}
                         </strong>
                       </div>
                       <span>{member.count} {member.count === 1 ? "projeto" : "projetos"}</span>
+                      {isAdmin && onToggleUserDisabled && (
+                        <button
+                          type="button"
+                          className="studio-leader-admin-action"
+                          onClick={() => void onToggleUserDisabled(member.id, !member.disabled)}
+                          title={member.disabled ? "Reativar usuário no ranking" : "Marcar conta como e-mail desativado"}
+                        >
+                          {member.disabled ? "Reativar" : "Desativar"}
+                        </button>
+                      )}
                     </motion.div>
                   );
                 })
@@ -919,14 +972,21 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
       .then(([projects, users]) => {
         if (!active) return;
         const counts = new Map<string, number>();
-        const usersInfo = new Map<string, { name: string; photoURL: string | null; email: string | null }>();
+        const usersInfo = new Map<string, { name: string; photoURL: string | null; email: string | null; disabled?: boolean }>();
 
         users.docs.forEach(docItem => {
           const data = docItem.data();
           const name = String(data.name || data.displayName || "Educador(a)");
           const photoURL = (data.photoURL || data.photoUrl || data.avatarUrl || data.avatar || data.picture || data.image || null) as string | null;
           const email = (data.email as string) || null;
-          usersInfo.set(docItem.id, { name, photoURL, email });
+          const disabled = isUserDeactivated({
+            email,
+            disabled: data.disabled,
+            isDeactivated: data.isDeactivated,
+            status: data.status,
+            active: data.active,
+          });
+          usersInfo.set(docItem.id, { name, photoURL, email, disabled });
         });
 
         projects.docs.forEach(docItem => {
@@ -935,15 +995,20 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
           if (typeof id === "string") {
             counts.set(id, (counts.get(id) || 0) + 1);
             if (!usersInfo.has(id)) {
+              const email = (data.authorEmail || data.userEmail || null) as string | null;
               usersInfo.set(id, {
                 name: String(data.authorName || data.userName || "Educador(a)"),
                 photoURL: (data.authorPhoto || data.userPhoto || null) as string | null,
-                email: (data.authorEmail || data.userEmail || null) as string | null,
+                email,
+                disabled: isUserDeactivated({ email, disabled: true }),
               });
             } else {
               const current = usersInfo.get(id)!;
               if (!current.photoURL && (data.authorPhoto || data.userPhoto)) {
                 current.photoURL = (data.authorPhoto || data.userPhoto) as string;
+              }
+              if (!current.email && (data.authorEmail || data.userEmail)) {
+                current.email = (data.authorEmail || data.userEmail) as string;
               }
             }
           }
@@ -956,6 +1021,7 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
             name: user.displayName || current?.name || user.email?.split("@")[0] || "Educador(a)",
             photoURL: user.photoURL || current?.photoURL || null,
             email: user.email || current?.email || null,
+            disabled: false,
           });
         }
 
@@ -967,6 +1033,7 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
             name: u?.name || "Educador(a)",
             photoURL: u?.photoURL || null,
             email: u?.email || null,
+            disabled: Boolean(u?.disabled),
           };
         }).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
@@ -984,6 +1051,21 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
     };
   }, [section, user]);
 
+  const handleToggleUserDisabled = async (userId: string, nextDisabled: boolean) => {
+    try {
+      await setDoc(
+        doc(db, "users", userId),
+        { disabled: nextDisabled, status: nextDisabled ? "deactivated" : "active" },
+        { merge: true }
+      );
+      setTeam(prev =>
+        prev.map(member => (member.id === userId ? { ...member, disabled: nextDisabled } : member))
+      );
+    } catch (err) {
+      console.error("Erro ao atualizar status do usuário:", err);
+    }
+  };
+
   return (
     <StudioHomeView
       key={section}
@@ -997,6 +1079,7 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
       team={team}
       teamLoading={teamLoading}
       teamError={teamError}
+      onToggleUserDisabled={handleToggleUserDisabled}
     />
   );
 }

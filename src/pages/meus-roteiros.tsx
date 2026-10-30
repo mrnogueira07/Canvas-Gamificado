@@ -50,6 +50,7 @@ interface TrashedProject extends Omit<Project, "createdAt"> {
 
 import { CustomSelect } from "../components/ui/CustomSelect";
 import { RankingPanel, RankingModal, type RankingEntry } from "../components/dashboard/Ranking";
+import { isMasterUser, isUserDeactivated } from "../lib/studioNavigation";
 import { FolderCard } from "../components/dashboard/FolderCard";
 import { FOLDER_COLORS, getColorConfig, type Folder as FolderType } from "../components/dashboard/folderConfig";
 
@@ -170,7 +171,7 @@ export default function Dashboard() {
   const activeFiltersCount = [typeFilter, gradeFilter, subjectFilter, yearFilter, quarterFilter].filter(v => v !== "all").length;
 
   // Estados & Listeners do Ranking
-  const [usersMap, setUsersMap] = useState<Record<string, { name: string; email: string; photoURL?: string | null }>>({});
+  const [usersMap, setUsersMap] = useState<Record<string, { name: string; email: string; photoURL?: string | null; disabled?: boolean }>>({});
   const [projectCounts, setProjectCounts] = useState<Record<string, number>>({});
   const [rankingLoading, setRankingLoading] = useState(true);
 
@@ -203,13 +204,21 @@ export default function Dashboard() {
     const unsubscribeUsers = onSnapshot(
       collection(db, "users"),
       (snapshot) => {
-        const usersData: Record<string, { name: string; email: string; photoURL?: string | null }> = {};
+        const usersData: Record<string, { name: string; email: string; photoURL?: string | null; disabled?: boolean }> = {};
         snapshot.forEach((doc) => {
           const data = doc.data();
+          const email = data.email || "";
           usersData[doc.id] = {
             name: data.name || data.displayName || "Usuário",
-            email: data.email || "",
+            email,
             photoURL: data.photoURL || null,
+            disabled: isUserDeactivated({
+              email,
+              disabled: data.disabled,
+              isDeactivated: data.isDeactivated,
+              status: data.status,
+              active: data.active,
+            }),
           };
         });
         setUsersMap(usersData);
@@ -245,19 +254,28 @@ export default function Dashboard() {
   }, []);
 
   const ranking = React.useMemo(() => {
+    const user = auth.currentUser;
+    const isAdmin = isMasterUser(user?.displayName, user?.email);
     const allUserIds = new Set([...Object.keys(usersMap), ...Object.keys(projectCounts)]);
     const entries: RankingEntry[] = Array.from(allUserIds)
       .map((uid) => {
         const u = usersMap[uid];
         const count = projectCounts[uid] || 0;
+        const email = u?.email || "";
+        const disabled = Boolean(
+          u?.disabled ||
+          isUserDeactivated({ email, disabled: !u })
+        );
         return {
           userId: uid,
           displayName: u?.name || "Usuário",
           photoURL: u?.photoURL || null,
-          email: u?.email || "",
+          email,
           count,
+          disabled,
         };
       })
+      .filter((entry) => isAdmin || !entry.disabled)
       .sort((a, b) => b.count - a.count);
     return entries;
   }, [usersMap, projectCounts]);
