@@ -2010,7 +2010,7 @@
   line-height: 1.36;
   border-radius: 0.3cqw;
   background: transparent;
-  text-align: left !important;
+  text-align: center !important;
   color: #111827;
 }
 
@@ -2035,7 +2035,7 @@
   font-weight: 450;
   font-size: 1.4cqw;
   line-height: 1.36;
-  text-align: left !important;
+  text-align: center !important;
   color: #111827;
 }
 
