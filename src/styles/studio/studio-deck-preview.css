@@ -646,37 +646,34 @@
 .studio-preview__dock-container {
   position: absolute;
   bottom: 0.8cqw;
-  left: 5.61%;
-  right: 27%;
+  left: 3.5cqw;
+  right: 3.5cqw;
   pointer-events: none;
   z-index: 35;
   transition: all 0.2s ease;
-}
-
-.studio-preview--kids .studio-preview__dock-container,
-.studio-preview--corporate .studio-preview__dock-container {
-  left: 4cqw;
-  right: 4cqw;
-}
-
-.studio-preview__dock-container--split {
-  display: grid;
-  grid-template-columns: 46% 49%;
-  gap: 5%;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
 }
 
 .studio-preview__dock-container--single {
-  display: flex;
   justify-content: center;
-  align-items: center;
 }
 
 .studio-preview__dock-slot {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 100%;
+  pointer-events: none;
+}
+
+.studio-preview__dock-slot--image {
+  justify-content: flex-start;
+  flex: 0 1 auto;
+}
+
+.studio-preview__dock-slot--text {
+  justify-content: flex-end;
+  flex: 0 0 auto;
 }
 
 .studio-preview__dock-slot .studio-floatbar {
@@ -684,11 +681,11 @@
   position: static;
   transform: none;
   margin: 0;
+  max-width: none;
   box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 
-.studio-preview__dock-slot .studio-floatbar:hover,
-.studio-preview__dock-slot .studio-floatbar.is-pinned {
+.studio-preview__dock-slot .studio-floatbar:hover {
   transform: translateY(-2px);
 }
 
@@ -703,6 +700,50 @@
   padding: 0 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* Barra de Enquadramento destacada e perfeitamente centralizada */
+.studio-preview__dock-reposition {
+  position: absolute;
+  bottom: 0.8cqw;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: auto;
+}
+
+.studio-preview__dock-reposition .studio-floatbar--reposition {
+  pointer-events: auto;
+  position: static;
+  transform: none;
+  margin: 0;
+  max-width: 95%;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(139, 92, 246, 0.55);
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(139, 92, 246, 0.35);
+  padding: 4px 10px;
+  gap: 6px;
+}
+
+.studio-preview__dock-reposition .studio-floatbar--reposition:hover {
+  transform: translateY(-2px);
+  border-color: rgba(167, 139, 250, 0.8);
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(167, 139, 250, 0.5);
+}
+
+.studio-preview__dock-reposition .studio-floatbar__hint {
+  color: #c4b5fd;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  padding: 2px 6px;
+  white-space: nowrap;
 }
 
 /* Barra flutuante ancorada legada */
@@ -787,6 +828,19 @@
 .studio-floatbar__btn.is-active {
   background: rgba(59, 130, 246, 0.25);
   color: #60a5fa;
+}
+
+/* Botão de Enquadramento */
+.studio-floatbar__btn--reposition {
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.studio-floatbar__btn--reposition:hover {
+  background: rgba(139, 92, 246, 0.3);
+  border-color: rgba(167, 139, 250, 0.6);
+  color: #ffffff;
 }
 
 /* Botão primário (Trocar imagem) */
