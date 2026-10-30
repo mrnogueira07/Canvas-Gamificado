@@ -732,11 +732,18 @@
   transform: none;
   margin: 0;
   max-width: 95%;
-  background: rgba(15, 23, 42, 0.98);
+  height: 38px;
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(139, 92, 246, 0.55);
   box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(139, 92, 246, 0.35);
-  padding: 4px 10px;
-  gap: 6px;
+  padding: 0 6px 0 12px;
+  gap: 7px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
 }
 
 .studio-preview__dock-reposition .studio-floatbar--reposition:hover {
@@ -746,14 +753,81 @@
 }
 
 .studio-preview__dock-reposition .studio-floatbar__hint {
-  color: #c4b5fd;
-  font-weight: 600;
+  color: #e2e8f0;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: 11.5px;
-  padding: 2px 6px;
+  padding: 0 4px;
   white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.studio-preview__dock-reposition .studio-floatbar__hint svg {
+  color: #c084fc;
+}
+
+.studio-preview__dock-reposition .studio-floatbar__btn {
+  height: 27px;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 11.5px;
+  font-weight: 500;
+  gap: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.studio-preview__dock-reposition .studio-floatbar__btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.studio-preview__dock-reposition .studio-floatbar__btn:active {
+  background: rgba(139, 92, 246, 0.25);
+  color: #c4b5fd;
+  border-color: rgba(139, 92, 246, 0.5);
+  transform: translateY(0);
+}
+
+.studio-preview__dock-reposition .studio-floatbar__btn--success {
+  height: 28px;
+  padding: 0 13px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  border: 1px solid #22c55e;
+  color: #ffffff !important;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
+  margin-left: 2px;
+  box-sizing: border-box;
+}
+
+.studio-preview__dock-reposition .studio-floatbar__btn--success:hover {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border-color: #4ade80;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.5);
+  transform: translateY(-1px);
+}
+
+.studio-preview__dock-reposition .studio-floatbar__btn--success:active {
+  transform: translateY(0);
+  background: #15803d;
 }
 
 /* Barra flutuante ancorada legada */
