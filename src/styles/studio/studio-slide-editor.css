@@ -232,6 +232,19 @@
   outline: none;
   cursor: pointer;
   padding: 1px 0;
+  color-scheme: dark;
+}
+
+.studio-slide-editor__type-chip select option {
+  background-color: #141620;
+  color: #f0f2f7;
+  padding: 6px 10px;
+}
+
+.studio-slide-editor__type-chip select option:checked,
+.studio-slide-editor__type-chip select option:hover {
+  background-color: #2563eb;
+  color: #ffffff;
 }
 
 .studio-slide-editor__btn-insert-image {
