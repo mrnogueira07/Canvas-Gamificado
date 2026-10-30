@@ -383,7 +383,7 @@
   display: grid !important;
   grid-template-columns: 46% 49% !important;
   gap: 5% !important;
-  align-items: start !important;
+  align-items: center !important;
   height: 100% !important;
   flex: 1 1 0 !important;
   min-height: 0 !important;
@@ -397,8 +397,8 @@
   max-height: 100% !important;
   min-height: 0 !important;
   flex: 1 1 0 !important;
-  justify-content: flex-start !important;
-  align-items: flex-start !important;
+  justify-content: center !important;
+  align-items: center !important;
   transition: transform 0.15s ease-out;
 }
 
@@ -410,7 +410,8 @@
   aspect-ratio: 3 / 4;
   flex: 0 1 auto !important;
   min-height: 0;
-  margin: 0 !important;
+  margin: 0 auto !important;
+  align-self: center !important;
   display: flex;
   border-radius: 0.6cqw;
   overflow: hidden;
@@ -420,7 +421,7 @@
   transition: aspect-ratio 0.2s ease, max-height 0.2s ease;
 }
 
-/* Proporções editáveis diretamente no slide (sempre alinhadas ao topo com o texto e com a fonte colada abaixo) */
+/* Proporções editáveis diretamente no slide (sempre alinhadas ao centro com o texto e com a fonte colada abaixo) */
 .studio-preview__image-container[data-aspect="3:4"],
 .studio-preview--konectar .studio-preview__image-container[data-aspect="3:4"] {
   aspect-ratio: 3 / 4 !important;
@@ -428,7 +429,8 @@
   height: auto !important;
   max-height: calc(100% - 2.2cqw) !important;
   flex: 0 1 auto !important;
-  margin: 0 !important;
+  margin: 0 auto !important;
+  align-self: center !important;
 }
 
 .studio-preview__image-container[data-aspect="1:1"],
@@ -438,7 +440,8 @@
   height: auto !important;
   max-height: calc(100% - 2.2cqw) !important;
   flex: 0 1 auto !important;
-  margin: 0 !important;
+  margin: 0 auto !important;
+  align-self: center !important;
 }
 
 .studio-preview__image-container[data-aspect="4:3"],
@@ -448,7 +451,8 @@
   height: auto !important;
   max-height: calc(100% - 2.2cqw) !important;
   flex: 0 1 auto !important;
-  margin: 0 !important;
+  margin: 0 auto !important;
+  align-self: center !important;
 }
 
 .studio-preview__image-container[data-aspect="16:9"],
@@ -458,7 +462,8 @@
   height: auto !important;
   max-height: calc(100% - 2.2cqw) !important;
   flex: 0 1 auto !important;
-  margin: 0 !important;
+  margin: 0 auto !important;
+  align-self: center !important;
 }
 
 .studio-preview--konectar .studio-preview__image img {
@@ -510,9 +515,10 @@
   font-weight: 500;
   line-height: 1.2;
   color: #536779;
-  margin: 0.35cqw 0 0 0 !important;
+  margin: 0.35cqw auto 0 auto !important;
   padding: 0 !important;
   flex: 0 0 auto !important;
+  text-align: center !important;
 }
 
 .studio-preview--konectar .studio-preview__topics--topicos_com_imagem p {
@@ -607,7 +613,7 @@
   height: 100%;
   flex: 1 1 0;
   min-height: 0;
-  justify-content: flex-start;
+  justify-content: center !important;
   align-items: flex-start;
   position: relative;
   transition: transform 0.15s ease-out;
