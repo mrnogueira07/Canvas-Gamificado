@@ -1,8 +1,14 @@
 import { useState, useEffect } from "react";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Clock, Plus, Trash2, Image as ImageIcon, X, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
 import type { StudioProject, StudioSlide } from "../../lib/studioProjects";
-import { createStudioId } from "../../lib/studioProjects";
-import { orderedStudioSlides, slideTypeLabels, studioCategories } from "../../lib/studioNavigation";
+import {
+  orderedStudioSlides,
+  slideTypeLabels,
+  studioCategories,
+  getCategoryForSlideType,
+  createSlideForCategory,
+  insertSlideIntoList,
+} from "../../lib/studioNavigation";
 import { slideTypes } from "../../lib/studioGuidelines";
 import { uploadStudioImage } from "../../lib/studioImages";
 import { StudioSlideFrame } from "./StudioSlidePreview";
@@ -88,22 +94,17 @@ export function StudioSlideEditor({
 
   const selected = slides.find(slide => slide.id === selectedId) || slides[0];
   const index = slides.findIndex(slide => slide.id === selected?.id);
+  const currentCategory = getCategoryForSlideType(selected?.type);
+
   const patch = (value: Partial<StudioSlide>) => {
     if (selected) onSlideChange(selected.id, value);
   };
 
-  function add(type = "conteudo") {
-    const slide: StudioSlide = {
-      id: createStudioId(),
-      type,
-      title: "",
-      content: "",
-      notes: "",
-      duration: 45,
-      layout: "so_texto",
-    };
-    onSlidesChange([...project.slides, slide]);
-    selectSlide(slide.id);
+  function add(targetCategoryIdOrType?: string) {
+    const newSlide = createSlideForCategory(targetCategoryIdOrType, selected);
+    const nextSlides = insertSlideIntoList(project.slides, newSlide, selected?.id);
+    onSlidesChange(nextSlides);
+    selectSlide(newSlide.id);
   }
 
   function move(delta: number) {
@@ -117,9 +118,21 @@ export function StudioSlideEditor({
       <nav className="studio-slide-editor__nav" aria-label="Categorias e slides">
         {studioCategories.map(category => {
           const items = slides.filter(slide => category.types.includes(slide.type || "conteudo"));
+          const isCurrentCat = category.types.includes(selected?.type || "conteudo");
           return (
-            <section key={category.id}>
-              <h3>{category.label}</h3>
+            <section key={category.id} className={isCurrentCat ? "is-active-category" : undefined}>
+              <div className="studio-slide-editor__category-header">
+                <h3>{category.label}</h3>
+                <button
+                  type="button"
+                  className="studio-slide-editor__cat-add-btn"
+                  title={`Adicionar slide em ${category.label}`}
+                  aria-label={`Adicionar slide em ${category.label}`}
+                  onClick={() => add(category.id)}
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
               {items.map(slide => (
                 <button
                   type="button"
@@ -137,7 +150,12 @@ export function StudioSlideEditor({
             </section>
           );
         })}
-        <button type="button" className="studio-slide-editor__new" onClick={() => add()}>
+        <button
+          type="button"
+          className="studio-slide-editor__new"
+          onClick={() => add()}
+          title={`Adicionar slide em ${currentCategory.label}`}
+        >
           <Plus size={16} /> Adicionar slide
         </button>
       </nav>
