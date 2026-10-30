@@ -1193,8 +1193,8 @@ export function StudioSlideFrame({
               role="toolbar"
               aria-label="Ferramentas de enquadramento da foto"
             >
-              <span className="studio-floatbar__hint">
-                <Move size={14} /> Arraste a foto para enquadrar
+              <span className="studio-floatbar__hint" title="Arraste na foto para posicionar livremente">
+                <Move size={13} /> Arraste a foto
               </span>
               <span className="studio-floatbar__divider" />
               <button
@@ -1203,7 +1203,7 @@ export function StudioSlideFrame({
                 data-tip="Alinhar ao topo"
                 onClick={() => handleSetImagePosition(slide.image?.positionX ?? 50, 0)}
               >
-                <ArrowUpToLine size={15} /> Topo
+                <ArrowUpToLine size={14} /> Topo
               </button>
               <button
                 type="button"
@@ -1211,7 +1211,7 @@ export function StudioSlideFrame({
                 data-tip="Centralizar"
                 onClick={() => handleSetImagePosition(50, 50)}
               >
-                <Crosshair size={15} /> Centro
+                <Crosshair size={14} /> Centro
               </button>
               <button
                 type="button"
@@ -1219,7 +1219,7 @@ export function StudioSlideFrame({
                 data-tip="Alinhar à base"
                 onClick={() => handleSetImagePosition(slide.image?.positionX ?? 50, 100)}
               >
-                <ArrowDownToLine size={15} /> Base
+                <ArrowDownToLine size={14} /> Base
               </button>
               <span className="studio-floatbar__divider" />
               <button
@@ -1228,7 +1228,7 @@ export function StudioSlideFrame({
                 data-tip="Concluir enquadramento (ou pressione Esc / Enter)"
                 onClick={() => setIsRepositioningImage(false)}
               >
-                <Check size={15} /> Concluir
+                <Check size={14} strokeWidth={2.4} /> Concluir
               </button>
             </div>
           </div>
