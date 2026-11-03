@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
@@ -90,40 +90,6 @@ export function Layout({ children, hideSidebar = false, ...props }: LayoutProps)
       <div ref={contentRef} className="studio-main-wrap">
         {logoutError && <p role="alert" className="studio-notice">{logoutError}</p>}
         <main id="studio-main">{children}</main>
-        <footer className="studio-footer" aria-label="Rodapé institucional Mind Canvas">
-          <div className="studio-footer__inner">
-            <div className="studio-footer__brand">
-              <span className="studio-footer__logo" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" fill="rgba(59, 130, 246, 0.25)" stroke="#60a5fa" />
-                  <path d="M2 17l10 5 10-5" stroke="#93c5fd" />
-                  <path d="M2 12l10 5 10-5" stroke="#60a5fa" />
-                </svg>
-              </span>
-              <span className="studio-footer__title">MIND CANVAS</span>
-              <span className="studio-footer__divider" aria-hidden="true">·</span>
-              <span className="studio-footer__by">by INNYX Educação</span>
-              <span className="studio-footer__pill">BNCC &amp; IA Pedagógica</span>
-            </div>
-
-            <nav className="studio-footer__nav" aria-label="Atalhos do rodapé">
-              <Link to="/inicio">Início</Link>
-              <Link to="/projetos">Meus Projetos</Link>
-              <Link to="/ranking">Ranking</Link>
-              <Link to="/studio/slides">Slides Canvas</Link>
-              <Link to="/studio/roteiro">Roteiro de Gravação</Link>
-            </nav>
-
-            <div className="studio-footer__meta">
-              <span className="studio-footer__status">
-                <span className="studio-footer__status-dot" aria-hidden="true" />
-                Ambiente sincronizado
-              </span>
-              <span className="studio-footer__divider" aria-hidden="true">·</span>
-              <span className="studio-footer__tagline">Feito para transformar a educação.</span>
-            </div>
-          </div>
-        </footer>
       </div>
     </div>
   );
