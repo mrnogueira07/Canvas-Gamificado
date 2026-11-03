@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -15,6 +15,7 @@ import {
   Presentation,
   Video,
   Package,
+  Sparkles,
 } from "lucide-react";
 import type { User } from "firebase/auth";
 import { isMasterUser } from "../../lib/studioNavigation";
@@ -54,8 +55,57 @@ export function AppSidebar({
   const userSlug = user?.email?.split("@")[0].replace(/\./g, "-") || "usuario";
   const isCanvasGenerator = location.pathname.startsWith("/canvas-generator");
   const isMaster = isMasterUser(user?.displayName, user?.email);
+  const [flyoutOpen, setFlyoutOpen] = useState(false);
+  const flyoutBtnRef = useRef<HTMLButtonElement | null>(null);
+  const flyoutMenuRef = useRef<HTMLDivElement | null>(null);
+  const [flyoutPos, setFlyoutPos] = useState({ top: 120, left: 80 });
 
   const [prevPathname, setPrevPathname] = useState(location.pathname);
+
+  // Fecha o menu flutuante ao descolapsar ou ao mudar de rota
+  useEffect(() => {
+    if (!isCollapsed) {
+      setFlyoutOpen(false);
+    }
+  }, [isCollapsed]);
+
+  // Gerencia clique fora e tecla Escape para fechar o flyout
+  useEffect(() => {
+    if (!flyoutOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        flyoutMenuRef.current &&
+        !flyoutMenuRef.current.contains(target) &&
+        flyoutBtnRef.current &&
+        !flyoutBtnRef.current.contains(target)
+      ) {
+        setFlyoutOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFlyoutOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [flyoutOpen]);
+
+  const handleToggleFlyout = () => {
+    if (!flyoutOpen && flyoutBtnRef.current) {
+      const rect = flyoutBtnRef.current.getBoundingClientRect();
+      const menuHeight = 350;
+      const targetTop = Math.max(16, Math.min(rect.top - 20, window.innerHeight - menuHeight - 16));
+      setFlyoutPos({
+        top: targetTop,
+        left: rect.right + 12,
+      });
+    }
+    setFlyoutOpen(prev => !prev);
+  };
 
   // Ao navegar por categorias principais (Início, Meus Projetos, Modelos, Ranking), fecha "Criar no Estúdio"; ao entrar em rotas de estúdio, abre automaticamente.
   if (prevPathname !== location.pathname) {
@@ -273,16 +323,134 @@ export function AppSidebar({
             )}
           </div>
         ) : (
-          /* Modo colapsado: Card de Ação Rápida de Criação */
+          /* Modo colapsado: Botão que abre as IAs de Criação ao clicar */
           <div className="studio-collapsed-group">
-            <NavLink
-              to={`/canvas-generator/${userSlug}`}
-              className="studio-collapsed-active-card studio-collapsed-active-card--purple"
-              title="Criar Game Canvas"
-              onClick={onNavigate}
+            <button
+              ref={flyoutBtnRef}
+              type="button"
+              className={`studio-collapsed-active-card studio-collapsed-active-card--purple ${flyoutOpen ? "is-active" : ""}`}
+              title="IAs de Criação Pedagógica (Clique para abrir opções)"
+              aria-label="IAs de Criação Pedagógica"
+              aria-expanded={flyoutOpen}
+              aria-haspopup="menu"
+              onClick={handleToggleFlyout}
             >
-              <PlusCircle size={17} strokeWidth={2} />
-            </NavLink>
+              <PlusCircle size={18} strokeWidth={2} />
+            </button>
+
+            {flyoutOpen && (
+              <div
+                ref={flyoutMenuRef}
+                className="studio-collapsed-flyout"
+                style={{ top: `${flyoutPos.top}px`, left: `${flyoutPos.left}px` }}
+                role="menu"
+                aria-label="IAs de Criação"
+              >
+                <div className="studio-collapsed-flyout__header">
+                  <div className="studio-collapsed-flyout__title-row">
+                    <span className="studio-collapsed-flyout__title">
+                      <Sparkles size={14} /> IAs de Criação
+                    </span>
+                    <span className="studio-tree-badge studio-tree-badge--purple">Estúdio INNYX</span>
+                  </div>
+                  <span className="studio-collapsed-flyout__sub">Selecione o formato para criar com inteligência artificial</span>
+                </div>
+
+                <div className="studio-collapsed-flyout__items">
+                  {/* Game Canvas */}
+                  <NavLink
+                    to={`/canvas-generator/${userSlug}`}
+                    onClick={() => {
+                      setFlyoutOpen(false);
+                      onNavigate?.();
+                    }}
+                    className={({ isActive }) =>
+                      `studio-collapsed-flyout__item studio-collapsed-flyout__item--game ${isActive || isCanvasGenerator ? "is-active" : ""}`
+                    }
+                  >
+                    <div className="studio-collapsed-flyout__icon-wrap studio-collapsed-flyout__icon-wrap--purple">
+                      <Gamepad2 size={16} strokeWidth={1.8} />
+                    </div>
+                    <div className="studio-collapsed-flyout__text">
+                      <div className="studio-collapsed-flyout__label-row">
+                        <strong>Game Canvas</strong>
+                        <span className="studio-tree-badge studio-tree-badge--purple">Jogo</span>
+                      </div>
+                      <p>Transforme a apostila em jogos e desafios pedagógicos</p>
+                    </div>
+                  </NavLink>
+
+                  {/* Slides Canvas */}
+                  <NavLink
+                    to="/studio/slides"
+                    onClick={() => {
+                      setFlyoutOpen(false);
+                      onNavigate?.();
+                    }}
+                    className={({ isActive }) =>
+                      `studio-collapsed-flyout__item studio-collapsed-flyout__item--slides ${isActive ? "is-active" : ""}`
+                    }
+                  >
+                    <div className="studio-collapsed-flyout__icon-wrap studio-collapsed-flyout__icon-wrap--blue">
+                      <Presentation size={16} strokeWidth={1.8} />
+                    </div>
+                    <div className="studio-collapsed-flyout__text">
+                      <div className="studio-collapsed-flyout__label-row">
+                        <strong>Slides Canvas</strong>
+                        <span className="studio-tree-badge studio-tree-badge--blue">Novo</span>
+                      </div>
+                      <p>Apresentações completas com ilustrações em IA</p>
+                    </div>
+                  </NavLink>
+
+                  {/* Roteiro de Aula */}
+                  <NavLink
+                    to="/studio/roteiro"
+                    onClick={() => {
+                      setFlyoutOpen(false);
+                      onNavigate?.();
+                    }}
+                    className={({ isActive }) =>
+                      `studio-collapsed-flyout__item studio-collapsed-flyout__item--roteiro ${isActive ? "is-active" : ""}`
+                    }
+                  >
+                    <div className="studio-collapsed-flyout__icon-wrap studio-collapsed-flyout__icon-wrap--emerald">
+                      <Video size={16} strokeWidth={1.8} />
+                    </div>
+                    <div className="studio-collapsed-flyout__text">
+                      <div className="studio-collapsed-flyout__label-row">
+                        <strong>Roteiro de Gravação</strong>
+                        <span className="studio-tree-badge studio-tree-badge--emerald">Vídeo</span>
+                      </div>
+                      <p>Videoaula decupada cena a cena com teleprompter</p>
+                    </div>
+                  </NavLink>
+
+                  {/* Pacote de Aula */}
+                  <NavLink
+                    to="/studio/pacote"
+                    onClick={() => {
+                      setFlyoutOpen(false);
+                      onNavigate?.();
+                    }}
+                    className={({ isActive }) =>
+                      `studio-collapsed-flyout__item studio-collapsed-flyout__item--pacote ${isActive ? "is-active" : ""}`
+                    }
+                  >
+                    <div className="studio-collapsed-flyout__icon-wrap studio-collapsed-flyout__icon-wrap--rose">
+                      <Package size={16} strokeWidth={1.8} />
+                    </div>
+                    <div className="studio-collapsed-flyout__text">
+                      <div className="studio-collapsed-flyout__label-row">
+                        <strong>Pacote Pedagógico</strong>
+                        <span className="studio-tree-badge studio-tree-badge--rose">Completo</span>
+                      </div>
+                      <p>Jogo, slides e roteiro integrados no mesmo briefing</p>
+                    </div>
+                  </NavLink>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
