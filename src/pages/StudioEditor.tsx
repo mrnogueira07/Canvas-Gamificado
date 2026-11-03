@@ -1168,7 +1168,7 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
         )}
 
         {/* Workspace de conteudo */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto relative z-10 custom-scrollbar">
+        <div className={`flex-1 min-h-0 flex flex-col ${stage === "edit" ? "overflow-hidden" : "overflow-y-auto custom-scrollbar"} relative z-10`}>
           {stage !== "edit" ? (
             <SlidesFlow
               project={project}
