@@ -202,15 +202,17 @@ function StudioResendModalDialog({
                     <small>{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB · Novo arquivo selecionado</small>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="studio-resend-selected-file__remove"
-                  onClick={() => setSelectedFile(null)}
-                  disabled={isSubmitting}
-                  aria-label="Remover arquivo selecionado"
-                >
-                  <X size={16} />
-                </button>
+                {!isSubmitting && (
+                  <button
+                    type="button"
+                    className="studio-resend-selected-file__remove"
+                    onClick={() => setSelectedFile(null)}
+                    disabled={isSubmitting}
+                    aria-label="Remover arquivo selecionado"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
               </div>
             )}
           </div>

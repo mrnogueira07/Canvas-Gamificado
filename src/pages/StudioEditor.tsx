@@ -222,9 +222,26 @@ function SlidesFlow({
                       : ""}
                   </small>
                 </span>
-                <button type="button" disabled={importing} aria-label="Remover material" onClick={() => onUpdate({ sourceContent: "", sourceFileName: undefined, referenceImages: [] })}>
-                  <X size={17} />
-                </button>
+                {importing || Boolean(job && isStudioJobRunning(job)) ? (
+                  <span
+                    style={{
+                      display: "grid",
+                      placeItems: "center",
+                      width: 34,
+                      height: 34,
+                      color: "#60a5fa",
+                      flexShrink: 0,
+                    }}
+                    title="Processando material..."
+                    aria-label="Processando material"
+                  >
+                    <LoaderCircle className="studio-editor__spinner" size={17} />
+                  </span>
+                ) : (
+                  <button type="button" aria-label="Remover material" onClick={() => onUpdate({ sourceContent: "", sourceFileName: undefined, referenceImages: [] })}>
+                    <X size={17} />
+                  </button>
+                )}
               </div>
             )}
             <button className="studio-slides-text-toggle" type="button" disabled={importing} onClick={() => setPasteOpen(open => !open)}>
@@ -1448,15 +1465,16 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
                         : " · pronto para os slides"}
                     </small>
                   </div>
-                  <button
-                    type="button"
-                    disabled={generating || importing}
-                    aria-label="Remover documento"
-                    title="Remover conteúdo de referência"
-                    onClick={() => update({ sourceContent: "", sourceFileName: undefined, referenceImages: [] })}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  {!(generating || importing) && (
+                    <button
+                      type="button"
+                      aria-label="Remover documento"
+                      title="Remover conteúdo de referência"
+                      onClick={() => update({ sourceContent: "", sourceFileName: undefined, referenceImages: [] })}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               )}
 
