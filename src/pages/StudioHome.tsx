@@ -877,7 +877,7 @@ export function StudioHomeView({
                             <span className="studio-leader-badge-professor" title="Professor da Rede">🎓 Professor</span>
                           )}
                           {member.disabled && (
-                            <span className="studio-leader-badge-disabled" title="Conta com e-mail desativado (visível apenas para o Administrador)">
+                            <span className="studio-leader-badge-disabled" title="Conta com e-mail institucional inativo. Para reativar, o e-mail precisa ser ativado novamente.">
                               🚫 Desativado
                             </span>
                           )}
@@ -900,15 +900,23 @@ export function StudioHomeView({
                             </select>
                           </div>
                         )}
-                        {isAdmin && onToggleUserDisabled && (
+                        {isAdmin && !isMemberMaster && !member.disabled && onToggleUserDisabled && (
                           <button
                             type="button"
                             className="studio-leader-admin-action"
-                            onClick={() => void onToggleUserDisabled(member.id, !member.disabled)}
-                            title={member.disabled ? "Reativar usuário no ranking" : "Marcar conta como e-mail desativado"}
+                            onClick={() => void onToggleUserDisabled(member.id, true)}
+                            title="Marcar conta como e-mail desativado"
                           >
-                            {member.disabled ? "Reativar" : "Desativar"}
+                            Desativar
                           </button>
+                        )}
+                        {member.disabled && (
+                          <span
+                            className="studio-leader-deactivated-note"
+                            title="Conta inativa. A reativação só ocorre quando o e-mail institucional for ativado novamente."
+                          >
+                            E-mail desativado
+                          </span>
                         )}
                       </div>
                     </motion.div>
