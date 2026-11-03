@@ -27,7 +27,7 @@ import { Layout } from "../components/ui/Layout";
 import { auth, db, functions } from "../lib/firebase";
 import { deleteStudioProject, getStudioProjects, isStudioProjectSynced } from "../lib/studioProjects";
 import { removeStudioJob } from "../lib/studioJobs";
-import { isMasterUser, isUserDeactivated } from "../lib/studioNavigation";
+import { isMasterUser, isUserDeactivated, isUserAdmin } from "../lib/studioNavigation";
 import type { StudioProject } from "../lib/studioProjects";
 import type { Project } from "../types";
 
@@ -55,6 +55,7 @@ interface TeamMember {
   photoURL?: string | null;
   email?: string | null;
   disabled?: boolean;
+  role?: "master" | "admin" | "professor";
 }
 
 const headings: Record<Section, { prefix: string; highlight: string; subtitle: React.ReactNode }> = {
@@ -146,6 +147,7 @@ export function StudioHomeView({
   teamLoading = false,
   teamError = "",
   onToggleUserDisabled,
+  onUpdateUserRole,
 }: {
   section?: Section;
   games?: Project[];
@@ -158,6 +160,7 @@ export function StudioHomeView({
   teamLoading?: boolean;
   teamError?: string;
   onToggleUserDisabled?: (userId: string, nextDisabled: boolean) => Promise<void> | void;
+  onUpdateUserRole?: (userId: string, nextRole: "admin" | "professor") => Promise<void> | void;
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKind>("todos");
@@ -167,7 +170,8 @@ export function StudioHomeView({
   const homeRef = useRef<HTMLDivElement>(null);
 
   const currentUser = auth.currentUser;
-  const isAdmin = isMasterUser(currentUser?.displayName || userName, currentUser?.email || (userSlug ? `${userSlug}@innyx.com` : ""));
+  const isMaster = isMasterUser(currentUser?.displayName || userName, currentUser?.email || (userSlug ? `${userSlug}@innyx.com` : ""));
+  const isAdmin = isMaster || isUserAdmin(team.find(m => m.id === currentUser?.uid));
 
   const deactivatedCount = useMemo(() => team.filter(m => Boolean(m.disabled)).length, [team]);
   const visibleTeam = useMemo(() => {
@@ -792,6 +796,13 @@ export function StudioHomeView({
               </span>
             </div>
 
+            {isMaster && (
+              <div className="studio-ranking-master-toolbar">
+                <span className="studio-ranking-master-badge">👑 PAINEL MASTER INNYX</span>
+                <span>Como Administrador Master, você tem a opção de definir se cada educador da equipe é <strong>Administrador</strong> ou <strong>Professor</strong>.</span>
+              </div>
+            )}
+
             {isAdmin && deactivatedCount > 0 && (
               <div className="studio-ranking-admin-toolbar">
                 <label className="studio-ranking-admin-toggle">
@@ -820,6 +831,8 @@ export function StudioHomeView({
                 visibleTeam.map((member, index) => {
                   const isCurrentUser = auth.currentUser?.uid === member.id;
                   const initial = (member.name || "E").slice(0, 1).toUpperCase();
+                  const isMemberMaster = isMasterUser(member.name, member.email);
+                  const memberRole = isMemberMaster ? "master" : (member.role === "admin" ? "admin" : "professor");
                   return (
                     <motion.div
                       className={`studio-leader-row ${isCurrentUser ? "is-current-user" : ""} ${member.disabled ? "is-disabled" : ""}`}
@@ -854,8 +867,14 @@ export function StudioHomeView({
                       <div className="studio-leader-info">
                         <strong>
                           {member.name}
-                          {isMasterUser(member.name, member.email) && (
+                          {isMemberMaster && (
                             <span className="studio-leader-badge-master" title="Usuário Administrador MASTER">👑 MASTER</span>
+                          )}
+                          {!isMemberMaster && memberRole === "admin" && (
+                            <span className="studio-leader-badge-admin" title="Usuário Administrador">🛡️ Administrador</span>
+                          )}
+                          {!isMemberMaster && memberRole === "professor" && (
+                            <span className="studio-leader-badge-professor" title="Professor da Rede">🎓 Professor</span>
                           )}
                           {member.disabled && (
                             <span className="studio-leader-badge-disabled" title="Conta com e-mail desativado (visível apenas para o Administrador)">
@@ -865,17 +884,33 @@ export function StudioHomeView({
                           {isCurrentUser && <span className="studio-leader-badge-you">Você</span>}
                         </strong>
                       </div>
-                      <span>{member.count} {member.count === 1 ? "projeto" : "projetos"}</span>
-                      {isAdmin && onToggleUserDisabled && (
-                        <button
-                          type="button"
-                          className="studio-leader-admin-action"
-                          onClick={() => void onToggleUserDisabled(member.id, !member.disabled)}
-                          title={member.disabled ? "Reativar usuário no ranking" : "Marcar conta como e-mail desativado"}
-                        >
-                          {member.disabled ? "Reativar" : "Desativar"}
-                        </button>
-                      )}
+                      <div className="studio-leader-row-actions">
+                        <span className="studio-leader-project-count">{member.count} {member.count === 1 ? "projeto" : "projetos"}</span>
+                        {isMaster && !isMemberMaster && onUpdateUserRole && (
+                          <div className="studio-leader-role-picker" title="Como Administrador MASTER, altere a função da pessoa: Administrador ou Professor">
+                            <span className="studio-leader-role-picker-label">Função:</span>
+                            <select
+                              className="studio-leader-role-select"
+                              value={memberRole === "admin" ? "admin" : "professor"}
+                              onChange={(e) => void onUpdateUserRole(member.id, e.target.value as "admin" | "professor")}
+                              aria-label={`Alterar função de ${member.name}`}
+                            >
+                              <option value="professor">🎓 Professor</option>
+                              <option value="admin">🛡️ Administrador</option>
+                            </select>
+                          </div>
+                        )}
+                        {isAdmin && onToggleUserDisabled && (
+                          <button
+                            type="button"
+                            className="studio-leader-admin-action"
+                            onClick={() => void onToggleUserDisabled(member.id, !member.disabled)}
+                            title={member.disabled ? "Reativar usuário no ranking" : "Marcar conta como e-mail desativado"}
+                          >
+                            {member.disabled ? "Reativar" : "Desativar"}
+                          </button>
+                        )}
+                      </div>
                     </motion.div>
                   );
                 })
@@ -972,7 +1007,7 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
       .then(([projects, users]) => {
         if (!active) return;
         const counts = new Map<string, number>();
-        const usersInfo = new Map<string, { name: string; photoURL: string | null; email: string | null; disabled?: boolean }>();
+        const usersInfo = new Map<string, { name: string; photoURL: string | null; email: string | null; disabled?: boolean; role?: "master" | "admin" | "professor" }>();
 
         users.docs.forEach(docItem => {
           const data = docItem.data();
@@ -986,7 +1021,12 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
             status: data.status,
             active: data.active,
           });
-          usersInfo.set(docItem.id, { name, photoURL, email, disabled });
+          const role: "master" | "admin" | "professor" = isMasterUser(name, email)
+            ? "master"
+            : (data.role === "admin" || data.isAdmin === true)
+            ? "admin"
+            : "professor";
+          usersInfo.set(docItem.id, { name, photoURL, email, disabled, role });
         });
 
         projects.docs.forEach(docItem => {
@@ -996,11 +1036,14 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
             counts.set(id, (counts.get(id) || 0) + 1);
             if (!usersInfo.has(id)) {
               const email = (data.authorEmail || data.userEmail || null) as string | null;
+              const name = String(data.authorName || data.userName || "Educador(a)");
+              const role: "master" | "admin" | "professor" = isMasterUser(name, email) ? "master" : "professor";
               usersInfo.set(id, {
-                name: String(data.authorName || data.userName || "Educador(a)"),
+                name,
                 photoURL: (data.authorPhoto || data.userPhoto || null) as string | null,
                 email,
                 disabled: isUserDeactivated({ email, disabled: true }),
+                role,
               });
             } else {
               const current = usersInfo.get(id)!;
@@ -1017,11 +1060,14 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
         // Garante que o usuário logado utilize a foto mais atual do Google Auth
         if (user) {
           const current = usersInfo.get(user.uid);
+          const isMaster = isMasterUser(user.displayName, user.email);
+          const userRole: "master" | "admin" | "professor" = isMaster ? "master" : (current?.role || "professor");
           usersInfo.set(user.uid, {
             name: user.displayName || current?.name || user.email?.split("@")[0] || "Educador(a)",
             photoURL: user.photoURL || current?.photoURL || null,
             email: user.email || current?.email || null,
             disabled: false,
+            role: userRole,
           });
         }
 
@@ -1034,6 +1080,7 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
             photoURL: u?.photoURL || null,
             email: u?.email || null,
             disabled: Boolean(u?.disabled),
+            role: u?.role || (isMasterUser(u?.name, u?.email) ? "master" : "professor"),
           };
         }).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
@@ -1066,6 +1113,21 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
     }
   };
 
+  const handleUpdateUserRole = async (userId: string, nextRole: "admin" | "professor") => {
+    try {
+      await setDoc(
+        doc(db, "users", userId),
+        { role: nextRole, isAdmin: nextRole === "admin", updatedAt: new Date() },
+        { merge: true }
+      );
+      setTeam(prev =>
+        prev.map(member => (member.id === userId ? { ...member, role: nextRole } : member))
+      );
+    } catch (err) {
+      console.error("Erro ao atualizar função do usuário:", err);
+    }
+  };
+
   return (
     <StudioHomeView
       key={section}
@@ -1080,6 +1142,7 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
       teamLoading={teamLoading}
       teamError={teamError}
       onToggleUserDisabled={handleToggleUserDisabled}
+      onUpdateUserRole={handleUpdateUserRole}
     />
   );
 }

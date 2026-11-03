@@ -18,6 +18,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { User } from "firebase/auth";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../../lib/firebase";
 import { isMasterUser } from "../../lib/studioNavigation";
 
 export interface AppSidebarProps {
@@ -55,6 +57,20 @@ export function AppSidebar({
   const userSlug = user?.email?.split("@")[0].replace(/\./g, "-") || "usuario";
   const isCanvasGenerator = location.pathname.startsWith("/canvas-generator");
   const isMaster = isMasterUser(user?.displayName, user?.email);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = onSnapshot(doc(db, "users", user.uid), docSnap => {
+      if (docSnap.exists()) {
+        const d = docSnap.data();
+        setUserRole(d.role || (d.isAdmin ? "admin" : "professor"));
+      }
+    });
+    return () => unsub();
+  }, [user?.uid]);
+
+  const isAdmin = isMaster || userRole === "admin";
   const [flyoutOpen, setFlyoutOpen] = useState(false);
   const flyoutBtnRef = useRef<HTMLButtonElement | null>(null);
   const flyoutMenuRef = useRef<HTMLDivElement | null>(null);
@@ -166,12 +182,14 @@ export function AppSidebar({
                   <strong className="studio-sidebar-profile-name">
                     {user?.displayName || user?.email?.split("@")[0] || "Educador"}
                   </strong>
-                  {isMaster && (
+                  {isMaster ? (
                     <span className="studio-sidebar-tag-master" title="Usuário Administrador MASTER">👑 MASTER</span>
-                  )}
+                  ) : isAdmin ? (
+                    <span className="studio-sidebar-tag-admin" title="Usuário Administrador">🛡️ ADMIN</span>
+                  ) : null}
                 </div>
-                <span className={`studio-sidebar-profile-role ${isMaster ? "studio-sidebar-profile-role--master" : ""}`}>
-                  {isMaster ? "Administrador MASTER · INNYX" : "Educador(a) · INNYX"}
+                <span className={`studio-sidebar-profile-role ${isMaster ? "studio-sidebar-profile-role--master" : isAdmin ? "studio-sidebar-profile-role--admin" : ""}`}>
+                  {isMaster ? "Administrador MASTER · INNYX" : isAdmin ? "Administrador · INNYX" : "Professor(a) · INNYX"}
                 </span>
               </div>
             </div>

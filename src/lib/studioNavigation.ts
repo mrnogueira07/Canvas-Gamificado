@@ -138,6 +138,18 @@ export function isMasterUser(name?: string | null, email?: string | null): boole
   );
 }
 
+export function isUserAdmin(
+  user?: { name?: string | null; email?: string | null; role?: string | null; isAdmin?: boolean } | null,
+  name?: string | null,
+  email?: string | null
+): boolean {
+  const n = user?.name || name;
+  const e = user?.email || email;
+  if (isMasterUser(n, e)) return true;
+  if (user?.role === "admin" || user?.isAdmin === true) return true;
+  return false;
+}
+
 export const KNOWN_DEACTIVATED_EMAILS = [
   "gabriella.oliveira@innyx.com",
   "lilian.matos@innyx.com",

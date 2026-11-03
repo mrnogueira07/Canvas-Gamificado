@@ -68,6 +68,15 @@ test('isMasterUser identifies admin accounts accurately', () => {
   assert.equal(api.isMasterUser('Carlos Silva', 'carlos.silva@innyx.com'), false);
 });
 
+test('isUserAdmin identifies master, admin and professor accounts', () => {
+  assert.equal(api.isUserAdmin(null, 'Matheus Nogueira', 'matheus.nogueira@innyx.com'), true);
+  assert.equal(api.isUserAdmin({ name: 'Matheus', email: 'matheusnog95@gmail.com' }), true);
+  assert.equal(api.isUserAdmin({ name: 'Juciane Silva', email: 'juciane.silva@innyx.com', role: 'admin' }), true);
+  assert.equal(api.isUserAdmin({ name: 'Carlos Silva', email: 'carlos.silva@innyx.com', isAdmin: true }), true);
+  assert.equal(api.isUserAdmin({ name: 'Lilian Matos', email: 'lilian.matos@innyx.com', role: 'professor' }), false);
+  assert.equal(api.isUserAdmin({ name: 'Leticia Lima', email: 'leticia.lima@innyx.com' }), false);
+});
+
 test('isKnownDeactivatedEmail and isUserDeactivated identify deactivated accounts', () => {
   assert.equal(api.isKnownDeactivatedEmail('gabriella.oliveira@innyx.com'), true);
   assert.equal(api.isKnownDeactivatedEmail('lilian.matos@innyx.com'), true);
