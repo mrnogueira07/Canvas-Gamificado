@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowRight, LockKeyhole, RefreshCw } from "lucide-react"
 import { LoginFlowBackground } from "../components/ui/LoginFlowBackground";
 import { Turnstile } from "../components/auth/Turnstile";
 import type { TurnstileRef } from "../components/auth/Turnstile";
+import { isUserDeactivated } from "../lib/studioNavigation";
 import "../styles/login.css";
 
 const Login: React.FC = () => {
@@ -38,6 +39,24 @@ const Login: React.FC = () => {
       const userDocRef = doc(db, "users", user.uid);
       try {
         const userDoc = await getDoc(userDocRef);
+        const userData = userDoc.exists() ? userDoc.data() : null;
+
+        // Bloqueia acesso caso a conta esteja marcada como desativada
+        if (
+          isUserDeactivated({
+            email: user.email,
+            disabled: userData?.disabled,
+            isDeactivated: userData?.isDeactivated,
+            status: userData?.status,
+            active: userData?.active,
+          })
+        ) {
+          await signOut(auth);
+          setBlockedEmail(user.email || "Conta desativada");
+          setError("Esta conta institucional foi desativada no Mind Canvas. Para reativar, o e-mail institucional precisa ser ativado novamente.");
+          return;
+        }
+
         if (!userDoc.exists()) {
           await setDoc(userDocRef, {
             uid: user.uid,

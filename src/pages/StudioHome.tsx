@@ -1017,12 +1017,25 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
         const counts = new Map<string, number>();
         const usersInfo = new Map<string, { name: string; photoURL: string | null; email: string | null; disabled?: boolean; role?: "master" | "admin" | "professor" }>();
 
+        // Cache local para persistência imediata de contas desativadas pelo Admin
+        let localDeactivated = new Set<string>();
+        try {
+          const raw = localStorage.getItem("mind_canvas_deactivated_users_cache");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              localDeactivated = new Set(parsed.map((x: unknown) => String(x).toLowerCase().trim()));
+            }
+          }
+        } catch {}
+
         users.docs.forEach(docItem => {
           const data = docItem.data();
           const name = String(data.name || data.displayName || "Educador(a)");
           const photoURL = (data.photoURL || data.photoUrl || data.avatarUrl || data.avatar || data.picture || data.image || null) as string | null;
           const email = (data.email as string) || null;
-          const disabled = isUserDeactivated({
+          const isLocallyDeactivated = localDeactivated.has(docItem.id.toLowerCase().trim()) || (email ? localDeactivated.has(email.toLowerCase().trim()) : false);
+          const disabled = isLocallyDeactivated || isUserDeactivated({
             email,
             disabled: data.disabled,
             isDeactivated: data.isDeactivated,
@@ -1045,12 +1058,13 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
             if (!usersInfo.has(id)) {
               const email = (data.authorEmail || data.userEmail || null) as string | null;
               const name = String(data.authorName || data.userName || "Educador(a)");
+              const isLocallyDeactivated = localDeactivated.has(id.toLowerCase().trim()) || (email ? localDeactivated.has(email.toLowerCase().trim()) : false);
               const role: "master" | "admin" | "professor" = isMasterUser(name, email) ? "master" : "professor";
               usersInfo.set(id, {
                 name,
                 photoURL: (data.authorPhoto || data.userPhoto || null) as string | null,
                 email,
-                disabled: isUserDeactivated({ email, disabled: true }),
+                disabled: isLocallyDeactivated || isUserDeactivated({ email, disabled: data.disabled }),
                 role,
               });
             } else {
@@ -1107,32 +1121,68 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
   }, [section, user]);
 
   const handleToggleUserDisabled = async (userId: string, nextDisabled: boolean) => {
+    const member = team.find(m => m.id === userId);
+    if (!member) return;
+
+    if (isMasterUser(member.name, member.email)) {
+      alert("Não é permitido desativar a conta do Administrador Master.");
+      return;
+    }
+
+    const confirmMsg = `Confirma a desativação da conta de "${member.name}" no ranking?\n\nA conta será marcada como desativada e ficará visível apenas para os administradores.`;
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    // 1. Atualização otimista imediata na interface
+    setTeam(prev =>
+      prev.map(m => (m.id === userId ? { ...m, disabled: nextDisabled } : m))
+    );
+
+    // 2. Persistência no cache local (imediata e resiliente)
+    try {
+      const stored = JSON.parse(localStorage.getItem("mind_canvas_deactivated_users_cache") || "[]");
+      const list = Array.isArray(stored) ? stored : [];
+      const updated = nextDisabled
+        ? Array.from(new Set([...list, userId, member.email].filter((x): x is string => Boolean(x))))
+        : list.filter((x: string) => x !== userId && x !== member.email);
+      localStorage.setItem("mind_canvas_deactivated_users_cache", JSON.stringify(updated));
+    } catch (cacheErr) {
+      console.warn("Aviso ao salvar cache de desativação:", cacheErr);
+    }
+
+    // 3. Persistência no Firestore
     try {
       await setDoc(
         doc(db, "users", userId),
-        { disabled: nextDisabled, status: nextDisabled ? "deactivated" : "active" },
+        {
+          disabled: nextDisabled,
+          status: nextDisabled ? "deactivated" : "active",
+          updatedAt: new Date(),
+          ...(member.name ? { name: member.name } : {}),
+          ...(member.email ? { email: member.email } : {}),
+        },
         { merge: true }
       );
-      setTeam(prev =>
-        prev.map(member => (member.id === userId ? { ...member, disabled: nextDisabled } : member))
-      );
     } catch (err) {
-      console.error("Erro ao atualizar status do usuário:", err);
+      console.error("Erro ao atualizar status do usuário no Firestore:", err);
     }
   };
 
   const handleUpdateUserRole = async (userId: string, nextRole: "admin" | "professor") => {
+    // Atualização otimista imediata na interface
+    setTeam(prev =>
+      prev.map(member => (member.id === userId ? { ...member, role: nextRole } : member))
+    );
+
     try {
       await setDoc(
         doc(db, "users", userId),
         { role: nextRole, isAdmin: nextRole === "admin", updatedAt: new Date() },
         { merge: true }
       );
-      setTeam(prev =>
-        prev.map(member => (member.id === userId ? { ...member, role: nextRole } : member))
-      );
     } catch (err) {
-      console.error("Erro ao atualizar função do usuário:", err);
+      console.error("Erro ao atualizar função do usuário no Firestore:", err);
     }
   };
 
