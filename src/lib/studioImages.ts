@@ -450,69 +450,72 @@ export async function generateStudioImage(
   const tryGemini = async (): Promise<boolean> => {
     const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!geminiKey) return false;
-    try {
-      const geminiInstruction = `Crie uma imagem de altíssima definição no estilo ${engineConfig.title}.
+    const modelsToTry = ["gemini-2.5-flash-image", "gemini-3.1-flash-image"];
+    for (const modelName of modelsToTry) {
+      try {
+        const geminiInstruction = `Crie uma imagem de altíssima definição no estilo ${engineConfig.title}.
 Diretrizes Visuais da Cena: ${fullPrompt}
 Composição: cobrir toda a margem do slide (${selectedRatio}).
 Restrições estritas: Proibido qualquer texto, legenda, moldura, barra preta ou logotipo.`;
 
-      const response = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
-          signal: AbortSignal.timeout(90000),
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  {
-                    text: `${geminiInstruction}\nDescrição detalhada: ${JSON.stringify(description.slice(0, 4000))}\nContexto: ${context}`,
-                  },
-                ],
-              },
-            ],
-            generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-          }),
-        }
-      );
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
+            signal: AbortSignal.timeout(90000),
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: "user",
+                  parts: [
+                    {
+                      text: `${geminiInstruction}\nDescrição detalhada: ${JSON.stringify(description.slice(0, 4000))}\nContexto: ${context}`,
+                    },
+                  ],
+                },
+              ],
+              generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+            }),
+          }
+        );
 
-      if (response.ok) {
-        const data = (await response.json()) as {
-          candidates?: { content?: { parts?: { inlineData?: { mimeType: string; data: string } }[] } }[];
-        };
-        const image = data.candidates?.[0]?.content?.parts?.find(part =>
-          part.inlineData?.mimeType?.startsWith("image/")
-        )?.inlineData;
-        if (image && ["image/png", "image/jpeg", "image/webp"].includes(image.mimeType)) {
-          const binary = atob(image.data);
-          if (binary.length <= 10 * 1024 * 1024) {
-            const directDataUrl = `data:${image.mimeType};base64,${image.data}`;
-            if (auth.currentUser) {
-              try {
-                const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
-                url = await uploadStudioImage(
-                  auth.currentUser.uid,
-                  project.id,
-                  slide.id,
-                  new File([bytes], `generated-${engine}.jpg`, { type: image.mimeType })
-                );
-                cacheImageDataUrl(url, directDataUrl);
-              } catch {
+        if (response.ok) {
+          const data = (await response.json()) as {
+            candidates?: { content?: { parts?: { inlineData?: { mimeType: string; data: string } }[] } }[];
+          };
+          const image = data.candidates?.[0]?.content?.parts?.find(part =>
+            part.inlineData?.mimeType?.startsWith("image/")
+          )?.inlineData;
+          if (image && ["image/png", "image/jpeg", "image/webp"].includes(image.mimeType)) {
+            const binary = atob(image.data);
+            if (binary.length <= 10 * 1024 * 1024) {
+              const directDataUrl = `data:${image.mimeType};base64,${image.data}`;
+              if (auth.currentUser) {
+                try {
+                  const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+                  url = await uploadStudioImage(
+                    auth.currentUser.uid,
+                    project.id,
+                    slide.id,
+                    new File([bytes], `generated-${engine}.jpg`, { type: image.mimeType })
+                  );
+                  cacheImageDataUrl(url, directDataUrl);
+                } catch {
+                  url = directDataUrl;
+                }
+              } else {
                 url = directDataUrl;
               }
-            } else {
-              url = directDataUrl;
+              cacheImageDataUrl(url, directDataUrl);
+              provider = "Gemini AI";
+              return true;
             }
-            cacheImageDataUrl(url, directDataUrl);
-            provider = "Gemini AI";
-            return true;
           }
         }
+      } catch (err) {
+        console.warn(`Falha no gerador Gemini direto (${modelName}):`, err);
       }
-    } catch (err) {
-      console.warn("Falha no gerador Gemini direto:", err);
     }
     return false;
   };

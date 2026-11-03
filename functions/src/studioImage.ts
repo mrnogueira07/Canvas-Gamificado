@@ -100,21 +100,30 @@ export const generateStudioImage = onCall({ cors: true, maxInstances: 10, timeou
 
   async function viaGemini(): Promise<SavedImage> {
     if (!keys.gemini) throw new Error("Gemini não configurado.");
-    const model = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": keys.gemini },
-      signal: AbortSignal.timeout(90000),
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: `Crie uma representação visual de alta definição baseada no conteúdo e descrição abaixo, na proporção ${aspectRatio}. Não crie o slide inteiro, textos, legendas, molduras ou logotipos. Foco visual claro, bom contraste e alta qualidade estética.\nDescrição visual: ${JSON.stringify(description)}\nContexto da aula: ${context}` }] }],
-        generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-      }),
-    });
-    if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
-    const payload = await res.json() as { candidates?: { content?: { parts?: { inlineData?: { mimeType: string; data: string } }[] } }[] };
-    const image = payload.candidates?.[0]?.content?.parts?.find(part => part.inlineData?.mimeType?.startsWith("image/"))?.inlineData;
-    if (!image) throw new Error("Gemini não retornou imagem.");
-    return save(Buffer.from(image.data, "base64"), image.mimeType, "gemini");
+    const primaryModel = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
+    const models = [primaryModel, "gemini-3.1-flash-image"].filter((m, i, arr) => arr.indexOf(m) === i);
+    let lastErr: unknown;
+    for (const model of models) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": keys.gemini },
+          signal: AbortSignal.timeout(90000),
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: `Crie uma representação visual de alta definição baseada no conteúdo e descrição abaixo, na proporção ${aspectRatio}. Não crie o slide inteiro, textos, legendas, molduras ou logotipos. Foco visual claro, bom contraste e alta qualidade estética.\nDescrição visual: ${JSON.stringify(description)}\nContexto da aula: ${context}` }] }],
+            generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+          }),
+        });
+        if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
+        const payload = await res.json() as { candidates?: { content?: { parts?: { inlineData?: { mimeType: string; data: string } }[] } }[] };
+        const image = payload.candidates?.[0]?.content?.parts?.find(part => part.inlineData?.mimeType?.startsWith("image/"))?.inlineData;
+        if (!image) throw new Error("Gemini não retornou imagem.");
+        return save(Buffer.from(image.data, "base64"), image.mimeType, "gemini");
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error("Gemini não retornou imagem.");
   }
 
   async function viaOpenAI(): Promise<SavedImage> {
@@ -157,13 +166,38 @@ export const generateStudioImage = onCall({ cors: true, maxInstances: 10, timeou
   if (!available.length) throw new HttpsError("failed-precondition", "A geração de imagens ainda não foi configurada no servidor.");
 
   const failures: string[] = [];
+
+  /** Tenta um provedor até maxRetries vezes com backoff exponencial. */
+  const tryWithRetry = async (provider: ImageProvider, maxRetries: number): Promise<SavedImage> => {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      if (attempt > 0) {
+        const delay = process.env.NODE_ENV === "test" || process.env.GEMINI_API_KEY === "test-only" ? 0 : 2000 * Math.pow(2, attempt - 1);
+        if (delay > 0) await new Promise(r => setTimeout(r, delay));
+        console.log(`[studioImage] Retry ${attempt}/${maxRetries - 1} para ${provider}...`);
+      }
+      try {
+        return await runners[provider]();
+      } catch (err) {
+        lastError = err;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[studioImage] Tentativa ${attempt + 1}/${maxRetries} falhou (${provider}): ${msg}`);
+        // Não faz retry em erros de configuração (chave ausente)
+        if (msg.includes("não configurado")) break;
+      }
+    }
+    throw lastError;
+  };
+
   for (const provider of available) {
     try {
-      const result = await runners[provider]();
+      // Provedor preferido: até 3 tentativas; fallbacks: 2 tentativas
+      const maxRetries = (requestedProvider === provider || !requestedProvider) ? 3 : 2;
+      const result = await tryWithRetry(provider, maxRetries);
       return { ...result, requestedProvider: requestedProvider || provider, fallback: requestedProvider ? provider !== requestedProvider : false };
     } catch (error) {
       const message = error instanceof Error ? error.message : "erro desconhecido";
-      console.warn(`Falha no provedor ${provider}:`, message);
+      console.warn(`Todos os ${PROVIDER_LABEL[provider]} esgotados:`, message);
       failures.push(`${PROVIDER_LABEL[provider]}: ${message}`);
     }
   }

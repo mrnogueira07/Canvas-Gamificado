@@ -234,30 +234,49 @@ async function run(job: StudioJob, project: StudioProject) {
         completed = { ...completed, slides: associateReferenceImages(completed.slides, refImages, project.sourceFileName) };
       }
 
-      // Never replace an unmatched original with a generated illustration.
-      const targets = refImages.length ? [] : completed.slides.filter(slide => slide.image?.description && !slide.image?.url && !["capa", "objetivo_bncc", "encerramento"].includes(slide.type || ""));
+      // Slides que já têm imagem original do material preservam sua URL.
+      // Todos os demais slides de conteúdo que ainda não possuem URL são direcionados para geração com IA, garantindo que nenhum slide fique sem imagem.
+      const targets = completed.slides.filter(slide =>
+        !slide.image?.url &&
+        !["capa", "objetivo_bncc", "encerramento"].includes(slide.type || "") &&
+        (Boolean(slide.image?.description) || ["imagem_esquerda_texto_direita", "topicos_com_imagem"].includes(slide.layout || "") || ["conteudo", "gancho"].includes(slide.type || ""))
+      );
       if (targets.length) {
         publish({ ...job, status: "illustrating", result: completed, message: "Slides e textos estruturados! Ilustrando a aula…" });
         saveStudioProject(job.userId, completed);
         let next = 0, finished = 0;
-        let serviceUnavailable = false;
+
+        /** Gera uma imagem com até maxRetries tentativas para máxima confiabilidade. */
+        const generateWithRetry = async (slide: StudioSlide, maxRetries = 2): Promise<NonNullable<StudioSlide["image"]>> => {
+          let lastError: unknown;
+          for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+              return await withStudioDeadline(generateStudioImage(project, slide), 115000);
+            } catch (err) {
+              lastError = err;
+              console.warn(`[studioJobs] Tentativa ${attempt + 1}/${maxRetries} falhou para slide "${slide.title}":`, err instanceof Error ? err.message : err);
+            }
+          }
+          throw lastError;
+        };
+
         const worker = async () => {
           while (next < targets.length) {
             const slide = targets[next++];
             publish({ ...job, status: "illustrating", result: completed, message: `Criando imagens da aula · ${finished} de ${targets.length} concluídas…` });
             try {
-              if (serviceUnavailable) throw new Error("Serviço de imagens indisponível.");
-              const image = await withStudioDeadline(generateStudioImage(project, slide), 115000);
+              const image = await generateWithRetry(slide, 3);
               completed = { ...completed, slides: completed.slides.map(item => item.id === slide.id ? { ...item, image, layout: "imagem_esquerda_texto_direita" } : item) };
             } catch {
               failedImages++;
-              serviceUnavailable = true;
+              // Não bloqueia as demais imagens — continua tentando as outras
               completed = { ...completed, slides: completed.slides.map(item => item.id === slide.id ? { ...item, image: { ...item.image!, status: "Não gerada — tentar novamente" }, pending: [...(item.pending || []), "Geração da imagem pendente. Use Gerar imagem na edição do slide."] } : item) };
             }
             finished++;
             publish({ ...job, status: "illustrating", result: completed, message: `Criando imagens da aula · ${finished} de ${targets.length} concluídas…` });
           }
         };
+        // 2 workers paralelos, sem corte por falha de um slide
         await Promise.all([worker(), worker()]);
       }
     }
