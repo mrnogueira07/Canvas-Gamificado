@@ -529,7 +529,7 @@ export function StudioImageEditor({
               <div className="studio-image-editor__step-box">
                 <div className="studio-image-editor__section-header">
                   <span className="studio-image-editor__section-title">
-                    <Sparkles size={13} style={{ color: "#38bdf8" }} />
+                    <Sparkles size={13} style={{ color: "#94a3b8" }} />
                     Motor de Inteligência Artificial
                   </span>
                 </div>

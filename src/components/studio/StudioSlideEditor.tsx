@@ -373,44 +373,6 @@ export function StudioSlideEditor({
               Próximo <ArrowRight size={16} />
             </button>
           </footer>
-
-          {/* MODAL PARA O GERENCIADOR DE IMAGEM */}
-          {showImageModal && (
-            <div className="studio-modal-overlay" onClick={() => setShowImageModal(false)}>
-              <div className="studio-modal-dialog" onClick={e => e.stopPropagation()}>
-                <header className="studio-modal-header">
-                  <div className="studio-modal-header-title">
-                    <span className="studio-modal-header-icon">🖼️</span>
-                    <div>
-                      <h3>Imagem do Slide {String(index + 1).padStart(2, "0")} — {slideTypeLabels[selected.type || "conteudo"]}</h3>
-                      <p className="studio-modal-header-sub">Gerencie ilustrações com IA, imagens da apostila ou arquivos do seu computador</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="studio-modal-close-btn"
-                    onClick={() => setShowImageModal(false)}
-                    aria-label="Fechar janela do editor de imagem"
-                    title="Fechar modal (Esc)"
-                  >
-                    <X size={16} />
-                    <span>Fechar</span>
-                    <kbd className="studio-modal-kbd">Esc</kbd>
-                  </button>
-                </header>
-                <div className="studio-modal-body">
-                  <StudioImageEditor
-                    project={project}
-                    slide={selected}
-                    userId={userId}
-                    onChange={patch}
-                    onProjectChange={onProjectChange}
-                    onClose={() => setShowImageModal(false)}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       ) : (
         <div className="studio-editor__empty">
@@ -418,6 +380,43 @@ export function StudioSlideEditor({
           <button type="button" className="studio-button studio-button--primary" onClick={() => add()}>
             Adicionar slide
           </button>
+        </div>
+      )}
+      {/* MODAL PARA O GERENCIADOR DE IMAGEM */}
+      {showImageModal && selected && (
+        <div className="studio-modal-overlay" onClick={() => setShowImageModal(false)}>
+          <div className="studio-modal-dialog" onClick={e => e.stopPropagation()}>
+            <header className="studio-modal-header">
+              <div className="studio-modal-header-title">
+                <span className="studio-modal-header-icon">🖼️</span>
+                <div>
+                  <h3>Imagem do Slide {String(index + 1).padStart(2, "0")} — {slideTypeLabels[selected.type || "conteudo"]}</h3>
+                  <p className="studio-modal-header-sub">Gerencie ilustrações com IA, imagens da apostila ou arquivos do seu computador</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="studio-modal-close-btn"
+                onClick={() => setShowImageModal(false)}
+                aria-label="Fechar janela do editor de imagem"
+                title="Fechar modal (Esc)"
+              >
+                <X size={16} />
+                <span>Fechar</span>
+                <kbd className="studio-modal-kbd">Esc</kbd>
+              </button>
+            </header>
+            <div className="studio-modal-body">
+              <StudioImageEditor
+                project={project}
+                slide={selected}
+                userId={userId}
+                onChange={patch}
+                onProjectChange={onProjectChange}
+                onClose={() => setShowImageModal(false)}
+              />
+            </div>
+          </div>
         </div>
       )}
       {showDeleteSlideModal && selected && (
