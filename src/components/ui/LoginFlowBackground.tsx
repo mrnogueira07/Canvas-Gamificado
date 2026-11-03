@@ -4,12 +4,13 @@ export function LoginFlowBackground() {
     <div className="mind-login-flow" aria-hidden="true">
       <div className="mind-login-glow mind-login-glow-one" />
       <div className="mind-login-glow mind-login-glow-two" />
+      <div className="mind-login-glow mind-login-glow-three" />
       <svg viewBox="0 0 1440 1000" preserveAspectRatio="xMidYMid slice" focusable="false">
         <defs>
           <linearGradient id="login-flow-line" x1="0" y1="1" x2="1" y2="0">
-            <stop stopColor="#93c5fd" stopOpacity="0.04" />
-            <stop offset=".5" stopColor="#60a5fa" stopOpacity=".38" />
-            <stop offset="1" stopColor="#3b82f6" stopOpacity=".05" />
+            <stop stopColor="#93c5fd" stopOpacity="0.08" />
+            <stop offset=".5" stopColor="#60a5fa" stopOpacity=".5" />
+            <stop offset="1" stopColor="#3b82f6" stopOpacity=".12" />
           </linearGradient>
         </defs>
         <g fill="none" stroke="url(#login-flow-line)" strokeWidth="1.2" strokeLinecap="round">
@@ -20,7 +21,7 @@ export function LoginFlowBackground() {
           <path d="M810 1140 C660 900 830 720 1100 770 S1600 720 1530 400 S1180 100 1330 -120" />
           <path d="M860 1160 C710 920 880 750 1130 810 S1660 740 1580 400 S1230 100 1380 -120" />
         </g>
-        <g fill="#60a5fa" fillOpacity=".4">
+        <g fill="#60a5fa" fillOpacity=".5">
           <circle cx="173" cy="511" r="5" />
           <circle cx="484" cy="789" r="4" />
           <circle cx="1233" cy="741" r="6" />
