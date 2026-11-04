@@ -595,9 +595,6 @@ Retorne EXATAMENTE ESSE FORMATO JSON (sem markdown, sem explicações):
           e o subtítulo com disciplina + ano/bimestre.
       ══════════════════════════════════════════════════════════════════ */}
       <div className="relative group mb-6 overflow-hidden rounded-xl text-center canvas-document-header export-compact-header border border-slate-200/80 bg-white">
-        {/* Barra superior de acento gradiente */}
-        <div className="canvas-document-accent h-1 w-full" />
-        
         <div className="relative z-10 py-6 sm:py-8 px-4 sm:px-8">
 
           {/* Badge do Tipo de Jogo */}

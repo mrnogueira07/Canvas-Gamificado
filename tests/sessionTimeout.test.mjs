@@ -120,3 +120,4 @@ test("markSessionExpired and consumeSessionExpiredReason work correctly", () => 
   const reason2 = consumeSessionExpiredReason();
   assert.equal(reason2, null);
 });
+

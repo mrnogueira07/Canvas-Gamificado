@@ -205,3 +205,4 @@ export function setupSessionTimeoutListener(
     window.clearInterval(intervalId);
   };
 }
+

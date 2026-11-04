@@ -1307,8 +1307,9 @@
     background: linear-gradient(125deg, #1b3158, #172540 55%, #131d31);
     border-color: #355280;
   }
-  .generator-document-sheet .canvas-document-accent {
-    background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #10b981 100%);
+  .generator-document-sheet .canvas-document-accent,
+  .canvas-document-accent {
+    display: none !important;
   }
   .generator-document-sheet .canvas-document-header h1 { color: #ffffff !important; }
   .generator-document-sheet .canvas-document-header span {
