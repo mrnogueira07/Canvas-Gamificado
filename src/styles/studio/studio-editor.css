@@ -1089,9 +1089,23 @@
 
 .studio-slides-preview-stage .studio-preview__frame {
   width: min(100%, 1024px);
+  max-width: 100%;
+  aspect-ratio: 53.45 / 30.22;
   height: auto;
   border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+}
+
+@media (min-width: 1440px) {
+  .studio-slides-preview-stage .studio-preview__frame {
+    width: min(100%, 1160px);
+  }
+}
+
+@media (min-width: 1920px) {
+  .studio-slides-preview-stage .studio-preview__frame {
+    width: min(100%, 1280px);
+  }
 }
 
 .studio-slides-preview-counter {
@@ -1890,6 +1904,74 @@
   border: none !important;
   background: transparent !important;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.studio-preview__image-container img {
+  box-shadow: none !important;
+}
+
+.studio-preview__image-container {
+  position: relative;
+  display: flex;
+  flex: 0 1 auto !important;
+  min-height: 0;
+  margin: 0 auto !important;
+  align-self: center !important;
+  border-radius: 0.6cqw;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  background: transparent !important;
+  border: none !important;
+  transition: aspect-ratio 0.2s ease, max-height 0.2s ease;
+}
+
+.studio-preview__image-container[data-aspect="3:4"],
+.studio-preview__image-container--aspect-3-4,
+.studio-preview__image-container:not([data-aspect]) {
+  aspect-ratio: 3 / 4 !important;
+  width: auto !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  max-height: calc(100% - 2.2cqw) !important;
+  flex: 0 1 auto !important;
+  margin: 0 auto !important;
+  align-self: center !important;
+}
+
+.studio-preview__image-container[data-aspect="1:1"],
+.studio-preview__image-container--aspect-1-1 {
+  aspect-ratio: 1 / 1 !important;
+  width: auto !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  max-height: calc(100% - 2.2cqw) !important;
+  flex: 0 1 auto !important;
+  margin: 0 auto !important;
+  align-self: center !important;
+}
+
+.studio-preview__image-container[data-aspect="4:3"],
+.studio-preview__image-container--aspect-4-3 {
+  aspect-ratio: 4 / 3 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: calc(100% - 2.2cqw) !important;
+  flex: 0 1 auto !important;
+  margin: 0 auto !important;
+  align-self: center !important;
+}
+
+.studio-preview__image-container[data-aspect="16:9"],
+.studio-preview__image-container--aspect-16-9 {
+  aspect-ratio: 16 / 9 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: calc(100% - 2.2cqw) !important;
+  flex: 0 1 auto !important;
+  margin: 0 auto !important;
+  align-self: center !important;
 }
 
 .studio-preview__image small {

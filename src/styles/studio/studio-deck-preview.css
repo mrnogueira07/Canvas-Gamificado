@@ -19,6 +19,20 @@
   overflow: hidden;
 }
 
+@media (min-width: 1600px) and (min-height: 960px) {
+  .studio-deck {
+    width: min(1680px, calc(100vw - 64px));
+    height: min(1040px, calc(100dvh - 64px));
+  }
+}
+
+@media (min-width: 2000px) and (min-height: 1200px) {
+  .studio-deck {
+    width: min(1920px, calc(100vw - 80px));
+    height: min(1200px, calc(100dvh - 80px));
+  }
+}
+
 .studio-deck[open] {
   display: flex;
   flex-direction: column;
@@ -402,17 +416,14 @@
   transition: transform 0.15s ease-out;
 }
 
-.studio-preview--konectar .studio-preview__image-container {
+.studio-preview--konectar .studio-preview__image-container,
+.studio-preview__image-container {
   position: relative;
-  width: 100% !important;
-  height: auto !important;
-  max-height: calc(100% - 2.2cqw) !important;
-  aspect-ratio: 3 / 4;
+  display: flex;
   flex: 0 1 auto !important;
   min-height: 0;
   margin: 0 auto !important;
   align-self: center !important;
-  display: flex;
   border-radius: 0.6cqw;
   overflow: hidden;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
@@ -421,12 +432,19 @@
   transition: aspect-ratio 0.2s ease, max-height 0.2s ease;
 }
 
-/* Proporções editáveis diretamente no slide (sempre alinhadas ao centro com o texto e com a fonte colada abaixo) */
+/* Proporções editáveis no slide — responsividade resiliente para qualquer tamanho de tela e monitor:
+   - 3:4 e 1:1 priorizam altura com largura auto para nunca achatar/esticar ou cortar rostos
+   - 4:3 e 16:9 ajustam largura de forma proporcional com altura contida no slide */
 .studio-preview__image-container[data-aspect="3:4"],
-.studio-preview--konectar .studio-preview__image-container[data-aspect="3:4"] {
+.studio-preview__image-container--aspect-3-4,
+.studio-preview--konectar .studio-preview__image-container[data-aspect="3:4"],
+.studio-preview--konectar .studio-preview__image-container--aspect-3-4,
+.studio-preview__image-container:not([data-aspect]),
+.studio-preview--konectar .studio-preview__image-container:not([data-aspect]) {
   aspect-ratio: 3 / 4 !important;
-  width: 100% !important;
-  height: auto !important;
+  width: auto !important;
+  max-width: 100% !important;
+  height: 100% !important;
   max-height: calc(100% - 2.2cqw) !important;
   flex: 0 1 auto !important;
   margin: 0 auto !important;
@@ -434,10 +452,13 @@
 }
 
 .studio-preview__image-container[data-aspect="1:1"],
-.studio-preview--konectar .studio-preview__image-container[data-aspect="1:1"] {
+.studio-preview__image-container--aspect-1-1,
+.studio-preview--konectar .studio-preview__image-container[data-aspect="1:1"],
+.studio-preview--konectar .studio-preview__image-container--aspect-1-1 {
   aspect-ratio: 1 / 1 !important;
-  width: 100% !important;
-  height: auto !important;
+  width: auto !important;
+  max-width: 100% !important;
+  height: 100% !important;
   max-height: calc(100% - 2.2cqw) !important;
   flex: 0 1 auto !important;
   margin: 0 auto !important;
@@ -445,9 +466,12 @@
 }
 
 .studio-preview__image-container[data-aspect="4:3"],
-.studio-preview--konectar .studio-preview__image-container[data-aspect="4:3"] {
+.studio-preview__image-container--aspect-4-3,
+.studio-preview--konectar .studio-preview__image-container[data-aspect="4:3"],
+.studio-preview--konectar .studio-preview__image-container--aspect-4-3 {
   aspect-ratio: 4 / 3 !important;
   width: 100% !important;
+  max-width: 100% !important;
   height: auto !important;
   max-height: calc(100% - 2.2cqw) !important;
   flex: 0 1 auto !important;
@@ -456,9 +480,12 @@
 }
 
 .studio-preview__image-container[data-aspect="16:9"],
-.studio-preview--konectar .studio-preview__image-container[data-aspect="16:9"] {
+.studio-preview__image-container--aspect-16-9,
+.studio-preview--konectar .studio-preview__image-container[data-aspect="16:9"],
+.studio-preview--konectar .studio-preview__image-container--aspect-16-9 {
   aspect-ratio: 16 / 9 !important;
   width: 100% !important;
+  max-width: 100% !important;
   height: auto !important;
   max-height: calc(100% - 2.2cqw) !important;
   flex: 0 1 auto !important;
