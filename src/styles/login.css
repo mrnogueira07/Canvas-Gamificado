@@ -442,6 +442,12 @@
   color: #fca5a5;
 }
 
+.mind-login-message.warning {
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+}
+
 /* Card Footer */
 .mind-login-card-footer {
   display: flex;

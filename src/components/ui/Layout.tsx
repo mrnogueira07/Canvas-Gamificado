@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
+import { clearUserSession } from "../../lib/sessionTimeout";
 import { AppSidebar } from "./AppSidebar";
 import "../../styles/studio/studio.css";
 
@@ -58,7 +59,11 @@ export function Layout({ children, hideSidebar = false, ...props }: LayoutProps)
   }, [mobileOpen]);
 
   const handleLogout = async () => {
-    try { await signOut(auth); navigate("/login"); }
+    try {
+      clearUserSession();
+      await signOut(auth);
+      navigate("/login");
+    }
     catch { setLogoutError("Não foi possível sair. Tente novamente."); }
   };
   const sidebarProps = { ...props, user: auth.currentUser, onLogout: handleLogout };

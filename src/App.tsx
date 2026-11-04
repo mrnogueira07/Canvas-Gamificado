@@ -13,6 +13,13 @@ import { useEffect, useState } from "react";
 import { auth, db } from "./lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
+import {
+  recordUserActivity,
+  isSessionExpired,
+  markSessionExpired,
+  clearUserSession,
+  setupSessionTimeoutListener,
+} from "./lib/sessionTimeout";
 
 import { ThemeProvider } from "./context/ThemeContext";
 import { AppErrorBoundary } from "./components/ui/AppErrorBoundary";
@@ -24,12 +31,22 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         // Usuário não autenticado — estado normal de logout
+        clearUserSession();
+        setIsAuthenticated(false);
+        return;
+      }
+
+      // 0ª guarda: limite de inatividade (2 horas sem entrar/utilizar o sistema)
+      if (isSessionExpired(user.uid)) {
+        markSessionExpired("inactivity_2h");
+        await signOut(auth);
         setIsAuthenticated(false);
         return;
       }
 
       // 1ª guarda: e-mail não verificado → derruba a sessão (exceto no localhost)
       if (!user.emailVerified && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+        clearUserSession();
         await signOut(auth);
         setIsAuthenticated(false);
         return;
@@ -37,6 +54,7 @@ function App() {
 
       // 2ª guarda: domínio fora do @innyx.com → derruba a sessão (exceto no localhost)
       if (window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1" && !user.email?.toLowerCase().endsWith("@innyx.com")) {
+        clearUserSession();
         await signOut(auth);
         setIsAuthenticated(false);
         return;
@@ -60,11 +78,34 @@ function App() {
         console.warn("Erro ao sincronizar perfil do usuário:", err);
       }
 
+      // Registra atividade válida da sessão
+      recordUserActivity(user.uid);
+
       // Tudo certo → usuário autenticado e autorizado
       setIsAuthenticated(true);
     });
     return () => unsubscribe();
   }, []);
+
+  // Monitora inatividade contínua enquanto o usuário está autenticado
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleExpire = async () => {
+      markSessionExpired("inactivity_2h");
+      try {
+        await signOut(auth);
+      } catch (err) {
+        console.warn("Erro ao encerrar sessão expirada:", err);
+      }
+      setIsAuthenticated(false);
+    };
+
+    const cleanup = setupSessionTimeoutListener(handleExpire, {
+      currentUid: auth.currentUser?.uid,
+    });
+    return () => cleanup();
+  }, [isAuthenticated]);
 
   // Mostra um spinner maneiro de carregamento enquanto a gente checa a autenticação
   if (isAuthenticated === null) {

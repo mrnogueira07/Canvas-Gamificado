@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-import { AlertTriangle, ArrowRight, LockKeyhole, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowRight, Clock, LockKeyhole, RefreshCw } from "lucide-react";
 import { LoginFlowBackground } from "../components/ui/LoginFlowBackground";
 import { Turnstile } from "../components/auth/Turnstile";
 import type { TurnstileRef } from "../components/auth/Turnstile";
 import { isUserDeactivated } from "../lib/studioNavigation";
+import { consumeSessionExpiredReason, recordUserActivity } from "../lib/sessionTimeout";
 import "../styles/login.css";
 
 const Login: React.FC = () => {
@@ -17,6 +18,13 @@ const Login: React.FC = () => {
   const [blockedEmail, setBlockedEmail] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
   const turnstileRef = useRef<TurnstileRef>(null);
+  const [sessionExpiredNotice] = useState<string | null>(() => {
+    const reason = consumeSessionExpiredReason();
+    if (reason === "inactivity_2h") {
+      return "Sua sessão expirou por limite de inatividade (2 horas). Faça login novamente para continuar.";
+    }
+    return null;
+  });
 
   const handleGoogleLogin = async () => {
     if (loading) return;
@@ -82,6 +90,7 @@ const Login: React.FC = () => {
       } catch (firestoreErr) {
         console.warn("Aviso ao sincronizar perfil do usuário no Firestore:", firestoreErr);
       }
+      recordUserActivity(user.uid);
       navigate("/inicio");
     } catch (err: unknown) {
       const code = typeof err === "object" && err !== null && "code" in err ? String(err.code) : "";
@@ -180,6 +189,12 @@ const Login: React.FC = () => {
             />
           </div>
 
+          {sessionExpiredNotice && !error && !blockedEmail && (
+            <div className="mind-login-message warning" role="status">
+              <Clock size={18} aria-hidden="true" />
+              <span>{sessionExpiredNotice}</span>
+            </div>
+          )}
           {error && <div className="mind-login-message error" role="alert"><AlertTriangle size={18} aria-hidden="true" /><span>{error}</span></div>}
           <div className="mind-login-card-footer">
             <span className="mind-login-note-line" />
