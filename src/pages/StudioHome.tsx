@@ -285,9 +285,10 @@ export function StudioHomeView({
         "Falas prontas para o teleprompter do docente",
         "Indicações de tela, lettering e recursos de apoio",
       ],
-      cta: "Criar roteiro",
+      cta: "Em desenvolvimento",
       href: `/studio/roteiro${returnParam}`,
-      badge: "Vídeo",
+      badge: "Em desenvolvimento",
+      inDevelopment: true,
     },
   ];
 
@@ -386,7 +387,7 @@ export function StudioHomeView({
                 visible: { transition: { staggerChildren: 0.08 } },
               }}
             >
-              {cards.map(({ kind, theme, icon: Icon, formatLabel, title, description, features, cta, href, badge }) => (
+              {cards.map(({ kind, theme, icon: Icon, formatLabel, title, description, features, cta, href, badge, inDevelopment }) => (
                 <motion.article
                   variants={{
                     hidden: { opacity: 0, y: 18 },
@@ -394,14 +395,14 @@ export function StudioHomeView({
                   }}
                   whileHover={{ y: -5, transition: { duration: 0.2 } }}
                   whileTap={{ scale: 0.985 }}
-                  className={`studio-creation-card card-${kind} card--${theme}`}
+                  className={`studio-creation-card card-${kind} card--${theme}${inDevelopment ? " is-dev" : ""}`}
                   key={kind}
                 >
                   <div className="creation-card-top">
                     <span className={`creation-icon creation-icon--${theme}`}>
                       <Icon size={24} strokeWidth={1.75} />
                     </span>
-                    <span className={`creation-badge creation-badge--${theme}`}>{badge}</span>
+                    <span className={`creation-badge creation-badge--${theme}${inDevelopment ? " creation-badge--dev" : ""}`}>{badge}</span>
                   </div>
                   <span className={`creation-eyebrow creation-eyebrow--${theme}`}>{formatLabel}</span>
                   <h3>{title}</h3>
@@ -411,7 +412,7 @@ export function StudioHomeView({
                       <li key={feature}>{feature}</li>
                     ))}
                   </ul>
-                  <Link className={`creation-cta creation-cta--${theme}`} to={href} state={{ from: "/inicio" }}>
+                  <Link className={`creation-cta creation-cta--${theme}${inDevelopment ? " creation-cta--dev" : ""}`} to={href} state={{ from: "/inicio" }}>
                     {cta} <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
                   </Link>
                 </motion.article>

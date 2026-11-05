@@ -317,11 +317,11 @@ export function AppSidebar({
                     className={({ isActive }) =>
                       `studio-tree-item studio-tree-item--roteiro ${isActive ? "is-active is-highlighted" : ""}`
                     }
-                    title="Roteiro de Gravação — Videoaulas decupadas cena a cena"
+                    title="Roteiro de Gravação — Em desenvolvimento"
                   >
                     <Video size={16} strokeWidth={1.7} className="studio-tree-icon studio-tree-icon--emerald" />
                     <span>Roteiro de Aula</span>
-                    <span className="studio-tree-badge studio-tree-badge--emerald">Vídeo</span>
+                    <span className="studio-tree-badge studio-tree-badge--dev">Em dev</span>
                   </NavLink>
 
                   {/* Pacote de Aula */}
@@ -438,7 +438,7 @@ export function AppSidebar({
                     <div className="studio-collapsed-flyout__text">
                       <div className="studio-collapsed-flyout__label-row">
                         <strong>Roteiro de Gravação</strong>
-                        <span className="studio-tree-badge studio-tree-badge--emerald">Vídeo</span>
+                        <span className="studio-tree-badge studio-tree-badge--dev">Em desenvolvimento</span>
                       </div>
                       <p>Videoaula decupada cena a cena com teleprompter</p>
                     </div>

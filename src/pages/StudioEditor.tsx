@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { resolveRouteParams, buildEncryptedUrl, type EncryptedRouteData } from "../lib/routeCrypto";
-import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, Check, ChevronLeft, ChevronRight, Download, FileText, FolderOpen, Gamepad2, Images, LoaderCircle, MonitorPlay, Package, Pencil, Plus, Presentation, RotateCcw, Save, Sparkles, Trash2, Upload, Video, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Check, ChevronLeft, ChevronRight, Download, FileText, FolderOpen, Gamepad2, Images, LoaderCircle, MonitorPlay, Package, Pencil, Plus, Presentation, RotateCcw, Save, Sparkles, Trash2, Upload, Video, X } from "lucide-react";
 import { Layout } from "../components/ui/Layout";
 import { auth } from "../lib/firebase";
 import { getStudioJobs, subscribeStudioJobs, isStudioJobRunning, startStudioJob, markStudioJobSaved, removeStudioJob, withStudioDeadline } from "../lib/studioJobs";
@@ -41,14 +41,6 @@ function newProject(kind: StudioKind, line = "Konectar.me"): StudioProject {
     scenes: kind === "slides" ? [] : [newScene("Abertura"), newScene("Explicação e demonstração"), newScene("Síntese e atividade")],
     updatedAt: new Date().toISOString(),
   };
-}
-
-function moveItem<T>(items: T[], index: number, delta: number): T[] {
-  const next = [...items];
-  const target = index + delta;
-  if (target < 0 || target >= items.length) return next;
-  [next[index], next[target]] = [next[target], next[index]];
-  return next;
 }
 
 function SlidesFlow({
@@ -979,7 +971,6 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
     setProject(current => ({ ...current, slides: current.slides.map(item => item.id === id ? { ...item, ...patch } : item) }));
     setDirty(true); setMessage("");
   };
-  const editScene = (id: string, patch: Partial<StudioScene>) => update({ scenes: project.scenes.map((item) => item.id === id ? { ...item, ...patch } : item) });
   const slug = auth.currentUser?.email?.split("@")[0].replace(/\./g, "-") || "usuario";
 
   if (kind === "slides") {
@@ -1257,6 +1248,71 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
     );
   }
 
+  if (kind === "roteiro") {
+    return (
+      <Layout>
+        <div className="studio-roteiro-dev">
+          <div className="studio-roteiro-dev__topbar">
+            <Link to={returnPath} className="studio-editor__back">
+              <ArrowLeft size={15} /> {returnLabel}
+            </Link>
+          </div>
+
+          <section className="studio-roteiro-dev__card" aria-labelledby="roteiro-dev-title">
+            <div className="studio-roteiro-dev__glow" aria-hidden="true" />
+            <span className="studio-roteiro-dev__badge">
+              <Sparkles size={13} /> EM DESENVOLVIMENTO · AUDIOVISUAL PEDAGÓGICO
+            </span>
+
+            <div className="studio-roteiro-dev__icon" aria-hidden="true">
+              <Video size={34} strokeWidth={1.7} />
+            </div>
+
+            <h1 id="roteiro-dev-title">Roteiro de Gravação</h1>
+            <p className="studio-roteiro-dev__lead">
+              A área dedicada de roteirização audiovisual está em desenvolvimento pela equipe{" "}
+              <strong>INNYX Educação</strong>. Em breve, você poderá planejar e decupar videoaulas
+              cena a cena a partir das apostilas com assistência de inteligência artificial.
+            </p>
+
+            <div className="studio-roteiro-dev__grid">
+              <div className="studio-roteiro-dev__feature">
+                <strong>01 · Decupagem por Cena</strong>
+                <p>Estruturação automática de blocos didáticos, transições e tempo pedagógico estimado.</p>
+              </div>
+              <div className="studio-roteiro-dev__feature">
+                <strong>02 · Teleprompter do Docente</strong>
+                <p>Falas prontas, acolhedoras e adaptadas para leitura natural durante a gravação da aula.</p>
+              </div>
+              <div className="studio-roteiro-dev__feature">
+                <strong>03 · Direção Visual em Tela</strong>
+                <p>Indicações de lettering, imagens de apoio e sincronia direta com a apresentação.</p>
+              </div>
+            </div>
+
+            <div className="studio-roteiro-dev__tip">
+              <FileText size={18} />
+              <span>
+                <strong>Já disponível no Slides Canvas:</strong> ao criar uma apresentação no{" "}
+                <em>Slides Canvas</em>, a IA já gera automaticamente o{" "}
+                <strong>roteiro de fala do professor</strong> nas Notas do Apresentador de cada slide!
+              </span>
+            </div>
+
+            <div className="studio-roteiro-dev__actions">
+              <Link to="/studio/slides" className="studio-roteiro-dev__btn-primary">
+                <MonitorPlay size={17} /> Criar aula no Slides Canvas
+              </Link>
+              <Link to={returnPath} className="studio-roteiro-dev__btn-secondary">
+                <ArrowLeft size={16} /> {returnLabel}
+              </Link>
+            </div>
+          </section>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout hideSidebar={true}>
       {previewOpen && <StudioDeckPreview project={project} onClose={() => setPreviewOpen(false)} />}
@@ -1276,8 +1332,8 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
             <p className="studio-editor__subtitle">{info.subtitle}</p>
           </div>
           <div className="studio-editor__actions">
-            {kind !== "roteiro" && <button type="button" className="studio-button studio-button--quiet" disabled={generating || importing || project.slides.length === 0} onClick={() => setPreviewOpen(true)}><MonitorPlay size={16} /> Prévia dos slides</button>}
-            {kind !== "roteiro" && <button type="button" className="studio-button studio-button--quiet" disabled={generating || importing || exporting} onClick={() => void download("pdf")}><FileText size={16} /> Exportar PDF</button>}
+            <button type="button" className="studio-button studio-button--quiet" disabled={generating || importing || project.slides.length === 0} onClick={() => setPreviewOpen(true)}><MonitorPlay size={16} /> Prévia dos slides</button>
+            <button type="button" className="studio-button studio-button--quiet" disabled={generating || importing || exporting} onClick={() => void download("pdf")}><FileText size={16} /> Exportar PDF</button>
             <button type="button" className="studio-button studio-button--quiet" disabled={generating || importing || exporting} onClick={() => void download()}>{exporting ? <LoaderCircle size={16} className="studio-editor__spinner" /> : <Download size={16} />}{exporting ? "Preparando arquivo…" : "PowerPoint editável"}</button>
             <button type="button" className="studio-button studio-button--primary" onClick={save} disabled={generating || importing}><Save size={16} /> Salvar rascunho</button>
             <button type="button" className="studio-button studio-button--danger" onClick={() => setShowDeleteModal(true)} disabled={generating || importing} title="Excluir projeto"><Trash2 size={16} /> Excluir projeto</button>
@@ -1343,37 +1399,35 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
                 {project.line !== "Educação Corporativa" && <label className="studio-field">Bimestre<input maxLength={300} value={project.bimester || ""} onChange={event => update({ bimester: event.target.value })} /></label>}
                 {project.line === "Konecta Kids" && <label className="studio-field">Professor(a)<input maxLength={300} value={project.teacher || ""} onChange={event => update({ teacher: event.target.value })} /></label>}
                 {project.line === "Educação Corporativa" && <label className="studio-field">Subtítulo da capa (Corporativa)<input maxLength={300} value={project.subtitle || ""} onChange={event => update({ subtitle: event.target.value })} /></label>}
-                {kind !== "roteiro" && (
-                  <label className="studio-field">
-                    {project.line === "Konectar.me" ? "Quantidade de slides (Aula Síntese: 9 ou 10)" : "Quantidade de slides (mínimo 5)"}
-                    <input
-                      ref={slideCountInputRef}
-                      type="number"
-                      min={project.line === "Konectar.me" ? 9 : 5}
-                      max={project.line === "Konectar.me" ? 10 : 30}
-                      value={slideCountText}
-                      onFocus={(e) => e.target.select()}
-                      onClick={(e) => (e.target as HTMLInputElement).select()}
-                      onChange={(event) => {
-                        const raw = event.target.value;
-                        setSlideCountText(raw);
-                        const val = parseInt(raw, 10);
-                        if (!Number.isNaN(val) && val >= 1 && val <= 50) {
-                          update({ targetSlideCount: val });
-                        }
-                      }}
-                      onBlur={() => {
-                        const val = parseInt(slideCountText, 10);
-                        const minSlides = project.line === "Konectar.me" ? 9 : 5;
-                        const maxSlides = project.line === "Konectar.me" ? 10 : 30;
-                        const safeVal = Number.isNaN(val) ? 10 : Math.max(minSlides, Math.min(maxSlides, val));
-                        setSlideCountText(String(safeVal));
-                        update({ targetSlideCount: safeVal });
-                      }}
-                      placeholder="10"
-                    />
-                  </label>
-                )}
+                <label className="studio-field">
+                  {project.line === "Konectar.me" ? "Quantidade de slides (Aula Síntese: 9 ou 10)" : "Quantidade de slides (mínimo 5)"}
+                  <input
+                    ref={slideCountInputRef}
+                    type="number"
+                    min={project.line === "Konectar.me" ? 9 : 5}
+                    max={project.line === "Konectar.me" ? 10 : 30}
+                    value={slideCountText}
+                    onFocus={(e) => e.target.select()}
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      setSlideCountText(raw);
+                      const val = parseInt(raw, 10);
+                      if (!Number.isNaN(val) && val >= 1 && val <= 50) {
+                        update({ targetSlideCount: val });
+                      }
+                    }}
+                    onBlur={() => {
+                      const val = parseInt(slideCountText, 10);
+                      const minSlides = project.line === "Konectar.me" ? 9 : 5;
+                      const maxSlides = project.line === "Konectar.me" ? 10 : 30;
+                      const safeVal = Number.isNaN(val) ? 10 : Math.max(minSlides, Math.min(maxSlides, val));
+                      setSlideCountText(String(safeVal));
+                      update({ targetSlideCount: safeVal });
+                    }}
+                    placeholder="10"
+                  />
+                </label>
                 <label className="studio-field">Código da BNCC (sem parênteses, separados por vírgula)<input maxLength={400} value={project.curriculum || ""} onChange={event => update({ curriculum: formatBnccCodes(event.target.value) })} placeholder="Ex.: EF06MA18, EF06MA19" /></label>
                 <label className="studio-field">Exercício escolhido / estudo de caso<textarea rows={2} maxLength={4000} value={project.exercise || ""} onChange={event => update({ exercise: event.target.value })} /></label>
                 <label className="studio-field">Observações do professor<textarea rows={2} maxLength={4000} value={project.observations || ""} onChange={event => update({ observations: event.target.value })} /></label>
@@ -1550,19 +1604,19 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
 
           <section className="studio-panel studio-editor__content">
             <div className="studio-panel__heading studio-panel__heading--spread"><div className="studio-editor__content-label"><span className="studio-panel__step">02</span><div><h2>Planejamento do conteúdo</h2><p>Organize, revise e refine cada etapa.</p></div></div><span className="studio-editor__count">{activeTab === "slides" ? `${project.slides.length} slides` : `${project.scenes.length} cenas`}</span></div>
-            {kind === "pacote" && <div className="studio-editor__tabs" role="tablist" aria-label="Conteúdos do pacote"><button type="button" role="tab" aria-selected={activeTab === "slides"} onClick={() => setActiveTab("slides")}><MonitorPlay size={16} /> Slides Canvas</button><button type="button" role="tab" aria-selected={activeTab === "roteiro"} onClick={() => setActiveTab("roteiro")}><Video size={16} /> Roteiro de gravação</button></div>}
+            {kind === "pacote" && <div className="studio-editor__tabs" role="tablist" aria-label="Conteúdos do pacote"><button type="button" role="tab" aria-selected={activeTab === "slides"} onClick={() => setActiveTab("slides")}><MonitorPlay size={16} /> Slides Canvas</button><button type="button" role="tab" aria-selected={activeTab === "roteiro"} onClick={() => setActiveTab("roteiro")}><Video size={16} /> Roteiro de gravação <span className="studio-tree-badge studio-tree-badge--dev" style={{ marginLeft: 6 }}>Em dev</span></button></div>}
             <details className="studio-editor__notice"><summary>Checklist INNYX · {warnings.length} pendências</summary><p>Aula de 12 minutos · quarto direito livre para o professor. Revise fontes, imagens e fidelidade à apostila.</p><ul>{warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></details>
             <fieldset disabled={generating || importing} className="studio-editor__fieldset">
-              {activeTab === "slides" ? <StudioSlideEditor project={project} userId={userId} onSlidesChange={slides => update({ slides })} onSlideChange={editSlide} onProjectChange={update} /> : project.scenes.map((scene, index) => (
-                <details className="studio-item studio-item--collapsible" key={scene.id} open={index === 0}>
-                  <summary className="studio-item__heading"><span>CENA {String(index + 1).padStart(2, "0")}</span><strong className="studio-item__summary-title">{scene.title || "Nova cena"}</strong><div><button type="button" title="Mover cena para cima" aria-label={`Mover cena ${index + 1} para cima`} disabled={index === 0} onClick={() => update({ scenes: moveItem(project.scenes, index, -1) })}><ArrowUp size={15} /></button><button type="button" title="Mover cena para baixo" aria-label={`Mover cena ${index + 1} para baixo`} disabled={index === project.scenes.length - 1} onClick={() => update({ scenes: moveItem(project.scenes, index, 1) })}><ArrowDown size={15} /></button><button type="button" title="Excluir cena" aria-label={`Excluir cena ${index + 1}`} onClick={() => update({ scenes: project.scenes.filter((item) => item.id !== scene.id) })}><Trash2 size={15} /></button></div></summary>
-                  <div className="studio-item__scene-title"><label className="studio-field">Título da cena<input value={scene.title} maxLength={300} onChange={(event) => editScene(scene.id, { title: event.target.value })} placeholder="O que acontece nesta cena?" /></label><label className="studio-field">Tempo estimado<input value={scene.duration} maxLength={50} onChange={(event) => editScene(scene.id, { duration: event.target.value })} placeholder="Ex.: 30s" /></label></div>
-                  <label className="studio-field">Fala / teleprompter<textarea value={scene.speech} rows={4} maxLength={20000} onChange={(event) => editScene(scene.id, { speech: event.target.value })} placeholder="Escreva a fala do apresentador exatamente como será gravada." /></label>
-                  <label className="studio-field studio-field--notes">Visual e direção<textarea value={scene.visual} rows={3} maxLength={20000} onChange={(event) => editScene(scene.id, { visual: event.target.value })} placeholder="Enquadramento, texto em tela, imagens de apoio e transições." /></label>
-                </details>
-              ))}
-              {activeTab === "roteiro" && project.scenes.length === 0 && <div className="studio-editor__empty"><FileText size={30} /><h3>Seu conteúdo começa aqui</h3><p>Adicione o primeiro item ou crie uma estrutura a partir do briefing.</p></div>}
-              {activeTab === "roteiro" && <button type="button" className="studio-editor__add" onClick={() => update({ scenes: [...project.scenes, newScene()] })}><Plus size={17} /> Adicionar cena</button>}
+              {activeTab === "slides" ? (
+                <StudioSlideEditor project={project} userId={userId} onSlidesChange={slides => update({ slides })} onSlideChange={editSlide} onProjectChange={update} />
+              ) : (
+                <div className="studio-editor__empty studio-editor__empty--dev">
+                  <Video size={32} />
+                  <span className="studio-roteiro-dev__badge"><Sparkles size={12} /> EM DESENVOLVIMENTO</span>
+                  <h3>Roteirização cena a cena em desenvolvimento</h3>
+                  <p>O módulo dedicado de decupagem por cenas está sendo preparado pela equipe INNYX. Enquanto isso, utilize a aba Slides Canvas — o roteiro de fala do professor já é gerado automaticamente nas Notas do Apresentador de cada slide.</p>
+                </div>
+              )}
             </fieldset>
             <div className="studio-editor__export-note"><Download size={16} /><p>Baixe a apresentação em PowerPoint no modelo da linha INNYX, com textos editáveis e notas do apresentador. Para Konecta Kids, usamos o modelo oficial de capa, objetivo/BNCC, conteúdo e encerramento. Revise as imagens geradas e as notas antes de gravar.</p></div>
           </section>
