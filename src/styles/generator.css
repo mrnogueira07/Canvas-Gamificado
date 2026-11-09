@@ -2170,3 +2170,181 @@ html:not([data-theme="light"]) .generator-document-sheet .border-slate-200\/90 {
   .canvas-print-footer { font-size: 6.5pt !important; color: #64748b; padding-bottom: 0 !important; }
   .canvas-print-footer span { font-size: inherit; }
 }
+
+/* Keep the canvas preview on the same neutral/lilac palette as its controls. */
+@media screen {
+  html[data-theme] .generator-workspace .generator-document-sheet {
+    background: var(--ui-bg) !important;
+    color: var(--ui-text) !important;
+    border-color: var(--ui-line) !important;
+  }
+  html[data-theme] .generator-workspace .generator-document-sheet :is(.canvas-section-card, .canvas-document-header) {
+    background: var(--ui-panel) !important;
+    border-color: var(--ui-line) !important;
+    box-shadow: none !important;
+  }
+  html[data-theme] .generator-workspace .generator-document-sheet :is(.canvas-section-heading, .canvas-section-card > div:first-child) {
+    background: var(--ui-raised) !important;
+    border-color: var(--ui-line) !important;
+  }
+  html[data-theme] .generator-workspace .generator-document-sheet :is([contenteditable], textarea, input) {
+    background: var(--ui-bg) !important;
+    color: var(--ui-text) !important;
+    border-color: var(--ui-line) !important;
+  }
+  html[data-theme] .generator-workspace .generator-document-sheet :is([contenteditable], textarea, input):focus {
+    border-color: var(--ui-accent) !important;
+    outline-color: var(--ui-accent);
+  }
+  html[data-theme] .generator-workspace .generator-document-sheet :is(h1, h3, .text-slate-800, .text-slate-900) { color: var(--ui-text) !important; }
+  html[data-theme] .generator-workspace .generator-document-sheet :is(h4, label, .text-slate-400, .text-slate-500, .text-slate-600) { color: var(--ui-muted) !important; }
+  html[data-theme] .generator-workspace .generator-document-sheet :is(.canvas-document-header, .canvas-section-heading) :is(svg, span) { color: var(--ui-accent) !important; }
+  html[data-theme] .generator-workspace .generator-document-sheet .canvas-document-header :is(span, .rounded-full),
+  html[data-theme] .generator-workspace .generator-document-sheet .canvas-section-heading > div > div:first-child {
+    background: var(--ui-tint) !important;
+    border-color: var(--ui-line) !important;
+  }
+  html[data-theme] .generator-workspace .generator-step-card { border-color: var(--ui-line) !important; }
+}
+
+@media screen {
+  html[data-theme] .generator-workspace .generator-document-sheet :is(.canvas-question-card, .canvas-hint-card, .canvas-collectibles, .canvas-section-body .bg-slate-50\/50) {
+    background: var(--ui-panel) !important;
+    border-color: var(--ui-line) !important;
+    box-shadow: none !important;
+  }
+  html[data-theme] .generator-workspace .generator-document-sheet .canvas-answer-card {
+    background: var(--ui-raised) !important;
+    border-color: var(--ui-line) !important;
+    box-shadow: none !important;
+  }
+  html[data-theme] .generator-workspace .generator-document-sheet .canvas-answer-correct {
+    background: color-mix(in srgb, #10b981 10%, var(--ui-panel)) !important;
+    border-color: #329879 !important;
+  }
+  html[data-theme] .generator-workspace .generator-document-sheet .canvas-answer-correct h4 { color: #329879 !important; }
+  html[data-theme] .generator-workspace .generator-document-sheet .canvas-field [contenteditable] {
+    min-height: 48px;
+    padding: 12px 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  html[data-theme] .generator-workspace .generator-document-sheet .canvas-field [contenteditable]:hover { border-color: var(--ui-muted) !important; }
+  html[data-theme] .generator-workspace .generator-document-sheet .canvas-field [contenteditable]:focus {
+    border-color: var(--ui-accent) !important;
+    box-shadow: 0 0 0 2px var(--ui-tint) !important;
+  }
+}
+@media screen {
+  .generator-document-sheet .canvas-section-body .group > p.opacity-0 { display: none; }
+  .generator-document-sheet .canvas-section-body .group:focus-within > p.opacity-0 { display: block; }
+}
+
+/* PDF: consistent fields, restrained accents and readable flowing text. */
+@media print {
+  #canvas-content { color: #27252d !important; background: #fff !important; }
+  #canvas-content .canvas-section-heading {
+    background: #f3eff7 !important;
+    border-left-color: #80649f !important;
+  }
+  #canvas-content .canvas-section-heading :is(svg, span.uppercase) { color: #70558e !important; }
+  #canvas-content .canvas-document-header { border-bottom-color: #80649f !important; }
+  #canvas-content .canvas-field { min-width: 0; }
+  #canvas-content .canvas-field [contenteditable] {
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    line-height: 1.5 !important;
+    color: #27252d !important;
+  }
+  #canvas-content :is(.canvas-question-card, .canvas-hint-card, .canvas-collectibles) {
+    background: #faf9fb !important;
+    border-color: #dedce2 !important;
+    box-shadow: none !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  #canvas-content .canvas-answer-card { background: #fff !important; }
+  #canvas-content .canvas-answer-correct { background: #edf5f0 !important; border-left-color: #329879 !important; }
+  #canvas-content .canvas-answer-correct h4 { color: #237458 !important; }
+  #canvas-content .canvas-answer-card:not(.canvas-answer-correct) h4 { color: #a83e51 !important; }
+  #canvas-content .canvas-collectibles { padding: 3mm !important; break-inside: avoid-page; }
+  #canvas-content .canvas-mode-badge { background: #f3eff7 !important; color: #70558e !important; border-color: #dedce2 !important; }
+  #canvas-content .canvas-section-body .group > p.opacity-0 { display: none !important; }
+  #canvas-content .canvas-section-card { break-inside: auto !important; page-break-inside: auto !important; }
+  #canvas-content .canvas-section-heading { break-inside: avoid-page !important; break-after: avoid-page !important; }
+  #canvas-content .canvas-section-body > .grid > .flex > .space-y-3 { break-inside: avoid-page !important; }
+}
+
+/* Plain, consistent section icons in both the editor and PDF. */
+html[data-theme] .generator-workspace .canvas-section-heading > div > div:first-child {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+html[data-theme] .generator-workspace .canvas-section-heading svg {
+  width: 20px;
+  height: 20px;
+  color: var(--ui-accent, #80649f) !important;
+}
+@media print {
+  :root, html[data-theme], html[data-theme] body, html[data-theme] #root {
+    color-scheme: light !important;
+    background: #fff !important;
+    background-image: none !important;
+  }
+  html[data-theme] :is(.studio-shell, .studio-main, .studio-editor, .generator-workspace, .generator-document-area, .generator-document-sheet) {
+    background: #fff !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+  html[data-theme] .generator-workspace .canvas-section-heading svg { color: #70558e !important; width: 4.5mm; height: 4.5mm; }
+}
+
+@media screen {
+  html[data-theme] .generator-workspace .generator-settings :is(.generator-settings-icon, .generator-card-badge) {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: var(--ui-accent) !important;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+  html[data-theme] .generator-workspace .generator-settings .generator-settings-icon svg { width: 22px; height: 22px; }
+  html[data-theme] .generator-workspace .generator-settings .generator-card-badge svg { width: 17px; height: 17px; }
+  html[data-theme] .generator-workspace .generator-settings .generator-complete-icon { color: var(--ui-accent) !important; }
+  html[data-theme] .generator-workspace .generator-settings .generator-step-card.is-done { border-color: var(--ui-line) !important; }
+  html[data-theme] .generator-workspace .generator-settings :is(.generator-upload-dropzone-icon, .generator-file-icon, .generator-action-card-icon) {
+    background: var(--ui-tint) !important;
+    color: var(--ui-accent) !important;
+    border-color: var(--ui-line) !important;
+    box-shadow: none !important;
+  }
+}
+
+@media screen {
+  html[data-theme] .generator-workspace .generator-document-sheet .canvas-reference-images button {
+    background: var(--ui-raised) !important;
+    color: var(--ui-accent) !important;
+    border: 1px solid var(--ui-line) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  html[data-theme] .generator-workspace .generator-document-sheet .canvas-reference-images button:hover:not(:disabled) {
+    background: var(--ui-tint) !important;
+    border-color: var(--ui-accent) !important;
+    color: var(--ui-text) !important;
+  }
+  html[data-theme] .generator-workspace .generator-document-sheet .canvas-reference-images button:focus-visible {
+    outline: 2px solid var(--ui-accent);
+    outline-offset: 3px;
+  }
+  html[data-theme] .generator-workspace .generator-document-sheet .canvas-reference-images button:disabled {
+    color: var(--ui-muted) !important;
+    opacity: .5;
+  }
+}

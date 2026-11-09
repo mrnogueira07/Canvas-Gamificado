@@ -20,7 +20,7 @@ import {
   X,
   Trophy,
   Book,
-} from "lucide-react";
+} from "../lib/icons";
 import { useNavigate } from "react-router-dom";
 import { buildEncryptedUrl } from "../lib/routeCrypto";
 import type { Project } from "../types";

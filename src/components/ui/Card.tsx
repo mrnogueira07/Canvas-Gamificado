@@ -7,7 +7,7 @@ import {
   Calendar,
   Clock,
   FolderInput,
-} from "lucide-react";
+} from "../../lib/icons";
 import type { Project } from "../../types";
 
 interface ProjectCardProps {

@@ -41,7 +41,7 @@ import {
   PencilLine,
   AlertTriangle,
   RefreshCw,
-} from "lucide-react";
+} from "../../lib/icons";
 
 import { GameLogicSection } from "./sections/GameLogicSection";
 import { SectionCard } from "./shared/SectionCard";

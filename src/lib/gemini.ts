@@ -15,7 +15,7 @@ const LOCAL_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const localGenAI = LOCAL_API_KEY ? new GoogleGenerativeAI(LOCAL_API_KEY) : null;
 const localModel = localGenAI
   ? localGenAI.getGenerativeModel(
-      { model: "gemini-2.5-flash" },
+      { model: "gemini-3.1-pro-preview" },
       {
         customHeaders: {
           Referer: "https://canvasgame-2025.web.app/",
@@ -79,12 +79,12 @@ export const model = {
       } = {};
 
       if (typeof params === "string") {
-        payload = { prompt: params, modelName: "gemini-2.5-flash" };
+        payload = { prompt: params, modelName: "gemini-3.1-pro-preview" };
       } else if (params && typeof params === "object") {
         payload = {
           contents: params.contents,
           generationConfig: params.generationConfig,
-          modelName: "gemini-2.5-flash",
+          modelName: "gemini-3.1-pro-preview",
         };
       }
 

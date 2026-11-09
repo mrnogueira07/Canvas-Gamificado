@@ -100,7 +100,7 @@ export const generateStudioImage = onCall({ cors: true, maxInstances: 10, timeou
 
   async function viaGemini(): Promise<SavedImage> {
     if (!keys.gemini) throw new Error("Gemini não configurado.");
-    const primaryModel = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
+    const primaryModel = "gemini-3.1-flash-image";
     const models = [primaryModel, "gemini-3.1-flash-image"].filter((m, i, arr) => arr.indexOf(m) === i);
     let lastErr: unknown;
     for (const model of models) {
@@ -159,9 +159,7 @@ export const generateStudioImage = onCall({ cors: true, maxInstances: 10, timeou
   const runners: Record<ImageProvider, () => Promise<SavedImage>> = { magnific: viaMagnific, gemini: viaGemini, openai: viaOpenAI };
 
   // Provedor escolhido pelo usuário primeiro; depois os demais configurados como reserva.
-  const order: ImageProvider[] = requestedProvider
-    ? [requestedProvider, ...(["magnific", "gemini", "openai"] as ImageProvider[]).filter(p => p !== requestedProvider)]
-    : ["magnific", "gemini", "openai"];
+  const order: ImageProvider[] = ["gemini"];
   const available = order.filter(p => Boolean(keys[p]));
   if (!available.length) throw new HttpsError("failed-precondition", "A geração de imagens ainda não foi configurada no servidor.");
 

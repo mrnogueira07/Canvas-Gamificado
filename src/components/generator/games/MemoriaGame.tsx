@@ -8,7 +8,7 @@
  * Limite recomendado: 8 pares (= 16 cartas no tabuleiro).
  */
 import React from "react";
-import { XCircle } from "lucide-react";
+import { XCircle } from "../../../lib/icons";
 import { Field } from "../shared/Field";
 import { toStr } from "../shared/utils";
 

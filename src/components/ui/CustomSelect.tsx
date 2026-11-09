@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check } from "../../lib/icons";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function CustomSelect({

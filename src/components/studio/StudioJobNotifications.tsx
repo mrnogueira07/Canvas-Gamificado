@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
-import { AlertCircle, Check, LoaderCircle, X } from "lucide-react";
+import { AlertCircle, Check, LoaderCircle, X } from "../../lib/icons";
 import { dismissStudioJob, getStudioJobs, isStudioJobRunning, subscribeStudioJobs } from "../../lib/studioJobs";
 import { buildEncryptedUrl } from "../../lib/routeCrypto";
 import "../../styles/studio/studio-jobs.css";

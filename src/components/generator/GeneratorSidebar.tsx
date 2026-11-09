@@ -12,7 +12,7 @@ import {
   Gamepad2,
   Sparkles,
   CheckCircle2,
-} from "lucide-react";
+} from "../../lib/icons";
 import { model } from "../../lib/gemini";
 import { motion, AnimatePresence } from "framer-motion";
 

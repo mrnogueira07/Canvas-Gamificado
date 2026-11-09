@@ -18,7 +18,7 @@
  */
 
 import React, { useState } from "react";
-import { XCircle, Zap } from "lucide-react";
+import { XCircle, Zap } from "../../../lib/icons";
 import type { GeneratedContent } from "../../../types";
 import { model } from "../../../lib/gemini";
 import { SchemaType } from "@google/generative-ai";

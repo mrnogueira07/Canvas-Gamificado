@@ -5,8 +5,7 @@ service cloud.firestore {
     function isMasterAdmin() {
       return request.auth != null && (
         request.auth.token.email == "matheus.nogueira@innyx.com" ||
-        request.auth.token.email == "matheusnog95@gmail.com" ||
-        (request.auth.token.email != null && request.auth.token.email.matches('.*matheus.*'))
+        request.auth.token.email == "matheusnog95@gmail.com"
       );
     }
 

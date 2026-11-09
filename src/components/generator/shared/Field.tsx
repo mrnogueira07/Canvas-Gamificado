@@ -8,7 +8,7 @@
  * impedindo que objetos/arrays vindos da IA causem o erro #31 do React.
  */
 import React, { useEffect, useRef, useState } from "react";
-import { PencilLine } from "lucide-react";
+import { PencilLine } from "../../../lib/icons";
 
 export interface FieldProps {
   label: string;

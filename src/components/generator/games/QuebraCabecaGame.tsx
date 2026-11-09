@@ -10,7 +10,7 @@
  * Suporta até 3 quebra-cabeças simultâneos por canvas.
  */
 import React, { useRef, useState } from "react";
-import { Award, Check, XCircle, X } from "lucide-react";
+import { Award, Check, XCircle, X } from "../../../lib/icons";
 import type { GeneratedContent } from "../../../types";
 import { Field } from "../shared/Field";
 import { InlineSelect } from "../shared/InlineSelect";

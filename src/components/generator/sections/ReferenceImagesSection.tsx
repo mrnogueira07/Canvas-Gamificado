@@ -9,7 +9,7 @@
  * exportação para PDF (classe `export-hide`).
  */
 import React, { useRef, useState } from "react";
-import { Layers, X } from "lucide-react";
+import { Layers, X } from "../../../lib/icons";
 import { SectionCard } from "../shared/SectionCard";
 
 type AspectRatio = "16:9" | "3:5" | "1:1";

@@ -9,7 +9,7 @@
  * os itens são tratados como desafios pedagógicos.
  */
 import React, { useState } from "react";
-import { Check, Lightbulb, X, XCircle, Image as ImageIcon, Trash2, Upload } from "lucide-react";
+import { Check, Lightbulb, X, XCircle, Image as ImageIcon, Trash2, Upload } from "../../../lib/icons";
 import { Field } from "./Field";
 import { isCorrectAnswer, toStr } from "./utils";
 

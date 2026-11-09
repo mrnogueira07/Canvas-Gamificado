@@ -65,7 +65,7 @@ export const generateGeminiContent = onCall(
     }
 
     const data = (request.data || {}) as GenerateGeminiPayload;
-    const modelName = data.modelName || "gemini-2.5-flash";
+    const modelName = data.modelName || "gemini-3.1-pro-preview";
 
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
@@ -181,13 +181,38 @@ export const proxyImage = onRequest(
       return;
     }
     try {
+      const parsedUrl = new URL(targetUrl);
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        res.status(400).send("Invalid protocol");
+        return;
+      }
+      const host = parsedUrl.hostname.toLowerCase();
+      if (
+        host === "localhost" ||
+        host === "127.0.0.1" ||
+        host === "0.0.0.0" ||
+        host === "169.254.169.254" ||
+        host === "metadata.google.internal" ||
+        host.endsWith(".internal") ||
+        host.startsWith("10.") ||
+        host.startsWith("192.168.") ||
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host)
+      ) {
+        res.status(403).send("Forbidden target host");
+        return;
+      }
       const fetchRes = await fetch(targetUrl);
       if (!fetchRes.ok) {
         res.status(fetchRes.status).send(`Upstream error: ${fetchRes.statusText}`);
         return;
       }
+      const contentType = fetchRes.headers.get("content-type") || "";
+      if (contentType && !contentType.startsWith("image/") && !contentType.startsWith("application/octet-stream")) {
+        res.status(400).send("Resource is not an image");
+        return;
+      }
       res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Content-Type", fetchRes.headers.get("content-type") || "image/jpeg");
+      res.setHeader("Content-Type", contentType || "image/jpeg");
       res.setHeader("Cache-Control", "public, max-age=86400");
       const arrayBuffer = await fetchRes.arrayBuffer();
       res.send(Buffer.from(arrayBuffer));

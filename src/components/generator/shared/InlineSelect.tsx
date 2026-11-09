@@ -4,7 +4,7 @@
  * alinhamento do dropdown e cor por opção.
  */
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check } from "../../../lib/icons";
 import { motion, AnimatePresence } from "framer-motion";
 
 export interface InlineSelectOption {

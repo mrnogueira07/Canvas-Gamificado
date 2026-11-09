@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Folder as FolderIcon, MoreVertical, Edit2, Move, Trash2 } from "lucide-react";
+import { Folder as FolderIcon, MoreVertical, Edit2, Move, Trash2 } from "../../lib/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Folder } from "./folderConfig";
 import { getColorConfig } from "./folderConfig";

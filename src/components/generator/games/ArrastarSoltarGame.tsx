@@ -6,7 +6,7 @@
  * correta. Usado como mockup do mecanismo do jogo final.
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Move, Check } from "lucide-react";
+import { Move, Check } from "../../../lib/icons";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 interface Shape {

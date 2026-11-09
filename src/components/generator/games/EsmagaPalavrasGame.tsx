@@ -8,7 +8,7 @@
  * Limite recomendado: 10 palavras por canvas.
  */
 import React from "react";
-import { Grid, Type, Trash2, AlertCircle, CheckCircle, BookOpen } from "lucide-react";
+import { Grid, Type, Trash2, AlertCircle, CheckCircle, BookOpen } from "../../../lib/icons";
 import { Field } from "../shared/Field";
 import type { GameTarget } from "../../../types";
 

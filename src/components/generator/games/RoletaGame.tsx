@@ -10,7 +10,7 @@
  */
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Check, Plus, Trash2, Zap, Lightbulb, AlertTriangle, HelpCircle } from "lucide-react";
+import { Check, Plus, Trash2, Zap, Lightbulb, AlertTriangle, HelpCircle } from "../../../lib/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { Field } from "../shared/Field";
 

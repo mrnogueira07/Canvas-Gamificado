@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@iconify-json/tabler": "^1.2.43",
+    "@iconify/react": "^6.0.4",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/three": "^0.185.4",
     "firebase": "^12.9.0",
@@ -19,7 +21,6 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.0",
     "jszip": "^3.10.1",
-    "lucide-react": "^0.575.0",
     "mammoth": "^1.12.0",
     "openai": "^6.22.0",
     "pdfjs-dist": "^6.4.299",

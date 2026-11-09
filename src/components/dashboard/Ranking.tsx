@@ -1,5 +1,5 @@
 
-import { Trophy, X } from "lucide-react";
+import { Trophy, X } from "../../lib/icons";
 import { motion } from "framer-motion";
 import { isMasterUser } from "../../lib/studioNavigation";
 

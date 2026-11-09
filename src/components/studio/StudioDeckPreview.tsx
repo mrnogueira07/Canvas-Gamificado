@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, ArrowRight, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, X } from "../../lib/icons";
 import type { StudioProject } from "../../lib/studioProjects";
 import { StudioSlideFrame } from "./StudioSlidePreview";
 import { orderedStudioSlides, slideTypeLabels, studioCategories } from "../../lib/studioNavigation";

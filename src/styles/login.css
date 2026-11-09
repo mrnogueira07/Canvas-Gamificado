@@ -553,3 +553,26 @@
     filter: blur(150px);
   }
 }
+
+html[data-theme] .mind-login, html[data-theme] .mind-login :is(section,button,input,header,footer,h1,p,span), html[data-theme] :is(.studio-shell,.studio-sidebar,.studio-main,.theme-toggle) { transition: background-color .4s ease, color .4s ease, border-color .4s ease, box-shadow .4s ease; }
+html[data-theme="light"] .mind-login { background:linear-gradient(135deg,#faf9fc,#eee7f6 55%,#e9eff6); color:#27252d; }
+html[data-theme="light"] .mind-login :is(.mind-login-brand,.mind-login-brand-title,.mind-login-intro h1,.mind-login-card h2) { color:#27252d; }
+html[data-theme="light"] .mind-login-intro h1 > span { background:linear-gradient(135deg,#9674b4,#70558e,#527794); background-clip:text; -webkit-background-clip:text; }
+html[data-theme="light"] .mind-login-card { background:#ffffffde; border-color:#dcd5e7; box-shadow:0 20px 60px #48345f12; }
+html[data-theme="light"] .mind-login :is(.mind-login-description,.mind-login-section-label,.mind-login-card-heading p,.mind-login-card-footer,.mind-login-footer,.mind-login-intro-note) { color:#71677d; }
+html[data-theme="light"] .mind-login :is(.mind-login-eyebrow,.mind-login-card-eyebrow,.mind-login-brand-caption) { color:#70558e; }
+html[data-theme="light"] .mind-login-google { background:#f6f3fa; color:#342a40; border-color:#dcd5e7; }
+html[data-theme="light"] .mind-login-google:hover:not(:disabled) { background:#eae1f2; }
+html[data-theme="light"] .mind-login-innyx { filter:brightness(0) saturate(100%) opacity(.7); }
+html[data-theme="light"] .mind-login :is(.mind-login-card-heading,.mind-login-security,.mind-login-card-footer,.mind-login-footer,.mind-login-intro-note) { border-color:#dcd5e7; }
+html[data-theme="light"] .mind-login-flow { opacity:.25; }
+@media(prefers-reduced-motion:reduce) { html[data-theme] .mind-login, html[data-theme] .mind-login *, html[data-theme] :is(.studio-shell,.studio-sidebar,.studio-main,.theme-toggle) { transition:none; } }
+
+/* Stronger decorative strokes against the light login background. */
+html[data-theme="light"] .mind-login-flow { opacity: 1; }
+html[data-theme="light"] .mind-login-flow svg { opacity: .65; }
+html[data-theme="light"] .mind-login-flow svg > g:first-of-type { stroke-width: 1.5; }
+html[data-theme="light"] #login-flow-line stop { stop-color: #80649f; stop-opacity: .25; }
+html[data-theme="light"] #login-flow-line stop[offset=".5"] { stop-color: #70558e; stop-opacity: .6; }
+html[data-theme="light"] .mind-login-flow svg > g:last-of-type { fill: #80649f; fill-opacity: .55; }
+html[data-theme="light"] .mind-login-note-line { background: #9474b2; }

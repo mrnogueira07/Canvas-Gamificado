@@ -14,7 +14,7 @@ import {
   RotateCcw,
   Trash2,
   Type,
-} from "lucide-react";
+} from "../../lib/icons";
 import type { StudioProject, StudioSlide, StudioSlideImageAspect, StudioSlideImageFit } from "../../lib/studioProjects";
 import { createStudioId } from "../../lib/studioProjects";
 import { formatBnccCodes } from "../../lib/studioBriefing";

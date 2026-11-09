@@ -8,7 +8,7 @@
  * Após resolver, o jogo libera as questões de fixação configuradas.
  */
 import React, { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Check, CheckCircle2, Move } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, Move } from "../../../lib/icons";
 import { motion } from "framer-motion";
 
 // ─── Modo Clássico (8-puzzle) ────────────────────────────────────────────────

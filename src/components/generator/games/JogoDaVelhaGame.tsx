@@ -6,7 +6,7 @@
  * formar linha/coluna/diagonal de respostas certas vence.
  */
 import React from "react";
-import { Circle, Grid, X } from "lucide-react";
+import { Circle, Grid, X } from "../../../lib/icons";
 
 interface JogoDaVelhaGameProps {
   targets: any[];

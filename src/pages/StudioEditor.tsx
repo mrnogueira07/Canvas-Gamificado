@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { resolveRouteParams, buildEncryptedUrl, type EncryptedRouteData } from "../lib/routeCrypto";
-import { ArrowLeft, ArrowUpRight, Check, ChevronLeft, ChevronRight, Download, FileText, FolderOpen, Gamepad2, Images, LoaderCircle, MonitorPlay, Package, Pencil, Plus, Presentation, RotateCcw, Save, Sparkles, Trash2, Upload, Video, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Check, ChevronLeft, ChevronRight, Download, FileText, FolderOpen, Gamepad2, Images, LoaderCircle, MonitorPlay, Package, Pencil, Presentation, RotateCcw, Save, Sparkles, Trash2, Upload, Video, X } from "../lib/icons";
 import { Layout } from "../components/ui/Layout";
 import { auth } from "../lib/firebase";
 import { getStudioJobs, subscribeStudioJobs, isStudioJobRunning, startStudioJob, markStudioJobSaved, removeStudioJob, withStudioDeadline } from "../lib/studioJobs";
@@ -91,53 +91,7 @@ function SlidesFlow({
   const previewProject = hasGeneratedSlides ? project : { ...project, title: project.title || "Uma nova descoberta", subject: project.subject || "Tema da aula" };
 
   return <div className={`studio-slides-flow studio-slides-flow--${stage}`}>
-    {stage === "recent" && <main className="studio-slides-recent">
-      <div className="studio-slides-recent-heading">
-        <div>
-          <span>CONTINUE DE ONDE PAROU</span>
-          <h1>Projetos recentes</h1>
-          <p>Abra uma apresentação para continuar ou crie uma nova aula estruturada pela IA.</p>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Link
-            to="/projetos"
-            className="studio-slides-nav-recent"
-            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-            title="Ver central completa de projetos e materiais"
-          >
-            <FolderOpen size={16} /> Ver todos os projetos
-          </Link>
-          <button type="button" className="studio-slides-primary" onClick={() => onStage("prepare")}>
-            <Plus size={17} /> Nova apresentação
-          </button>
-        </div>
-      </div>
-      {recentProjects.length ? (
-        <div className="studio-slides-recent-grid">
-          {recentProjects.map(recent => (
-            <button type="button" className="studio-slides-recent-card" key={recent.id} onClick={() => onOpenProject(recent.id)}>
-              <span className="studio-slides-recent-card__icon"><Presentation size={20} /></span>
-              <span className="studio-slides-recent-card__count">{recent.slides.length} slides</span>
-              <strong>{recent.title || "Projeto sem título"}</strong>
-              <small>{[recent.subject, recent.line || "Konectar.me"].filter(Boolean).join(" · ")}</small>
-              <span className="studio-slides-recent-card__date">Atualizado em {new Date(recent.updatedAt).toLocaleDateString("pt-BR")}</span>
-              <ArrowUpRight className="studio-slides-recent-card__arrow" size={17} />
-            </button>
-          ))}
-        </div>
-      ) : (
-        <section className="studio-slides-recent-empty">
-          <span><Presentation size={25} /></span>
-          <h2>Nenhuma apresentação recente</h2>
-          <p>Quando você criar e salvar slides, eles aparecerão aqui para você retomar a qualquer momento.</p>
-          <button type="button" className="studio-slides-primary" onClick={() => onStage("prepare")}>
-            <Plus size={17} /> Criar primeira apresentação
-          </button>
-        </section>
-      )}
-    </main>}
-
-    {stage === "prepare" && <main className="studio-slides-create">
+    {(stage === "prepare" || stage === "recent") && <main className="studio-slides-create">
       <div className="studio-slides-intro">
         <span className="studio-slides-intro-badge"><Sparkles size={12} /> Planejamento Pedagógico</span>
         <h1>Criar aula a partir do material</h1>
@@ -275,6 +229,46 @@ function SlidesFlow({
             </p>
           )}
         </div>
+
+    {recentProjects.length > 0 && <section className="studio-slides-recent">
+      <div className="studio-slides-recent-heading">
+        <div>
+          <span>SUA BIBLIOTECA</span>
+          <h1>Projetos recentes</h1>
+          <p>Suas últimas aulas, prontas para continuar.</p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Link
+            to="/projetos"
+            className="studio-slides-nav-recent"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            title="Ver central completa de projetos e materiais"
+          >
+            <FolderOpen size={16} /> Ver todos os projetos
+          </Link>
+        </div>
+      </div>
+      {recentProjects.length ? (
+        <div className="studio-slides-recent-grid">
+          {recentProjects.map(recent => (
+            <button type="button" className="studio-slides-recent-card" key={recent.id} onClick={() => onOpenProject(recent.id)}>
+              <span className="studio-slides-recent-card__icon"><Presentation size={20} /></span>
+              <span className="studio-slides-recent-card__count">{recent.slides.length} slides</span>
+              <strong>{recent.title || "Projeto sem título"}</strong>
+              <small>{[recent.subject, recent.line || "Konectar.me"].filter(Boolean).join(" · ")}</small>
+              <span className="studio-slides-recent-card__date">Atualizado em {new Date(recent.updatedAt).toLocaleDateString("pt-BR")}</span>
+              <ArrowUpRight className="studio-slides-recent-card__arrow" size={17} />
+            </button>
+          ))}
+        </div>
+      ) : (
+        <section className="studio-slides-recent-empty">
+          <span><Presentation size={25} /></span>
+          <h2>Nenhuma apresentação recente</h2>
+          <p>Quando você criar e salvar slides, eles aparecerão aqui para você retomar a qualquer momento.</p>
+        </section>
+      )}
+    </section>}
 
         <section className="studio-slides-preview-panel" aria-label="Prévia navegável dos slides">
           <div className="studio-slides-preview-heading">
@@ -436,7 +430,7 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
   useEffect(() => {
     projectRef.current = project;
   }, [project]);
-  const [recentProjects, setRecentProjects] = useState<StudioProject[]>(() => getStudioProjects(userId).filter(item => item.kind === "slides").slice(0, 6));
+  const [recentProjects, setRecentProjects] = useState<StudioProject[]>(() => getStudioProjects(userId).filter(item => item.kind === "slides" && item.slides.some(slide => Boolean(slide.content?.trim() || slide.notes?.trim()))).slice(0, 6));
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState(projectId && !initial ? "Este rascunho não foi encontrado neste navegador. Você pode iniciar um novo projeto." : "");
@@ -545,7 +539,7 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
 
   useEffect(() => {
     const refreshRecentProjects = () => {
-      setRecentProjects(getStudioProjects(userId).filter(item => item.kind === "slides").slice(0, 6));
+      setRecentProjects(getStudioProjects(userId).filter(item => item.kind === "slides" && item.slides.some(slide => Boolean(slide.content?.trim() || slide.notes?.trim()))).slice(0, 6));
       if (projectId) {
         const found = getStudioProjects(userId).find(item => item.id === projectId && item.kind === kind);
         if (found) {
@@ -1006,13 +1000,10 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
             </span>
             <span className="generator-brand-name">MIND CANVAS</span>
             <span className="generator-toolbar-divider" />
-            <span className="generator-product-name"><Presentation size={17} /> Slides Canvas</span>
+            <span className="generator-product-name"><Presentation size={17} /><input aria-label="Nome do projeto" title="Editar nome do projeto" className="studio-project-title-input" value={project.title && project.title !== "Projeto sem título" ? project.title : project.slides.find(slide => slide.type === "capa")?.title || ""} placeholder="Nome da aula" onChange={event => update({ title: event.target.value })} /></span>
           </div>
 
-          <div className="generator-document-status">
-            <span className={dirty ? 'is-unsaved' : ''} />
-            {generating ? 'Criando slides com IA' : importing ? importStatus : dirty ? 'Alterações não salvas' : hasGeneratedSlides ? 'Slides prontos' : 'Novo projeto'}
-          </div>
+
 
           <div className="generator-toolbar-actions">
             {stage === "edit" ? (
@@ -1039,10 +1030,10 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
                 </button>
                 <button
                   type="button"
-                  className="generator-action-btn generator-action-btn--primary"
-                  disabled={generating || importing}
+                  className={`generator-action-btn studio-save-button${dirty ? " generator-action-btn--primary" : ""}`}
+                  disabled={!dirty || generating || importing}
                   onClick={save}
-                  title="Salvar alterações"
+                  title={dirty ? "Salvar alterações" : "Todas as alterações estão salvas"}
                 >
                   <Save size={14} /> <span>Salvar</span>
                 </button>

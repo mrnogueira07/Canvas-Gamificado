@@ -23,7 +23,7 @@ import {
   UploadCloud,
   Wand2,
   ZoomIn,
-} from "lucide-react";
+} from "../../lib/icons";
 import type {
   MagnificCreativity,
   MagnificEngine,
@@ -40,8 +40,8 @@ import {
 import type { StudioProject, StudioSlide } from "../../lib/studioProjects";
 
 const AI_PROVIDERS: { id: StudioImageProvider; label: string; sub: string; badge?: string }[] = [
-  { id: "magnific", label: "Magnific AI", sub: "Ultra-definição e texturas hiper-realistas", badge: "Padrão" },
-  { id: "gemini", label: "Gemini AI", sub: "Google 2.5 Flash Image rápida e precisa" },
+  { id: "magnific", label: "Magnific AI", sub: "Ultra-definição e texturas hiper-realistas", badge: undefined },
+  { id: "gemini", label: "Gemini AI", sub: "Gemini 3.1 Flash Image", badge: "Padrão" },
   { id: "openai", label: "OpenAI GPT", sub: "GPT Image-1 / DALL-E 3 de alta fidelidade" },
 ];
 
@@ -117,7 +117,7 @@ export function StudioImageEditor({
   const [activeTab, setActiveTab] = useState<"ia" | "material" | "upload">("ia");
 
   // Motor e parâmetros da IA
-  const [selectedProvider, setSelectedProvider] = useState<StudioImageProvider>("magnific");
+  const [selectedProvider, setSelectedProvider] = useState<StudioImageProvider>("gemini");
   const [selectedEngine, setSelectedEngine] = useState<MagnificEngine>("photographic");
   const [selectedCreativity, setSelectedCreativity] = useState<MagnificCreativity>("medium");
   const [selectedHdr, setSelectedHdr] = useState<MagnificHdr>("standard");
@@ -534,7 +534,7 @@ export function StudioImageEditor({
                   </span>
                 </div>
                 <div className="studio-image-editor__provider-row">
-                  {AI_PROVIDERS.map(pOpt => {
+                  {AI_PROVIDERS.filter(provider => provider.id === "gemini").map(pOpt => {
                     const isSelected = selectedProvider === pOpt.id;
                     return (
                       <button

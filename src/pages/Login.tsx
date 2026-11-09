@@ -1,9 +1,11 @@
+import { ThemeToggle } from "../components/ui/ThemeToggle";
+import { useTheme } from "../context/ThemeContext";
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-import { AlertTriangle, ArrowRight, LockKeyhole, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowRight, LockKeyhole, RefreshCw } from "../lib/icons";
 import { LoginFlowBackground } from "../components/ui/LoginFlowBackground";
 import { Turnstile } from "../components/auth/Turnstile";
 import type { TurnstileRef } from "../components/auth/Turnstile";
@@ -13,6 +15,7 @@ import "../styles/login.css";
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [blockedEmail, setBlockedEmail] = useState<string | null>(null);
@@ -121,7 +124,7 @@ const Login: React.FC = () => {
             <span className="mind-login-brand-caption">WORKSPACE PEDAGÓGICO</span>
           </div>
         </div>
-        <img src="/logo-innyx-branco.webp" alt="INNYX Educação" className="mind-login-innyx" />
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}><ThemeToggle /><img src="/logo-innyx-branco.webp" alt="INNYX Educação" className="mind-login-innyx" /></div>
       </header>
 
       <main className="mind-login-main">
@@ -171,7 +174,7 @@ const Login: React.FC = () => {
             <span className="mind-login-section-label">Verificação de segurança</span>
             <Turnstile
               ref={turnstileRef}
-              theme="dark"
+              theme={theme}
               size="flexible"
               onVerify={(token) => { setTurnstileToken(token); setError(""); }}
               onExpire={() => setTurnstileToken("")}

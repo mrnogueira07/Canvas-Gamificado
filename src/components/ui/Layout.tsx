@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X } from "../../lib/icons";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { clearUserSession } from "../../lib/sessionTimeout";

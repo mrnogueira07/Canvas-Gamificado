@@ -9,7 +9,7 @@
  * Quando o jogo é Plataforma 2D, exibe também o campo "Itens Coletáveis".
  */
 import React from "react";
-import { Award, Cog, Gem, LayoutList, Timer } from "lucide-react";
+import { Award, Cog, Gem, LayoutList, Timer } from "../../../lib/icons";
 import { Field } from "../shared/Field";
 import { SectionCard } from "../shared/SectionCard";
 

@@ -7,7 +7,7 @@
  * renderizar diretamente.
  */
 import React, { Component } from "react";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw } from "../../../lib/icons";
 
 interface ErrorBoundaryState {
   hasError: boolean;

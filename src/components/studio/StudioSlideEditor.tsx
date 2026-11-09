@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Clock, Plus, Trash2, Image as ImageIcon, X, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Clock, Plus, Trash2, Image as ImageIcon, X, ChevronLeft, ChevronRight, LoaderCircle } from "../../lib/icons";
 import type { StudioProject, StudioSlide } from "../../lib/studioProjects";
 import {
   orderedStudioSlides,
@@ -45,7 +45,7 @@ export function StudioSlideEditor({
     if (!showImageModal && !showDeleteSlideModal) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setShowImageModal(false);
+
         setShowDeleteSlideModal(false);
       }
     };
@@ -384,7 +384,7 @@ export function StudioSlideEditor({
       )}
       {/* MODAL PARA O GERENCIADOR DE IMAGEM */}
       {showImageModal && selected && (
-        <div className="studio-modal-overlay" onClick={() => setShowImageModal(false)}>
+        <div className="studio-modal-overlay">
           <div className="studio-modal-dialog" onClick={e => e.stopPropagation()}>
             <header className="studio-modal-header">
               <div className="studio-modal-header-title">
@@ -399,11 +399,11 @@ export function StudioSlideEditor({
                 className="studio-modal-close-btn"
                 onClick={() => setShowImageModal(false)}
                 aria-label="Fechar janela do editor de imagem"
-                title="Fechar modal (Esc)"
+                title="Fechar editor de imagem"
               >
                 <X size={16} />
                 <span>Fechar</span>
-                <kbd className="studio-modal-kbd">Esc</kbd>
+                
               </button>
             </header>
             <div className="studio-modal-body">
@@ -413,7 +413,7 @@ export function StudioSlideEditor({
                 userId={userId}
                 onChange={patch}
                 onProjectChange={onProjectChange}
-                onClose={() => setShowImageModal(false)}
+                onClose={() => {}}
               />
             </div>
           </div>

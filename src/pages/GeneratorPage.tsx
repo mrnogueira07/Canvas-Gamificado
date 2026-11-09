@@ -1,10 +1,11 @@
+import { ThemeToggle } from "../components/ui/ThemeToggle";
 // Componente da Pagina do Gerador
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GeneratorSidebar } from '../components/generator/GeneratorSidebar';
 import { DocumentView, DocumentViewErrorBoundary } from '../components/generator/DocumentView';
 import type { GeneratorFormData, GeneratedContent } from '../types';
-import { CheckCircle, AlertTriangle, Sliders, FileText, ArrowLeft, Gamepad2, BookOpen, Layers3, RefreshCw } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Sliders, FileText, ArrowLeft, Gamepad2, BookOpen, Layers3, RefreshCw } from "../lib/icons";
 import { model } from '../lib/gemini';
 import type { Part } from '@google/generative-ai';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -1769,7 +1770,8 @@ Retorne APENAS um JSON valido com esta estrutura:
                     <span className="generator-toolbar-divider" />
                     <span className="generator-product-name"><Gamepad2 size={17} /> Game Canvas</span>
                 </div>
-                <div className="generator-document-status"><span className={isDirty ? 'is-unsaved' : ''} />{isExtractingPdf ? 'Analisando roteiro' : isGenerating ? 'Criando seu canvas' : isDirty ? 'Alterações não salvas' : generatedContent ? 'Canvas carregado' : 'Novo projeto'}</div>
+                <ThemeToggle />
+<div className="generator-document-status"><span className={isDirty ? 'is-unsaved' : ''} />{isExtractingPdf ? 'Analisando roteiro' : isGenerating ? 'Criando seu canvas' : isDirty ? 'Alterações não salvas' : generatedContent ? 'Canvas carregado' : 'Novo projeto'}</div>
             </header>
 
             {/* ── BARRA DE ABAS MOBILE (Apenas em telas < lg para alternar com facilidade) ── */}

@@ -18,7 +18,7 @@ import {
   Trophy,
   Video,
   X,
-} from "lucide-react";
+} from "../lib/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import gsap from "gsap";
 import { collection, deleteDoc, doc, getDocs, onSnapshot, query, setDoc, where } from "firebase/firestore";
@@ -122,7 +122,7 @@ function getRows(games: Project[], drafts: StudioProject[], userSlug: string, se
     })),
     ...drafts.map(project => ({
       id: `studio-${project.id}`,
-      title: project.title || "Rascunho sem título",
+      title: project.title?.trim() && !/^(Projeto|Rascunho) sem título$/i.test(project.title.trim()) ? project.title : project.slides?.find(slide => slide.type === "capa")?.title?.trim() || project.slides?.[0]?.title?.trim() || "Rascunho sem título",
       kind: project.kind,
       detail: project.kind === "slides" ? "Slides Canvas" : project.kind === "roteiro" ? "Roteiro de gravação" : "Pacote de aula",
       subject: project.subject || "—",
@@ -205,7 +205,7 @@ export function StudioHomeView({
     if (!projectToDelete) return;
     setIsDeleting(true);
     try {
-      if (projectToDelete.local) {
+      if (projectToDelete.id.startsWith("studio-")) {
         const rawId = projectToDelete.id.replace(/^studio-/, "");
         if (auth.currentUser) {
           deleteStudioProject(auth.currentUser.uid, rawId);

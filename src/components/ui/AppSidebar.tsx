@@ -1,3 +1,4 @@
+import { ThemeToggle } from "./ThemeToggle";
 import React, { useState, useEffect, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -16,7 +17,7 @@ import {
   Video,
   Package,
   Sparkles,
-} from "lucide-react";
+} from "../../lib/icons";
 import type { User } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
@@ -71,6 +72,7 @@ export function AppSidebar({
   }, [user?.uid]);
 
   const isAdmin = isMaster || userRole === "admin";
+  const [profileOpen, setProfileOpen] = useState(false);
   const [flyoutOpen, setFlyoutOpen] = useState(false);
   const flyoutBtnRef = useRef<HTMLButtonElement | null>(null);
   const flyoutMenuRef = useRef<HTMLDivElement | null>(null);
@@ -166,7 +168,7 @@ export function AppSidebar({
               <ChevronsUpDown size={14} className="studio-workspace-chevron" />
             </div>
 
-            <div className="studio-sidebar-profile-card">
+            <div className="studio-sidebar-profile-card" role="button" tabIndex={0} aria-expanded={profileOpen} onClick={() => setProfileOpen(!profileOpen)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setProfileOpen(!profileOpen); } }}>
               <div className="studio-sidebar-avatar-wrapper">
                 <span className={`studio-sidebar-avatar ${isMaster ? "studio-sidebar-avatar--master" : ""}`}>
                   {user?.photoURL ? (
@@ -182,14 +184,12 @@ export function AppSidebar({
                   <strong className="studio-sidebar-profile-name">
                     {user?.displayName || user?.email?.split("@")[0] || "Educador"}
                   </strong>
-                  {isMaster ? (
-                    <span className="studio-sidebar-tag-master" title="Usuário Administrador MASTER">👑 MASTER</span>
-                  ) : isAdmin ? (
+                  {!isMaster && isAdmin ? (
                     <span className="studio-sidebar-tag-admin" title="Usuário Administrador">🛡️ ADMIN</span>
                   ) : null}
                 </div>
                 <span className={`studio-sidebar-profile-role ${isMaster ? "studio-sidebar-profile-role--master" : isAdmin ? "studio-sidebar-profile-role--admin" : ""}`}>
-                  {isMaster ? "Administrador MASTER · INNYX" : isAdmin ? "Administrador · INNYX" : "Professor(a) · INNYX"}
+                  {isMaster ? "MASTER" : isAdmin ? "Administrador · INNYX" : "Professor(a) · INNYX"}
                 </span>
               </div>
             </div>
@@ -200,6 +200,7 @@ export function AppSidebar({
               <ChevronsUpDown size={15} />
             </button>
             <span
+              role="button" tabIndex={0} aria-expanded={profileOpen} onClick={() => setProfileOpen(!profileOpen)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setProfileOpen(!profileOpen); } }}
               className={`studio-sidebar-avatar studio-sidebar-avatar--mini ${isMaster ? "studio-sidebar-avatar--master" : ""}`}
               title={`${user?.displayName || "Educador"}${isMaster ? " (MASTER)" : ""}`}
             >
@@ -213,9 +214,11 @@ export function AppSidebar({
         )}
       </div>
 
+      {profileOpen && <><button className="studio-profile-menu-dismiss" aria-label="Fechar menu do perfil" onClick={() => setProfileOpen(false)} /><div className="studio-profile-menu" role="menu"><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); onLogout(); }}><LogOut size={16} /> Sair da conta</button></div></>}
       {/* 3. Lista de Navegação Principal (Áreas do Sistema) */}
       <div className="studio-sidebar-scroll">
-        <nav className="studio-nav-group" aria-label="Áreas principais">
+
+<nav className="studio-nav-group" aria-label="Áreas principais">
           {/* Início / Dashboard */}
           <NavLink
             to="/inicio"
@@ -486,16 +489,7 @@ export function AppSidebar({
             {isCollapsed ? <PanelLeftOpen size={15} /> : <><PanelLeftClose size={15} /><span>Recolher</span></>}
           </button>
 
-          <button
-            type="button"
-            onClick={onLogout}
-            className="studio-logout-pill"
-            aria-label="Sair da conta"
-            title="Sair da conta"
-          >
-            <LogOut size={15} />
-            {!isCollapsed && <span>Sair</span>}
-          </button>
+          <ThemeToggle />
         </div>
       </div>
     </aside>

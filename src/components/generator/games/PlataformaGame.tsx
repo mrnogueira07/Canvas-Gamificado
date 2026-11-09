@@ -8,7 +8,7 @@
  * Cada pergunta possui enunciado + 3 alternativas (1 correta + 2 distratores).
  */
 import React from "react";
-import { XCircle } from "lucide-react";
+import { XCircle } from "../../../lib/icons";
 import { Field } from "../shared/Field";
 import { isCorrectAnswer } from "../shared/utils";
 

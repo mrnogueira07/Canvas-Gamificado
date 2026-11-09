@@ -404,7 +404,7 @@ export function sanitizeStudioProjectForFirestore(project: StudioProject, userId
     userId: userId || "local",
     kind: project.kind,
     type: project.kind,
-    title: project.title.trim() || "Projeto sem título",
+    title: ((project.title.trim() && project.title !== "Projeto sem título") ? project.title.trim() : project.slides.find(slide => slide.type === "capa")?.title?.trim() || "Projeto sem título"),
     subject: project.subject || "",
     grade: project.gradeLevel || "",
     gradeLevel: project.gradeLevel || "",
@@ -590,12 +590,12 @@ export async function syncStudioProjectsFromCloud(userId: string): Promise<Studi
 export function getStudioProjects(userId: string): StudioProject[] {
   if (!userId) return [];
   if (projectsMemory.has(userId)) {
-    return projectsMemory.get(userId)!;
+    return projectsMemory.get(userId)!.map(project => ({ ...project, title: project.title?.trim() && project.title !== "Projeto sem título" ? project.title : project.slides?.find(slide => slide.type === "capa")?.title?.trim() || project.slides?.[0]?.title?.trim() || "Projeto sem título" }));
   }
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(storageKey(userId)) || "[]");
     const projects = Array.isArray(parsed)
-      ? parsed.filter(isStudioProject).map(p => hydrateProjectImages(p)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      ? parsed.filter(isStudioProject).map(p => hydrateProjectImages({ ...p, title: p.title?.trim() && p.title !== "Projeto sem título" ? p.title : p.slides?.find(slide => slide.type === "capa")?.title?.trim() || p.slides?.[0]?.title?.trim() || "Projeto sem título" })).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       : [];
     projectsMemory.set(userId, projects);
     void syncFromIndexedDb(userId);
@@ -614,7 +614,7 @@ export function getStudioProjects(userId: string): StudioProject[] {
 
 export function saveStudioProject(userId: string, project: StudioProject): StudioProject {
   if (!userId) throw new Error("Entre na sua conta para salvar o rascunho.");
-  const saved: StudioProject = { ...project, title: project.title.trim() || "Projeto sem título", updatedAt: new Date().toISOString() };
+  const saved: StudioProject = { ...project, title: ((project.title.trim() && project.title !== "Projeto sem título") ? project.title.trim() : project.slides.find(slide => slide.type === "capa")?.title?.trim() || "Projeto sem título"), updatedAt: new Date().toISOString() };
 
   // 1. Atualizar cache em memória imediatamente (0ms)
   const current = projectsMemory.get(userId) || getStudioProjects(userId);

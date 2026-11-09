@@ -7,7 +7,7 @@
  * Limite máximo: 15 alvos (≈ 5 perguntas com 3 alvos cada).
  */
 import React from "react";
-import { Crosshair, Target, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Crosshair, Target, XCircle, ChevronLeft, ChevronRight } from "../../../lib/icons";
 import { Field } from "../shared/Field";
 import { toStr } from "../shared/utils";
 

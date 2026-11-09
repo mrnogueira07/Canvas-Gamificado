@@ -1,3 +1,4 @@
+import "./styles/workspace-theme.css";
 import {
   BrowserRouter as Router,
   Routes,

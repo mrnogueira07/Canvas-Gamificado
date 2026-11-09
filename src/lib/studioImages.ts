@@ -236,7 +236,7 @@ export async function generateStudioImage(
 
   let url: string | undefined;
   let provider = "Magnific AI";
-  const selectedProvider: StudioImageProvider = options?.provider || "magnific";
+  const selectedProvider: StudioImageProvider = "gemini";
 
   // 1. OPENAI (GPT-IMAGE-1 COM FALLBACK DALL-E-3)
   const tryOpenAI = async (): Promise<boolean> => {
@@ -450,7 +450,7 @@ export async function generateStudioImage(
   const tryGemini = async (): Promise<boolean> => {
     const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!geminiKey) return false;
-    const modelsToTry = ["gemini-2.5-flash-image", "gemini-3.1-flash-image"];
+    const modelsToTry = ["gemini-3.1-flash-image"];
     for (const modelName of modelsToTry) {
       try {
         const geminiInstruction = `Crie uma imagem de altíssima definição no estilo ${engineConfig.title}.

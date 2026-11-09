@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Upload, FileText, X, LoaderCircle, Sparkles, AlertCircle } from "lucide-react";
+import { Upload, FileText, X, LoaderCircle, Sparkles, AlertCircle } from "../../lib/icons";
 
 export interface StudioResendModalProps {
   isOpen: boolean;
