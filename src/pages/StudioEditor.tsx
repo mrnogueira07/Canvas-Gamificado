@@ -7,7 +7,7 @@ import { auth } from "../lib/firebase";
 import { getStudioJobs, subscribeStudioJobs, isStudioJobRunning, startStudioJob, markStudioJobSaved, removeStudioJob, withStudioDeadline } from "../lib/studioJobs";
 import type { StudioJob } from "../lib/studioJobs";
 import { extractStudioBriefing, formatBnccCodes, mergeStudioBriefing, type StudioBriefing } from "../lib/studioBriefing";
-import { createStudioId, deleteStudioProject, getStudioProjects, hydrateProjectImages, saveStudioProject, studioFilename } from "../lib/studioProjects";
+import { createStudioId, deleteStudioProject, fetchStudioProjectFromCloud, getStudioProjects, hydrateProjectImages, saveStudioProject, studioFilename } from "../lib/studioProjects";
 import type { ExtractedReferenceImage, StudioKind, StudioProject, StudioScene, StudioSlide } from "../lib/studioProjects";
 import "../styles/studio/studio-editor.css";
 import { readStudioReference } from "../lib/studioReference";
@@ -17,7 +17,7 @@ import { StudioDeckPreview } from "../components/studio/StudioDeckPreview";
 import { StudioSlideFrame } from "../components/studio/StudioSlidePreview";
 import { StudioResendModal } from "../components/studio/StudioResendModal";
 import { slideTypes, studioWarnings } from "../lib/studioGuidelines";
-import { orderedStudioSlides, slideTypeLabels } from "../lib/studioNavigation";
+import { orderedStudioSlides, slideTypeLabels, isMasterUser, getMasterProjectPermissions } from "../lib/studioNavigation";
 
 const metadata = {
   slides: { title: "Slides Canvas", subtitle: "Transforme o conteúdo da aula em uma apresentação bem planejada.", icon: Presentation },
@@ -45,16 +45,19 @@ function newProject(kind: StudioKind, line = "Konectar.me"): StudioProject {
 
 function SlidesFlow({
   project, job, stage, recentProjects, fileInput, importing, importStatus, error, message, progressClock,
-  exporting, onStage, onUpdate, onImport, onPaste, onGenerate, onOpenProject, onOpenResend, onDownload, onSelectSlide,
+  exporting, readOnlyOtherUser, authorName, onStage, onUpdate, onImport, onPaste, onGenerate, onOpenProject, onOpenResend, onDownload, onSelectSlide, onOpenPreview,
 }: {
   project: StudioProject; job?: StudioJob; stage: "recent" | "prepare" | "progress" | "result"; recentProjects: StudioProject[]; progressClock: number;
   fileInput: React.RefObject<HTMLInputElement | null>; importing: boolean; importStatus: string; error: string; message: string;
   exporting?: boolean;
+  readOnlyOtherUser?: boolean;
+  authorName?: string;
   onStage: (stage: "recent" | "prepare" | "progress" | "result" | "edit") => void; onUpdate: (patch: Partial<StudioProject>) => void;
   onImport: (file?: File) => void; onPaste: (text: string) => void; onGenerate: () => void; onOpenProject: (id: string) => void;
   onOpenResend: () => void;
   onDownload?: (format?: "pptx" | "pdf" | "roteiro") => void;
   onSelectSlide?: (id: string) => void;
+  onOpenPreview?: () => void;
 }) {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
@@ -333,7 +336,7 @@ function SlidesFlow({
     {stage === "result" && <main className="studio-slides-result">
       <div className="studio-slides-result-heading">
         <div>
-          <p className="studio-slides-ready"><Check size={16} /> Apresentação gerada com sucesso!</p>
+          <p className="studio-slides-ready"><Check size={16} /> {readOnlyOtherUser ? `Projeto de ${authorName || "Educador(a)"} · Visualização Master` : "Apresentação gerada com sucesso!"}</p>
           <h1>{project.title || "Apresentação da aula"}</h1>
           <p>{project.line || "Konectar.me"} · {project.line === "Konectar.me" ? "Aula síntese" : "Apresentação"} · {orderedSlides.length} slides prontos · ~{duration} de fala estimada</p>
         </div>
@@ -342,8 +345,13 @@ function SlidesFlow({
             {exporting ? <LoaderCircle size={17} className="studio-editor__spinner" /> : <Download size={17} />}
             Baixar PowerPoint (.pptx)
           </button>
+          {onOpenPreview && (
+            <button type="button" className="studio-slides-secondary" onClick={onOpenPreview}>
+              <MonitorPlay size={15} /> Apresentação em tela cheia
+            </button>
+          )}
           <button type="button" className="studio-slides-secondary" onClick={() => onStage("edit")}>
-            <Pencil size={15} /> Editar slide a slide
+            <Pencil size={15} /> {readOnlyOtherUser ? "Visualizar slide a slide" : "Editar slide a slide"}
           </button>
         </div>
       </div>
@@ -351,7 +359,11 @@ function SlidesFlow({
       <div className="studio-slides-result-layout">
         <div>
           <p style={{ margin: "0 0 14px", color: "var(--studio-text-muted, #8b90a2)", fontSize: "13.5px" }}>
-            💡 <strong>Dica:</strong> Clique em qualquer miniatura abaixo para abrir a edição detalhada daquele slide (textos, imagens e notas do apresentador).
+            {readOnlyOtherUser ? (
+              <>👁️ <strong>Visualização Master:</strong> Clique em qualquer miniatura abaixo para inspecionar o slide e as notas do apresentador.</>
+            ) : (
+              <>💡 <strong>Dica:</strong> Clique em qualquer miniatura abaixo para abrir a edição detalhada daquele slide (textos, imagens e notas do apresentador).</>
+            )}
           </p>
           <section className="studio-slides-thumbnails" aria-label="Miniaturas dos slides">
             {orderedSlides.map((slide, index) => (
@@ -368,7 +380,7 @@ function SlidesFlow({
                   <StudioSlideFrame project={project} slide={slide} />
                 </span>
                 <strong>{index + 1} &nbsp;{slide.title || slideTypeLabels[slide.type || "conteudo"]}</strong>
-                <span className="studio-slide-thumb__action"><Pencil size={11} /> Editar slide</span>
+                <span className="studio-slide-thumb__action"><Pencil size={11} /> {readOnlyOtherUser ? "Visualizar slide" : "Editar slide"}</span>
               </button>
             ))}
           </section>
@@ -397,14 +409,32 @@ function SlidesFlow({
             )}
           </section>
 
-          <div className="studio-slides-result-actions">
-            <button type="button" className="studio-slides-btn-resend" onClick={onOpenResend}>
-              <Upload size={16} /> Reenviar material didático
-            </button>
-            <button type="button" className="studio-slides-restart" onClick={() => onStage("prepare")}>
-              <RotateCcw size={14} /> Criar nova aula do zero
-            </button>
-          </div>
+          {readOnlyOtherUser ? (
+            <div
+              className="studio-slides-master-readonly"
+              role="status"
+              style={{
+                padding: "12px 14px",
+                borderRadius: "12px",
+                background: "rgba(139, 92, 246, 0.12)",
+                border: "1px solid rgba(139, 92, 246, 0.28)",
+                color: "#c4b5fd",
+                fontSize: "12px",
+                lineHeight: 1.5,
+              }}
+            >
+              🔒 <strong>Acesso Master:</strong> Permitido visualizar e baixar os arquivos da apresentação. Não é permitido recriar projetos de outros usuários.
+            </div>
+          ) : (
+            <div className="studio-slides-result-actions">
+              <button type="button" className="studio-slides-btn-resend" onClick={onOpenResend}>
+                <Upload size={16} /> Reenviar material didático
+              </button>
+              <button type="button" className="studio-slides-restart" onClick={() => onStage("prepare")}>
+                <RotateCcw size={14} /> Criar nova aula do zero
+              </button>
+            </div>
+          )}
           {(error || message) && (
             <p className={`studio-slides-feedback${error ? " has-error" : ""}`} role={error ? "alert" : "status"}>
               {error || message}
@@ -433,7 +463,11 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
   const [recentProjects, setRecentProjects] = useState<StudioProject[]>(() => getStudioProjects(userId).filter(item => item.kind === "slides" && item.slides.some(slide => Boolean(slide.content?.trim() || slide.notes?.trim()))).slice(0, 6));
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState("");
-  const [error, setError] = useState(projectId && !initial ? "Este rascunho não foi encontrado neste navegador. Você pode iniciar um novo projeto." : "");
+  const [error, setError] = useState("");
+  const [isOtherUserProject, setIsOtherUserProject] = useState(Boolean(routeData.view === "1"));
+  const isOtherUserProjectRef = useRef(Boolean(routeData.view === "1"));
+  const [projectAuthorName, setProjectAuthorName] = useState("");
+  const autoDownloadedRef = useRef(false);
   const jobs = useSyncExternalStore(subscribeStudioJobs, getStudioJobs);
   const job = jobs.find(item => item.userId === userId && item.projectId === project.id);
   const generating = isStudioJobRunning(job);
@@ -471,11 +505,68 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
           from: routeData.from,
           linha: routeData.linha,
           retry: routeData.retry,
+          view: routeData.view,
+          download: routeData.download,
         }),
         { replace: true }
       );
     }
   }, [routeData.isLegacy, location.pathname, routeData, stage, navigate]);
+
+  // Carrega projeto da nuvem (Firestore) caso não esteja em memória local ou pertença a outro usuário (modo Master)
+  useEffect(() => {
+    if (!projectId) {
+      setIsOtherUserProject(false);
+      isOtherUserProjectRef.current = false;
+      setProjectAuthorName("");
+      return;
+    }
+    let cancelled = false;
+    void fetchStudioProjectFromCloud(projectId).then(record => {
+      if (cancelled) return;
+      if (!record) {
+        if (!initial) {
+          setError("Este rascunho não foi encontrado neste navegador nem na nuvem. Você pode iniciar um novo projeto.");
+        }
+        return;
+      }
+      const currentUser = auth.currentUser;
+      const isMaster = isMasterUser(currentUser?.displayName, currentUser?.email);
+      const perms = getMasterProjectPermissions({
+        isMaster,
+        projectUserId: record.userId || null,
+        currentUserId: userId || currentUser?.uid || null,
+      });
+      if (!perms.canView) {
+        setError("Você não tem permissão para visualizar projetos de outros usuários.");
+        navigate("/projetos", { replace: true });
+        return;
+      }
+      const readOnlyOther = perms.isReadOnlyOtherUser || (routeData.view === "1" && Boolean(record.userId && record.userId !== userId));
+      setIsOtherUserProject(readOnlyOther);
+      isOtherUserProjectRef.current = readOnlyOther;
+      setProjectAuthorName(record.authorName || "Educador(a)");
+      setProject(prev => {
+        if (!initial || prev.id !== record.project.id) return record.project;
+        return Date.parse(prev.updatedAt) > Date.parse(record.project.updatedAt)
+          ? hydrateProjectImages(prev, record.project)
+          : hydrateProjectImages(record.project, prev);
+      });
+      setError("");
+      if (readOnlyOther && kind === "slides" && (stage === "prepare" || stage === "recent")) {
+        setStage("result");
+      }
+      if (routeData.download === "1" && !autoDownloadedRef.current) {
+        autoDownloadedRef.current = true;
+        setTimeout(() => {
+          void exportStudioPptx(record.project);
+        }, 300);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, userId, initial, kind, routeData.view, routeData.download, stage, navigate]);
 
   const executeBack = (replace = false) => {
     if (isFromProjetos) {
@@ -607,12 +698,14 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
   }, [generating, kind]);
 
   function update(patch: Partial<StudioProject>) {
+    if (isOtherUserProjectRef.current) return;
     setProject((current) => ({ ...current, ...patch }));
     setDirty(true);
     setMessage("");
   }
 
   function save() {
+    if (isOtherUserProjectRef.current) return;
     try {
       const saved = saveStudioProject(userId, project);
       markStudioJobSaved(userId, saved);
@@ -637,6 +730,7 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
   }
 
   function handleDeleteProject() {
+    if (isOtherUserProjectRef.current) return;
     deleteStudioProject(userId, project.id);
     removeStudioJob(userId, project.id);
     setDirty(false);
@@ -788,6 +882,7 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
   }
 
   const generate = useCallback(async () => {
+    if (isOtherUserProjectRef.current) return;
     const currentBase = projectRef.current.sourceContent?.trim() ? projectRef.current : project;
     if (!currentBase.sourceContent?.trim()) {
       setError("Insira o conteúdo de referência (envie um documento PDF/Word ou cole o texto) para que a IA preencha os slides.");
@@ -836,6 +931,7 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
   }, [project, userId, kind, setError, setProject, setDirty, setStage, setMessage, projectId, routeData, location.pathname, navigate]);
 
   async function handleResendMaterial({ file, text, updateBriefing }: { file?: File; text?: string; updateBriefing: boolean }) {
+    if (isOtherUserProjectRef.current) return;
     setImporting(true);
     setError("");
     setMessage("");
@@ -1000,72 +1096,130 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
             </span>
             <span className="generator-brand-name">MIND CANVAS</span>
             <span className="generator-toolbar-divider" />
-            <span className="generator-product-name"><Presentation size={17} /><input aria-label="Nome do projeto" title="Editar nome do projeto" className="studio-project-title-input" value={project.title && project.title !== "Projeto sem título" ? project.title : project.slides.find(slide => slide.type === "capa")?.title || ""} placeholder="Nome da aula" onChange={event => update({ title: event.target.value })} /></span>
+            <span className="generator-product-name"><Presentation size={17} /><input aria-label="Nome do projeto" title="Editar nome do projeto" className="studio-project-title-input" readOnly={isOtherUserProject} value={project.title && project.title !== "Projeto sem título" ? project.title : project.slides.find(slide => slide.type === "capa")?.title || ""} placeholder="Nome da aula" onChange={event => update({ title: event.target.value })} /></span>
+            {isOtherUserProject && (
+              <span
+                style={{
+                  marginLeft: 8,
+                  padding: "3px 10px",
+                  borderRadius: 999,
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  background: "rgba(139, 92, 246, 0.18)",
+                  border: "1px solid rgba(139, 92, 246, 0.35)",
+                  color: "#c4b5fd",
+                  whiteSpace: "nowrap",
+                }}
+                title="Modo Visualização Master: permitido visualizar e baixar (recriação bloqueada)"
+              >
+                👁️ Projeto de {projectAuthorName || "Educador(a)"} · Visualização & Download
+              </span>
+            )}
           </div>
 
 
 
           <div className="generator-toolbar-actions">
             {stage === "edit" ? (
-              <>
-                {Boolean(project.sourceContent?.trim()) && (
+              isOtherUserProject ? (
+                <>
                   <button
                     type="button"
-                    className={`generator-action-btn ${!hasGeneratedSlides ? "generator-action-btn--primary" : ""}`}
-                    disabled={generating || importing}
-                    onClick={() => void generate()}
-                    title="Preencher todos os slides com IA a partir do material de referência"
+                    className="generator-action-btn"
+                    onClick={() => setStage("result")}
+                    title="Voltar ao resumo da apresentação"
                   >
-                    {generating ? <LoaderCircle size={14} className="studio-editor__spinner" /> : <Sparkles size={14} />}
-                    <span>{hasGeneratedSlides ? "Recriar com IA" : "Gerar slides com IA"}</span>
+                    <ArrowLeft size={14} /> <span>Resumo</span>
                   </button>
-                )}
-                <button
-                  type="button"
-                  className="generator-action-btn"
-                  title="Reenviar material de referência"
-                  onClick={() => setShowResendModal(true)}
-                >
-                  <Upload size={14} /> <span>Reenviar material</span>
-                </button>
-                <button
-                  type="button"
-                  className={`generator-action-btn studio-save-button${dirty ? " generator-action-btn--primary" : ""}`}
-                  disabled={!dirty || generating || importing}
-                  onClick={save}
-                  title={dirty ? "Salvar alterações" : "Todas as alterações estão salvas"}
-                >
-                  <Save size={14} /> <span>Salvar</span>
-                </button>
-                <button
-                  type="button"
-                  className="generator-action-btn"
-                  disabled={generating || importing || exporting}
-                  onClick={() => void download("pptx")}
-                  title="Baixar apresentação em PowerPoint (.pptx)"
-                >
-                  {exporting ? <LoaderCircle size={14} className="studio-editor__spinner" /> : <Download size={14} />}
-                  <span>PowerPoint (.pptx)</span>
-                </button>
-                <button
-                  type="button"
-                  className="generator-action-btn"
-                  disabled={generating || importing || exporting}
-                  onClick={() => void download("pdf")}
-                  title="Baixar apresentação em PDF"
-                >
-                  <FileText size={14} /> <span>PDF</span>
-                </button>
-                <button
-                  type="button"
-                  className="generator-action-btn generator-action-btn--danger"
-                  disabled={generating || importing}
-                  onClick={() => setShowDeleteModal(true)}
-                  title="Excluir projeto"
-                >
-                  <Trash2 size={14} /> <span>Excluir projeto</span>
-                </button>
-              </>
+                  <button
+                    type="button"
+                    className="generator-action-btn"
+                    onClick={() => setPreviewOpen(true)}
+                    title="Abrir prévia dos slides em tela cheia"
+                  >
+                    <MonitorPlay size={14} /> <span>Prévia em tela cheia</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="generator-action-btn generator-action-btn--primary"
+                    disabled={exporting}
+                    onClick={() => void download("pptx")}
+                    title="Baixar apresentação em PowerPoint (.pptx)"
+                  >
+                    {exporting ? <LoaderCircle size={14} className="studio-editor__spinner" /> : <Download size={14} />}
+                    <span>PowerPoint (.pptx)</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="generator-action-btn"
+                    disabled={exporting}
+                    onClick={() => void download("pdf")}
+                    title="Baixar apresentação em PDF"
+                  >
+                    <FileText size={14} /> <span>PDF</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  {Boolean(project.sourceContent?.trim()) && (
+                    <button
+                      type="button"
+                      className={`generator-action-btn ${!hasGeneratedSlides ? "generator-action-btn--primary" : ""}`}
+                      disabled={generating || importing}
+                      onClick={() => void generate()}
+                      title="Preencher todos os slides com IA a partir do material de referência"
+                    >
+                      {generating ? <LoaderCircle size={14} className="studio-editor__spinner" /> : <Sparkles size={14} />}
+                      <span>{hasGeneratedSlides ? "Recriar com IA" : "Gerar slides com IA"}</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="generator-action-btn"
+                    title="Reenviar material de referência"
+                    onClick={() => setShowResendModal(true)}
+                  >
+                    <Upload size={14} /> <span>Reenviar material</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`generator-action-btn studio-save-button${dirty ? " generator-action-btn--primary" : ""}`}
+                    disabled={!dirty || generating || importing}
+                    onClick={save}
+                    title={dirty ? "Salvar alterações" : "Todas as alterações estão salvas"}
+                  >
+                    <Save size={14} /> <span>Salvar</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="generator-action-btn"
+                    disabled={generating || importing || exporting}
+                    onClick={() => void download("pptx")}
+                    title="Baixar apresentação em PowerPoint (.pptx)"
+                  >
+                    {exporting ? <LoaderCircle size={14} className="studio-editor__spinner" /> : <Download size={14} />}
+                    <span>PowerPoint (.pptx)</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="generator-action-btn"
+                    disabled={generating || importing || exporting}
+                    onClick={() => void download("pdf")}
+                    title="Baixar apresentação em PDF"
+                  >
+                    <FileText size={14} /> <span>PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="generator-action-btn generator-action-btn--danger"
+                    disabled={generating || importing}
+                    onClick={() => setShowDeleteModal(true)}
+                    title="Excluir projeto"
+                  >
+                    <Trash2 size={14} /> <span>Excluir projeto</span>
+                  </button>
+                </>
+              )
             ) : stage === "prepare" ? (
               <>
                 {hasGeneratedSlides && (
@@ -1181,6 +1335,8 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
               error={error}
               message={message}
               exporting={exporting}
+              readOnlyOtherUser={isOtherUserProject}
+              authorName={projectAuthorName}
               onStage={setStage}
               onUpdate={update}
               onImport={file => { void importText(file); }}
@@ -1199,10 +1355,11 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
               onOpenResend={() => setShowResendModal(true)}
               onDownload={download}
               onSelectSlide={setSelectedSlideId}
+              onOpenPreview={() => setPreviewOpen(true)}
             />
           ) : (
             <div className="studio-slides-workspace">
-              {Boolean(!hasGeneratedSlides && project.sourceContent?.trim()) && (
+              {Boolean(!isOtherUserProject && !hasGeneratedSlides && project.sourceContent?.trim()) && (
                 <div style={{ margin: "16px 24px 0", padding: "16px 20px", background: "linear-gradient(135deg, rgba(30, 58, 138, 0.75), rgba(49, 46, 129, 0.75))", border: "1px solid rgba(96, 165, 250, 0.4)", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", color: "#fff", boxShadow: "0 8px 24px rgba(0, 0, 0, 0.25)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
                     <Sparkles style={{ color: "#fbbf24", flexShrink: 0 }} size={24} />
@@ -1227,6 +1384,7 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
                 project={project}
                 userId={userId}
                 initialSlideId={selectedSlideId}
+                readOnly={isOtherUserProject}
                 onSlidesChange={slides => update({ slides })}
                 onSlideChange={editSlide}
                 onProjectChange={update}
@@ -1326,8 +1484,12 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
             <button type="button" className="studio-button studio-button--quiet" disabled={generating || importing || project.slides.length === 0} onClick={() => setPreviewOpen(true)}><MonitorPlay size={16} /> Prévia dos slides</button>
             <button type="button" className="studio-button studio-button--quiet" disabled={generating || importing || exporting} onClick={() => void download("pdf")}><FileText size={16} /> Exportar PDF</button>
             <button type="button" className="studio-button studio-button--quiet" disabled={generating || importing || exporting} onClick={() => void download()}>{exporting ? <LoaderCircle size={16} className="studio-editor__spinner" /> : <Download size={16} />}{exporting ? "Preparando arquivo…" : "PowerPoint editável"}</button>
-            <button type="button" className="studio-button studio-button--primary" onClick={save} disabled={generating || importing}><Save size={16} /> Salvar rascunho</button>
-            <button type="button" className="studio-button studio-button--danger" onClick={() => setShowDeleteModal(true)} disabled={generating || importing} title="Excluir projeto"><Trash2 size={16} /> Excluir projeto</button>
+            {!isOtherUserProject && (
+              <>
+                <button type="button" className="studio-button studio-button--primary" onClick={save} disabled={generating || importing}><Save size={16} /> Salvar rascunho</button>
+                <button type="button" className="studio-button studio-button--danger" onClick={() => setShowDeleteModal(true)} disabled={generating || importing} title="Excluir projeto"><Trash2 size={16} /> Excluir projeto</button>
+              </>
+            )}
           </div>
         </header>
 
@@ -1571,16 +1733,18 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
                 A IA extrai os dados da referência, preenche o briefing e constrói a sequência de slides completa com títulos, textos, notas e imagens.
               </p>
 
-              <button
-                type="button"
-                className="studio-button studio-button--primary studio-button--full"
-                disabled={generating || importing || !project.sourceContent}
-                aria-busy={generating || importing}
-                onClick={() => void generate()}
-              >
-                {(generating || importing) ? <LoaderCircle size={17} className="studio-editor__spinner" /> : <img src="/logo-innyx-icon.png" alt="INNYX" style={{ width: 16, height: 16, objectFit: "contain", filter: "brightness(0) invert(1)" }} />}
-                {importing ? "Lendo material enviado…" : generating ? "Preenchendo slides com a IA…" : project.slides.some(s => s.content) ? "Regerar estrutura dos slides" : "Gerar estrutura da aula"}
-              </button>
+              {!isOtherUserProject && (
+                <button
+                  type="button"
+                  className="studio-button studio-button--primary studio-button--full"
+                  disabled={generating || importing || !project.sourceContent}
+                  aria-busy={generating || importing}
+                  onClick={() => void generate()}
+                >
+                  {(generating || importing) ? <LoaderCircle size={17} className="studio-editor__spinner" /> : <img src="/logo-innyx-icon.png" alt="INNYX" style={{ width: 16, height: 16, objectFit: "contain", filter: "brightness(0) invert(1)" }} />}
+                  {importing ? "Lendo material enviado…" : generating ? "Preenchendo slides com a IA…" : project.slides.some(s => s.content) ? "Regerar estrutura dos slides" : "Gerar estrutura da aula"}
+                </button>
+              )}
 
               <button
                 type="button"
@@ -1599,7 +1763,7 @@ function StudioWorkspace({ kind, userId, projectId, routeData }: { kind: StudioK
             <details className="studio-editor__notice"><summary>Checklist INNYX · {warnings.length} pendências</summary><p>Aula de 12 minutos · quarto direito livre para o professor. Revise fontes, imagens e fidelidade à apostila.</p><ul>{warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></details>
             <fieldset disabled={generating || importing} className="studio-editor__fieldset">
               {activeTab === "slides" ? (
-                <StudioSlideEditor project={project} userId={userId} onSlidesChange={slides => update({ slides })} onSlideChange={editSlide} onProjectChange={update} />
+                <StudioSlideEditor project={project} userId={userId} readOnly={isOtherUserProject} onSlidesChange={slides => update({ slides })} onSlideChange={editSlide} onProjectChange={update} />
               ) : (
                 <div className="studio-editor__empty studio-editor__empty--dev">
                   <Video size={32} />

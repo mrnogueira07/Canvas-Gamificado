@@ -175,3 +175,60 @@ export function isUserDeactivated(user?: {
   }
   return isKnownDeactivatedEmail(user.email);
 }
+
+export function isForeignProject(
+  projectUserId?: string | null,
+  currentUserId?: string | null
+): boolean {
+  const owner = (projectUserId || "").trim();
+  const current = (currentUserId || "").trim();
+  if (!owner || owner === "local" || !current || current === "local") {
+    return false;
+  }
+  return owner !== current;
+}
+
+export interface ProjectAccessPermissions {
+  canView: boolean;
+  canDownload: boolean;
+  canRecreate: boolean;
+  canEdit: boolean;
+  isReadOnlyOtherUser: boolean;
+}
+
+export function getMasterProjectPermissions({
+  isMaster,
+  projectUserId,
+  currentUserId,
+}: {
+  isMaster: boolean;
+  projectUserId?: string | null;
+  currentUserId?: string | null;
+}): ProjectAccessPermissions {
+  const foreign = isForeignProject(projectUserId, currentUserId);
+  if (!foreign) {
+    return {
+      canView: true,
+      canDownload: true,
+      canRecreate: true,
+      canEdit: true,
+      isReadOnlyOtherUser: false,
+    };
+  }
+  if (isMaster) {
+    return {
+      canView: true,
+      canDownload: true,
+      canRecreate: false,
+      canEdit: false,
+      isReadOnlyOtherUser: true,
+    };
+  }
+  return {
+    canView: false,
+    canDownload: false,
+    canRecreate: false,
+    canEdit: false,
+    isReadOnlyOtherUser: true,
+  };
+}

@@ -362,6 +362,7 @@ interface FirestoreServices {
   db: typeof import("./firebase").db;
   collection: typeof import("firebase/firestore").collection;
   doc: typeof import("firebase/firestore").doc;
+  getDoc: typeof import("firebase/firestore").getDoc;
   getDocs: typeof import("firebase/firestore").getDocs;
   query: typeof import("firebase/firestore").query;
   setDoc: typeof import("firebase/firestore").setDoc;
@@ -383,6 +384,7 @@ async function getFirestoreServices(): Promise<FirestoreServices | null> {
           db,
           collection: firestore.collection,
           doc: firestore.doc,
+          getDoc: firestore.getDoc,
           getDocs: firestore.getDocs,
           query: firestore.query,
           setDoc: firestore.setDoc,
@@ -527,6 +529,47 @@ export async function deleteStudioProjectFromFirestore(projectId: string): Promi
     syncedCloudProjectIds.delete(projectId);
   } catch (err) {
     console.warn("Aviso ao remover projeto do Firestore:", err);
+  }
+}
+
+export interface CloudStudioProjectRecord {
+  project: StudioProject;
+  userId: string;
+  authorName: string;
+  authorEmail: string;
+}
+
+export async function fetchStudioProjectFromCloud(projectId: string): Promise<CloudStudioProjectRecord | null> {
+  if (!projectId) return null;
+  const services = await getFirestoreServices();
+  if (!services) return null;
+  try {
+    const snap = await services.getDoc(services.doc(services.db, "projects", projectId));
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    const candidate = {
+      ...data,
+      id: typeof data.id === "string" ? data.id : snap.id,
+      kind: ["slides", "roteiro", "pacote"].includes(String(data.kind)) ? data.kind : "slides",
+      title: typeof data.title === "string" ? data.title : "Apresentação sem título",
+      subject: typeof data.subject === "string" ? data.subject : "",
+      gradeLevel: typeof data.gradeLevel === "string" ? data.gradeLevel : (typeof data.grade === "string" ? data.grade : ""),
+      objective: typeof data.objective === "string" ? data.objective : "",
+      sourceContent: typeof data.sourceContent === "string" ? data.sourceContent : "",
+      slides: Array.isArray(data.slides) ? data.slides : [],
+      scenes: Array.isArray(data.scenes) ? data.scenes : [],
+      updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
+    };
+    if (!isStudioProject(candidate)) return null;
+    return {
+      project: hydrateProjectImages(candidate),
+      userId: typeof data.userId === "string" ? data.userId : "",
+      authorName: String(data.authorName || data.userName || (data.authorEmail ? String(data.authorEmail).split("@")[0] : "Educador(a)")),
+      authorEmail: typeof data.authorEmail === "string" ? data.authorEmail : "",
+    };
+  } catch (err) {
+    console.warn("Aviso ao carregar projeto do Studio por ID no Firestore:", err);
+    return null;
   }
 }
 

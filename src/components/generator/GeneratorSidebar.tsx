@@ -77,6 +77,8 @@ interface GeneratorSidebarProps {
   isDirty?: boolean;
   hasSavedProject?: boolean;
   hasParamChanges?: boolean;
+  readOnlyOtherUser?: boolean;
+  authorName?: string;
 }
 
 const GAME_TYPES = [
@@ -183,7 +185,10 @@ export const GeneratorSidebar: React.FC<GeneratorSidebarProps> = ({
   isViewMode = false,
   isDirty = false,
   hasSavedProject = false,
+  readOnlyOtherUser = false,
+  authorName = "",
 }) => {
+  const isLocked = viewOnly || readOnlyOtherUser;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -408,7 +413,12 @@ Parâmetros:
           </div>
 
           <div className="generator-header-titles">
-            <h2>Configure seu jogo</h2>
+            <h2>{readOnlyOtherUser ? "Parâmetros do Projeto" : "Configure seu jogo"}</h2>
+            {readOnlyOtherUser && authorName && (
+              <span style={{ display: "block", fontSize: "11px", color: "#a78bfa", fontWeight: 600, marginTop: 2 }}>
+                Autor(a): {authorName}
+              </span>
+            )}
           </div>
         </div>
 
@@ -435,7 +445,7 @@ Parâmetros:
               onChange={(v) => handleChange("gradeLevel", v)}
               options={LEVELS.map((l) => ({ label: l, value: l }))}
               placeholder="Escolha o nível..."
-              disabled={viewOnly || isGenerating}
+              disabled={isLocked || isGenerating}
             />
 
             <CustomSelect
@@ -444,7 +454,7 @@ Parâmetros:
               onChange={(v) => handleChange("subject", v)}
               options={currentSubjects.map((s) => ({ label: s, value: s }))}
               placeholder={formData.gradeLevel ? "Selecione a matéria..." : "Escolha o nível primeiro"}
-              disabled={!formData.gradeLevel || viewOnly || isGenerating}
+              disabled={!formData.gradeLevel || isLocked || isGenerating}
             />
 
             <div className="generator-field-pair">
@@ -454,7 +464,7 @@ Parâmetros:
                 onChange={(v) => handleChange("year", v)}
                 options={currentYears.map((y) => ({ label: y, value: y }))}
                 placeholder={formData.gradeLevel ? "Ano/Série..." : "Nível..."}
-                disabled={!formData.gradeLevel || viewOnly || isGenerating}
+                disabled={!formData.gradeLevel || isLocked || isGenerating}
               />
 
               <CustomSelect
@@ -463,7 +473,7 @@ Parâmetros:
                 onChange={(v) => handleChange("quarter", v)}
                 options={QUARTERS.map((q) => ({ label: q, value: q }))}
                 placeholder="Bimestre..."
-                disabled={viewOnly || isGenerating}
+                disabled={isLocked || isGenerating}
               />
             </div>
           </div>
@@ -487,7 +497,7 @@ Parâmetros:
               onChange={(v) => handleChange("gameType", v)}
               options={GAME_TYPES.map((g) => ({ label: g, value: g }))}
               placeholder="Selecione o tipo de jogo..."
-              disabled={viewOnly || isGenerating}
+              disabled={isLocked || isGenerating}
             />
           </div>
         </section>
@@ -505,11 +515,11 @@ Parâmetros:
 
           <div className="generator-card-body">
             {/* Upload de Apostila */}
-            {(pdfFileName || !viewOnly) && (
+            {(pdfFileName || !isLocked) && (
               <div className="generator-upload-field">
                 <div className="generator-upload-header">
                   <label className="generator-field-label">Material de referência</label>
-                  {!hasPdf && !viewOnly && (
+                  {!hasPdf && !isLocked && (
                     <span className="generator-optional-badge">Opcional</span>
                   )}
                 </div>
@@ -521,8 +531,8 @@ Parâmetros:
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className={`generator-file-card ${viewOnly && pdfBase64 ? "is-clickable" : ""}`}
-                      onClick={viewOnly && pdfBase64 ? handleOpenPdf : undefined}
+                      className={`generator-file-card ${isLocked && pdfBase64 ? "is-clickable" : ""}`}
+                      onClick={isLocked && pdfBase64 ? handleOpenPdf : undefined}
                     >
                       <div className="generator-file-icon">
                         {isExtractingBncc ? <RefreshCw size={18} className="animate-spin" /> : <FileText size={18} />}
@@ -537,11 +547,11 @@ Parâmetros:
                           <span className="generator-file-status is-ready">✓ BNCC: {formData.bnccSkill}</span>
                         ) : (
                           <span className="generator-file-status is-ready">
-                            {viewOnly && pdfBase64 ? "✓ Documento (Clique p/ abrir)" : "✓ Documento Carregado"}
+                            {isLocked && pdfBase64 ? "✓ Documento (Clique p/ abrir ou baixar)" : "✓ Documento Carregado"}
                           </span>
                         )}
                       </div>
-                      {!viewOnly && (
+                      {!isLocked && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -601,25 +611,27 @@ Parâmetros:
                 <label className="generator-field-label" htmlFor="game-context">
                   Ideia ou contexto
                 </label>
-                <button
-                  type="button"
-                  onClick={() => !isGenerating && !isSuggesting && !(viewOnly || hasGeneratedContent) && handleSuggestContext()}
-                  disabled={viewOnly || hasGeneratedContent || isGenerating || isSuggesting}
-                  className="generator-ai-suggest-btn"
-                  title="Sugerir uma narrativa criativa com Inteligência Artificial"
-                >
-                  {isSuggesting ? (
-                    <>
-                      <RefreshCw size={12} className="animate-spin" />
-                      <span>Criando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Dices size={12} />
-                      <span>Sugerir com IA</span>
-                    </>
-                  )}
-                </button>
+                {!readOnlyOtherUser && (
+                  <button
+                    type="button"
+                    onClick={() => !isGenerating && !isSuggesting && !(isLocked || hasGeneratedContent) && handleSuggestContext()}
+                    disabled={isLocked || hasGeneratedContent || isGenerating || isSuggesting}
+                    className="generator-ai-suggest-btn"
+                    title="Sugerir uma narrativa criativa com Inteligência Artificial"
+                  >
+                    {isSuggesting ? (
+                      <>
+                        <RefreshCw size={12} className="animate-spin" />
+                        <span>Criando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Dices size={12} />
+                        <span>Sugerir com IA</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
 
               <div className="generator-context-control">
@@ -628,18 +640,20 @@ Parâmetros:
                   className="generator-context-textarea custom-scrollbar"
                   placeholder={pdfFileName ? "Orientações adicionais para aprofundar no PDF..." : "Descreva a ideia (ex: Alquimista dominando reações químicas)..."}
                   value={formData.additionalContext}
-                  disabled={viewOnly || isGenerating || isSuggesting}
+                  disabled={isLocked || isGenerating || isSuggesting}
                   onChange={(e) => handleChange("additionalContext", e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                       e.preventDefault();
-                      if (isFormReady && !isGenerating) onGenerate();
+                      if (!readOnlyOtherUser && isFormReady && !isGenerating) onGenerate();
                     }
                   }}
                 />
               </div>
               <p className="generator-field-help">
-                {pdfFileName
+                {readOnlyOtherUser
+                  ? "Visualizando parâmetros originais definidos pelo(a) educador(a)."
+                  : pdfFileName
                   ? "Dica: Você pode orientar o foco do jogo no conteúdo da apostila."
                   : "Descreva a dinâmica da aula ou use a IA para gerar uma narrativa imersiva."}
               </p>
@@ -651,7 +665,7 @@ Parâmetros:
       {/* ── 4. CARD WIDGET FLUTUANTE DE AÇÃO (ESTILO IMAGEM 2) ── */}
       <div className="generator-settings-actions">
         {hasGeneratedContent && (
-          <div className="generator-action-secondary-grid">
+          <div className={readOnlyOtherUser ? "generator-action-secondary-grid" : "generator-action-secondary-grid"} style={readOnlyOtherUser && !pdfBase64 ? { gridTemplateColumns: "1fr" } : undefined}>
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -664,64 +678,99 @@ Parâmetros:
               <FolderDown size={15} />
               <span>Exportar PDF</span>
             </button>
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                if (!isSaveDisabled) onSave?.();
-              }}
-              disabled={isSaveDisabled}
-              className={`generator-action-secondary-btn generator-action-save-btn ${isSaveDisabled ? "is-disabled" : ""}`}
-              title="Salvar alterações do projeto"
-            >
-              {isSaving ? <RefreshCw size={15} className="animate-spin" /> : <Save size={15} />}
-              <span>{isSaving ? "Salvando..." : "Salvar"}</span>
-            </button>
+            {readOnlyOtherUser ? (
+              pdfBase64 ? (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleOpenPdf();
+                  }}
+                  className="generator-action-secondary-btn"
+                  title="Visualizar ou baixar o material de referência enviado pelo educador"
+                >
+                  <FileText size={15} />
+                  <span>Baixar Material</span>
+                </button>
+              ) : null
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!isSaveDisabled) onSave?.();
+                }}
+                disabled={isSaveDisabled}
+                className={`generator-action-secondary-btn generator-action-save-btn ${isSaveDisabled ? "is-disabled" : ""}`}
+                title="Salvar alterações do projeto"
+              >
+                {isSaving ? <RefreshCw size={15} className="animate-spin" /> : <Save size={15} />}
+                <span>{isSaving ? "Salvando..." : "Salvar"}</span>
+              </button>
+            )}
           </div>
         )}
 
-        <div className="generator-sidebar-action-card">
-          {!isFormReady && (
-            <div className="generator-status-pending">
-              <span className="generator-status-pending-text">Faltam parâmetros:</span>
-              <div className="generator-missing-chips">
-                {missingFields.slice(0, 3).map((f) => (
-                  <span key={f} className="generator-missing-chip">{f}</span>
-                ))}
-                {missingFields.length > 3 && (
-                  <span className="generator-missing-chip">+{missingFields.length - 3}</span>
-                )}
-              </div>
-            </div>
-          )}
-
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              if (viewOnly) { onRecreate?.(); return; }
-              if (!isFormReady || isGenerating || isSuggesting || isExtractingBncc) return;
-              onGenerate();
+        {readOnlyOtherUser ? (
+          <div
+            className="generator-master-readonly-notice"
+            role="status"
+            style={{
+              padding: "11px 14px",
+              borderRadius: "12px",
+              background: "rgba(139, 92, 246, 0.12)",
+              border: "1px solid rgba(139, 92, 246, 0.28)",
+              fontSize: "11.5px",
+              lineHeight: 1.45,
+              color: "#c4b5fd",
+              textAlign: "center",
             }}
-            disabled={isGenerating || isSuggesting || isExtractingBncc || (!viewOnly && !isFormReady)}
-            className={`generator-generate-button ${
-              isGenerating || isSuggesting || isExtractingBncc ? "is-loading" : ""
-            } ${!viewOnly && !isFormReady ? "is-disabled" : "is-active"}`}
-            title={!isFormReady ? "Preencha todos os campos obrigatórios acima" : "Clique ou aperte Ctrl+Enter para gerar o canvas com IA"}
           >
-            {isGenerating || isSuggesting || isExtractingBncc ? (
-              <>
-                <RefreshCw size={17} className="animate-spin" />
-                <span>
-                  {isExtractingBncc ? "Analisando roteiro..." : isGenerating ? "Criando Game Canvas..." : "Criando sugestão..."}
-                </span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={17} className="generator-btn-sparkle" />
-                <span>{(viewOnly || hasGeneratedContent) ? "Recriar Canvas com IA" : "Gerar Canvas com IA"}</span>
-              </>
+            🔒 <strong>Modo Visualização Master</strong> — Permitido visualizar e baixar o PDF. Não é permitido recriar projetos de outros usuários.
+          </div>
+        ) : (
+          <div className="generator-sidebar-action-card">
+            {!isFormReady && (
+              <div className="generator-status-pending">
+                <span className="generator-status-pending-text">Faltam parâmetros:</span>
+                <div className="generator-missing-chips">
+                  {missingFields.slice(0, 3).map((f) => (
+                    <span key={f} className="generator-missing-chip">{f}</span>
+                  ))}
+                  {missingFields.length > 3 && (
+                    <span className="generator-missing-chip">+{missingFields.length - 3}</span>
+                  )}
+                </div>
+              </div>
             )}
-          </button>
-        </div>
+
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                if (viewOnly) { onRecreate?.(); return; }
+                if (!isFormReady || isGenerating || isSuggesting || isExtractingBncc) return;
+                onGenerate();
+              }}
+              disabled={isGenerating || isSuggesting || isExtractingBncc || (!viewOnly && !isFormReady)}
+              className={`generator-generate-button ${
+                isGenerating || isSuggesting || isExtractingBncc ? "is-loading" : ""
+              } ${!viewOnly && !isFormReady ? "is-disabled" : "is-active"}`}
+              title={!isFormReady ? "Preencha todos os campos obrigatórios acima" : "Clique ou aperte Ctrl+Enter para gerar o canvas com IA"}
+            >
+              {isGenerating || isSuggesting || isExtractingBncc ? (
+                <>
+                  <RefreshCw size={17} className="animate-spin" />
+                  <span>
+                    {isExtractingBncc ? "Analisando roteiro..." : isGenerating ? "Criando Game Canvas..." : "Criando sugestão..."}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={17} className="generator-btn-sparkle" />
+                  <span>{(viewOnly || hasGeneratedContent) ? "Recriar Canvas com IA" : "Gerar Canvas com IA"}</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </motion.div>
   );

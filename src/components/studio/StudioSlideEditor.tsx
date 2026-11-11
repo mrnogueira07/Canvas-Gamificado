@@ -23,6 +23,7 @@ export function StudioSlideEditor({
   onProjectChange,
   initialSlideId,
   onSelectSlide,
+  readOnly = false,
 }: {
   project: StudioProject;
   userId: string;
@@ -31,6 +32,7 @@ export function StudioSlideEditor({
   onProjectChange: (patch: Partial<StudioProject>) => void;
   initialSlideId?: string;
   onSelectSlide?: (id: string) => void;
+  readOnly?: boolean;
 }) {
   const slides = orderedStudioSlides(project.slides);
   const [selectedId, setSelectedId] = useState(
@@ -61,6 +63,7 @@ export function StudioSlideEditor({
   const handleCanvasDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOverCanvas(false);
+    if (readOnly) return;
     const file = e.dataTransfer.files?.[0];
     if (!file || !file.type.startsWith("image/")) return;
     if (!selected) return;
@@ -135,15 +138,17 @@ export function StudioSlideEditor({
             <section key={category.id} className={isCurrentCat ? "is-active-category" : undefined}>
               <div className="studio-slide-editor__category-header">
                 <h3>{category.label}</h3>
-                <button
-                  type="button"
-                  className="studio-slide-editor__cat-add-btn"
-                  title={`Adicionar slide em ${category.label}`}
-                  aria-label={`Adicionar slide em ${category.label}`}
-                  onClick={() => add(category.id)}
-                >
-                  <Plus size={13} />
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    className="studio-slide-editor__cat-add-btn"
+                    title={`Adicionar slide em ${category.label}`}
+                    aria-label={`Adicionar slide em ${category.label}`}
+                    onClick={() => add(category.id)}
+                  >
+                    <Plus size={13} />
+                  </button>
+                )}
               </div>
               {items.map(slide => (
                 <button
@@ -162,14 +167,16 @@ export function StudioSlideEditor({
             </section>
           );
         })}
-        <button
-          type="button"
-          className="studio-slide-editor__new"
-          onClick={() => add()}
-          title={`Adicionar slide em ${currentCategory.label}`}
-        >
-          <Plus size={16} /> Adicionar slide
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            className="studio-slide-editor__new"
+            onClick={() => add()}
+            title={`Adicionar slide em ${currentCategory.label}`}
+          >
+            <Plus size={16} /> Adicionar slide
+          </button>
+        )}
       </nav>
 
       {selected ? (
@@ -208,6 +215,7 @@ export function StudioSlideEditor({
                   type="number"
                   min={0}
                   max={720}
+                  disabled={readOnly}
                   value={selected.duration || 0}
                   onChange={event =>
                     patch({ duration: Math.max(0, Math.min(720, Number(event.target.value) || 0)) })
@@ -219,7 +227,7 @@ export function StudioSlideEditor({
               {!["capa", "encerramento"].includes(selected.type || "") && (
                 <label className="studio-slide-editor__type-chip" title="Tipo pedagógico do slide">
                   <span>Tipo:</span>
-                  <select value={selected.type || "conteudo"} onChange={event => patch({ type: event.target.value })}>
+                  <select disabled={readOnly} value={selected.type || "conteudo"} onChange={event => patch({ type: event.target.value })}>
                     {slideTypes.map(type => (
                       <option value={type} key={type}>
                         {slideTypeLabels[type]}
@@ -229,7 +237,7 @@ export function StudioSlideEditor({
                 </label>
               )}
 
-              {!["capa", "encerramento"].includes(selected.type || "") && (
+              {!readOnly && !["capa", "encerramento"].includes(selected.type || "") && (
                 <button
                   type="button"
                   className="studio-slide-editor__btn-insert-image"
@@ -240,33 +248,37 @@ export function StudioSlideEditor({
                   <span>{selected.image?.url ? "Alterar imagem" : "Inserir imagem"}</span>
                 </button>
               )}
-              <button
-                type="button"
-                title="Mover para cima dentro do mesmo tipo"
-                aria-label="Mover slide para cima"
-                disabled={index === 0 || slides[index - 1]?.type !== selected.type}
-                onClick={() => move(-1)}
-              >
-                <ArrowUp size={17} />
-              </button>
-              <button
-                type="button"
-                title="Mover para baixo dentro do mesmo tipo"
-                aria-label="Mover slide para baixo"
-                disabled={index === slides.length - 1 || slides[index + 1]?.type !== selected.type}
-                onClick={() => move(1)}
-              >
-                <ArrowDown size={17} />
-              </button>
-              <button
-                type="button"
-                className="studio-slide-editor__btn-delete-slide"
-                aria-label="Excluir slide"
-                title="Excluir slide"
-                onClick={() => setShowDeleteSlideModal(true)}
-              >
-                <Trash2 size={17} />
-              </button>
+              {!readOnly && (
+                <>
+                  <button
+                    type="button"
+                    title="Mover para cima dentro do mesmo tipo"
+                    aria-label="Mover slide para cima"
+                    disabled={index === 0 || slides[index - 1]?.type !== selected.type}
+                    onClick={() => move(-1)}
+                  >
+                    <ArrowUp size={17} />
+                  </button>
+                  <button
+                    type="button"
+                    title="Mover para baixo dentro do mesmo tipo"
+                    aria-label="Mover slide para baixo"
+                    disabled={index === slides.length - 1 || slides[index + 1]?.type !== selected.type}
+                    onClick={() => move(1)}
+                  >
+                    <ArrowDown size={17} />
+                  </button>
+                  <button
+                    type="button"
+                    className="studio-slide-editor__btn-delete-slide"
+                    aria-label="Excluir slide"
+                    title="Excluir slide"
+                    onClick={() => setShowDeleteSlideModal(true)}
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                </>
+              )}
             </div>
           </header>
 
@@ -275,7 +287,7 @@ export function StudioSlideEditor({
             className={`studio-slide-editor__canvas ${isDraggingOverCanvas ? "studio-slide-editor__canvas--drag-over" : ""}`}
             onDragOver={e => {
               e.preventDefault();
-              if (!isDraggingOverCanvas) setIsDraggingOverCanvas(true);
+              if (!readOnly && !isDraggingOverCanvas) setIsDraggingOverCanvas(true);
             }}
             onDragLeave={e => {
               if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -284,7 +296,7 @@ export function StudioSlideEditor({
             }}
             onDrop={handleCanvasDrop}
           >
-            {isDraggingOverCanvas && (
+            {isDraggingOverCanvas && !readOnly && (
               <div className="studio-slide-editor__canvas-drag-overlay">
                 <ImageIcon size={42} />
                 <strong>Solte a imagem aqui para inseri-la no slide</strong>
@@ -300,15 +312,19 @@ export function StudioSlideEditor({
             <StudioSlideFrame
               project={project}
               slide={selected}
-              isEditable={true}
+              isEditable={!readOnly}
               onSlideChange={patch}
               onProjectChange={onProjectChange}
-              onOpenImageEditor={() => setShowImageModal(true)}
+              onOpenImageEditor={readOnly ? undefined : () => setShowImageModal(true)}
               onSlidesChange={onSlidesChange}
               onSelectSlide={selectSlide}
             />
             <p className="studio-slide-editor__hint-text">
-              ✨ <strong>Edição no slide:</strong> clique diretamente em qualquer texto ou na imagem para editar. Você também pode arrastar uma foto direto para cá.
+              {readOnly ? (
+                <>👁️ <strong>Modo Visualização Master:</strong> navegue pelos slides e notas do apresentador. A edição e recriação estão bloqueadas.</>
+              ) : (
+                <>✨ <strong>Edição no slide:</strong> clique diretamente em qualquer texto ou na imagem para editar. Você também pode arrastar uma foto direto para cá.</>
+              )}
             </p>
           </div>
 
@@ -322,8 +338,9 @@ export function StudioSlideEditor({
               className="studio-slide-editor__notes-textarea"
               rows={3}
               maxLength={20000}
+              readOnly={readOnly}
               value={selected.notes}
-              onChange={event => patch({ notes: event.target.value })}
+              onChange={event => !readOnly && patch({ notes: event.target.value })}
               placeholder="Clique para adicionar anotações do orador / roteiro de fala para este slide..."
             />
           </div>
@@ -339,8 +356,9 @@ export function StudioSlideEditor({
                 <textarea
                   rows={2}
                   maxLength={4000}
+                  readOnly={readOnly}
                   value={(selected.pending || []).join("\n")}
-                  onChange={event => patch({ pending: event.target.value.split("\n").filter(Boolean) })}
+                  onChange={event => !readOnly && patch({ pending: event.target.value.split("\n").filter(Boolean) })}
                   placeholder="Ex.: Conferir fonte da imagem; validar citação com a apostila..."
                 />
               </label>
@@ -357,13 +375,15 @@ export function StudioSlideEditor({
             >
               <ArrowLeft size={16} /> Anterior
             </button>
-            <button
-              type="button"
-              className="studio-button studio-button--quiet"
-              onClick={() => add(selected.type || "conteudo")}
-            >
-              <Plus size={16} /> Adicionar neste tipo
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                className="studio-button studio-button--quiet"
+                onClick={() => add(selected.type || "conteudo")}
+              >
+                <Plus size={16} /> Adicionar neste tipo
+              </button>
+            )}
             <button
               type="button"
               className="studio-button studio-button--primary"

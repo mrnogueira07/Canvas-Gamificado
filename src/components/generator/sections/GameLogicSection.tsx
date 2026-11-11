@@ -89,6 +89,7 @@ interface GameLogicSectionProps {
   onAdd: (path: string, item: any) => void;
   onRemove: (path: string, index: number) => void;
   onIsGenerating?: (isGenerating: boolean) => void;
+  readOnly?: boolean;
 }
 
 // ─── Helpers de prompt de contexto ──────────────────────────────────────────
@@ -130,6 +131,7 @@ export const GameLogicSection: React.FC<GameLogicSectionProps> = ({
   onAdd,
   onRemove,
   onIsGenerating,
+  readOnly = false,
 }) => {
   const isFundamental1 = targetAudience.toLowerCase().includes("fundamental 1");
   const isFundamental2 = targetAudience.toLowerCase().includes("fundamental 2");
@@ -754,7 +756,7 @@ Retorne EXATAMENTE ESSE FORMATO JSON:
         </div>
 
         {/* Botão "Adicionar" — label e comportamento variam por tipo de jogo */}
-        {gameType === "Sliding Puzzle" ? (
+        {!readOnly && (gameType === "Sliding Puzzle" ? (
           <div className="flex flex-wrap items-center gap-3 print:hidden">
             {/* Botão Adicionar Questão */}
             <button
@@ -857,7 +859,7 @@ Retorne EXATAMENTE ESSE FORMATO JSON:
               </>
             )}
           </button>
-        )}
+        ))}
       </div>
 
       <div className="p-8 md:p-10 space-y-10">

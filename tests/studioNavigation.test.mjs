@@ -105,3 +105,51 @@ test('ranking visibility filtering: deactivated users only visible to admin', ()
   assert.equal(normalVisible.length, 2);
   assert.deepEqual(normalVisible.map((m) => m.name), ['Juciane Silva', 'Carlos Silva']);
 });
+
+test('isForeignProject and getMasterProjectPermissions enforce view/download only and block recreate for other users projects', () => {
+  assert.equal(api.isForeignProject('user_other', 'user_master'), true);
+  assert.equal(api.isForeignProject('user_master', 'user_master'), false);
+  assert.equal(api.isForeignProject('', 'user_master'), false);
+
+  // Master viewing another user's project: canView=true, canDownload=true, canRecreate=false, canEdit=false
+  const masterOnOther = api.getMasterProjectPermissions({
+    isMaster: true,
+    projectUserId: 'user_educator_1',
+    currentUserId: 'user_master',
+  });
+  assert.deepEqual(masterOnOther, {
+    canView: true,
+    canDownload: true,
+    canRecreate: false,
+    canEdit: false,
+    isReadOnlyOtherUser: true,
+  });
+
+  // Master viewing own project: full permissions including recreate
+  const masterOnOwn = api.getMasterProjectPermissions({
+    isMaster: true,
+    projectUserId: 'user_master',
+    currentUserId: 'user_master',
+  });
+  assert.deepEqual(masterOnOwn, {
+    canView: true,
+    canDownload: true,
+    canRecreate: true,
+    canEdit: true,
+    isReadOnlyOtherUser: false,
+  });
+
+  // Non-master user trying to access another user's project: denied
+  const regularOnOther = api.getMasterProjectPermissions({
+    isMaster: false,
+    projectUserId: 'user_educator_1',
+    currentUserId: 'user_educator_2',
+  });
+  assert.deepEqual(regularOnOther, {
+    canView: false,
+    canDownload: false,
+    canRecreate: false,
+    canEdit: false,
+    isReadOnlyOtherUser: true,
+  });
+});

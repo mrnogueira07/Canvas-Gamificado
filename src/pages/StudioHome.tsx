@@ -5,11 +5,14 @@ import {
   ArrowRight,
   BookOpen,
   ChevronRight,
+  Download,
+  Eye,
   FileText,
   FolderOpen,
   Gamepad2,
   GraduationCap,
   Layers3,
+  LockKeyhole,
   Package,
   Presentation,
   Search,
@@ -44,8 +47,14 @@ interface RecentProject {
   grade: string;
   updatedAt: Date;
   href: string;
+  downloadHref?: string;
   material?: string;
   local?: boolean;
+  userId?: string;
+  authorName?: string;
+  authorEmail?: string;
+  authorPhoto?: string | null;
+  isOtherUser?: boolean;
 }
 
 interface TeamMember {
@@ -118,6 +127,7 @@ function getRows(games: Project[], drafts: StudioProject[], userSlug: string, se
       grade: project.formData?.gradeLevel?.replace("Ensino ", "").replace("Fundamental ", "Fund. ") || "—",
       updatedAt: parseDate(project.updatedAt || project.createdAt),
       href: buildEncryptedUrl(`/canvas-generator/${userSlug}`, { id: project.id, from: section === "projetos" ? "projetos" : undefined }),
+      downloadHref: buildEncryptedUrl(`/canvas-generator/${userSlug}`, { id: project.id, from: section === "projetos" ? "projetos" : undefined, download: "1" }),
       material: project.pdfFileName || undefined,
     })),
     ...drafts.map(project => ({
@@ -129,6 +139,7 @@ function getRows(games: Project[], drafts: StudioProject[], userSlug: string, se
       grade: project.gradeLevel?.replace("Ensino ", "").replace("Fundamental ", "Fund. ") || "—",
       updatedAt: parseDate(project.updatedAt),
       href: buildEncryptedUrl(`/studio/${project.kind}`, { id: project.id, stage: "edit", from: section === "projetos" ? "projetos" : undefined }),
+      downloadHref: buildEncryptedUrl(`/studio/${project.kind}`, { id: project.id, stage: "edit", from: section === "projetos" ? "projetos" : undefined, download: "1" }),
       material: project.sourceContent?.trim() ? "Conteúdo-base do projeto" : undefined,
       local: !isStudioProjectSynced(project.id),
     })),
@@ -139,6 +150,7 @@ export function StudioHomeView({
   section = "inicio",
   games = [],
   drafts = [],
+  otherUsersProjects = [],
   loading = false,
   error = "",
   userName = "",
@@ -152,6 +164,7 @@ export function StudioHomeView({
   section?: Section;
   games?: Project[];
   drafts?: StudioProject[];
+  otherUsersProjects?: RecentProject[];
   loading?: boolean;
   error?: string;
   userName?: string;
@@ -164,6 +177,9 @@ export function StudioHomeView({
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKind>("todos");
+  const [projectScope, setProjectScope] = useState<"mine" | "others" | "all">("mine");
+  const [selectedAuthorId, setSelectedAuthorId] = useState<string>("all");
+  const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<RecentProject | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeactivated, setShowDeactivated] = useState(true);
@@ -223,16 +239,46 @@ export function StudioHomeView({
     }
   }
 
-  const rows = getRows(games, drafts, userSlug, section);
+  const ownRows = useMemo(() => getRows(games, drafts, userSlug, section), [games, drafts, userSlug, section]);
+
+  const otherAuthors = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; count: number }>();
+    otherUsersProjects.forEach(proj => {
+      const uid = proj.userId || proj.authorEmail || proj.authorName || "unknown";
+      const current = map.get(uid);
+      if (current) {
+        current.count += 1;
+      } else {
+        map.set(uid, {
+          id: uid,
+          name: proj.authorName || proj.authorEmail || "Educador(a)",
+          count: 1,
+        });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [otherUsersProjects]);
+
+  const rows = useMemo(() => {
+    if (!isMaster || section !== "projetos" || projectScope === "mine") {
+      return ownRows;
+    }
+    const base = projectScope === "others"
+      ? otherUsersProjects
+      : [...ownRows, ...otherUsersProjects].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    if (selectedAuthorId === "all") return base;
+    return base.filter(row => (row.userId || row.authorEmail || row.authorName) === selectedAuthorId);
+  }, [isMaster, section, projectScope, ownRows, otherUsersProjects, selectedAuthorId]);
+
   const normalize = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
   // Materials extracted from all projects
-  const materialRows = rows.filter(row => row.material && normalize(`${row.title} ${row.material} ${row.subject}`).includes(normalize(search)));
+  const materialRows = rows.filter(row => row.material && normalize(`${row.title} ${row.material} ${row.subject} ${row.authorName || ""}`).includes(normalize(search)));
 
   const matchingRows = rows.filter(row => {
     if (filter === "materiais") return false;
     const matchesFilter = filter === "todos" || row.kind === filter;
-    const matchesSearch = normalize(`${row.title} ${row.subject} ${row.detail} ${row.material || ""}`).includes(normalize(search));
+    const matchesSearch = normalize(`${row.title} ${row.subject} ${row.detail} ${row.material || ""} ${row.authorName || ""}`).includes(normalize(search));
     return matchesFilter && matchesSearch;
   });
 
@@ -550,6 +596,105 @@ export function StudioHomeView({
 
             {error && <p className="studio-notice" role="status">{error}</p>}
 
+            {/* PAINEL MASTER DE VISUALIZAÇÃO DE PROJETOS DOS OUTROS USUÁRIOS */}
+            {isMaster && section === "projetos" && (
+              <div
+                className="studio-master-projects-bar"
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  padding: "12px 16px",
+                  marginBottom: "16px",
+                  borderRadius: "14px",
+                  background: "linear-gradient(135deg, rgba(139, 92, 246, 0.14), rgba(59, 130, 246, 0.08))",
+                  border: "1px solid rgba(139, 92, 246, 0.3)",
+                }}
+              >
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "4px 10px",
+                      borderRadius: "999px",
+                      fontSize: "10.5px",
+                      fontWeight: 800,
+                      letterSpacing: "0.06em",
+                      background: "rgba(139, 92, 246, 0.25)",
+                      color: "#ddd6fe",
+                    }}
+                  >
+                    👑 ACESSO MASTER
+                  </span>
+                  <div role="group" aria-label="Escopo de visualização de projetos" style={{ display: "inline-flex", gap: "6px", flexWrap: "wrap" }}>
+                    {[
+                      { id: "mine" as const, label: `Meus Projetos (${ownRows.length})` },
+                      { id: "others" as const, label: `Projetos de Outros Usuários (${otherUsersProjects.length})` },
+                      { id: "all" as const, label: `Todos da Plataforma (${ownRows.length + otherUsersProjects.length})` },
+                    ].map(tab => {
+                      const active = projectScope === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => {
+                            setProjectScope(tab.id);
+                            if (tab.id === "mine") setSelectedAuthorId("all");
+                          }}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "10px",
+                            fontSize: "12px",
+                            fontWeight: active ? 700 : 500,
+                            border: active ? "1px solid rgba(167, 139, 250, 0.6)" : "1px solid rgba(255, 255, 255, 0.1)",
+                            background: active ? "rgba(139, 92, 246, 0.32)" : "rgba(15, 23, 42, 0.45)",
+                            color: active ? "#ffffff" : "#cbd5e1",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {projectScope !== "mine" && otherAuthors.length > 0 && (
+                    <select
+                      aria-label="Filtrar por educador"
+                      value={selectedAuthorId}
+                      onChange={e => setSelectedAuthorId(e.target.value)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "10px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        background: "rgba(15, 23, 42, 0.75)",
+                        border: "1px solid rgba(167, 139, 250, 0.35)",
+                        color: "#f8fafc",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <option value="all">Todos os educadores ({otherAuthors.length})</option>
+                      {otherAuthors.map(author => (
+                        <option key={author.id} value={author.id}>
+                          {author.name} ({author.count} {author.count === 1 ? "projeto" : "projetos"})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "11.5px", color: "#c4b5fd" }}>
+                  <LockKeyhole size={13} />
+                  <span>Permitido <strong>visualizar</strong> e <strong>baixar</strong> · Recriação desabilitada para outros usuários</span>
+                </span>
+              </div>
+            )}
+
             {/* SEÇÃO INTEGRADA DE MATERIAIS DA APOSTILA */}
             {filter === "materiais" ? (
               <motion.div
@@ -664,6 +809,11 @@ export function StudioHomeView({
                                 </span>
                                 <div>
                                   <span style={{ display: "block" }}>{row.title}</span>
+                                  {row.isOtherUser && row.authorName && (
+                                    <small style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#c4b5fd", fontSize: "10.5px", fontWeight: 600, marginTop: 2, marginRight: 8 }}>
+                                      👤 {row.authorName}
+                                    </small>
+                                  )}
                                   {row.material && (
                                     <small style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#9da1b2", fontSize: "10.5px", marginTop: 2 }}>
                                       <FileText size={11} strokeWidth={1.5} /> {row.material}
@@ -679,23 +829,76 @@ export function StudioHomeView({
                             <td>{row.grade}</td>
                             <td>{row.updatedAt.getTime() ? row.updatedAt.toLocaleDateString("pt-BR") : "—"}</td>
                             <td>
-                              <div className="studio-row-actions">
-                                <button
-                                  type="button"
-                                  className="studio-row-action studio-row-action--delete"
-                                  title={`Excluir ${row.title}`}
-                                  aria-label={`Excluir ${row.title}`}
-                                  onClick={e => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    setProjectToDelete(row);
-                                  }}
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                                <Link to={row.href} state={{ from: section === "projetos" ? "/projetos" : "/inicio" }} className="studio-row-arrow" aria-label={`Abrir ${row.title}`}>
-                                  <ChevronRight size={17} />
-                                </Link>
+                              <div className="studio-row-actions" style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
+                                {row.isOtherUser ? (
+                                  <>
+                                    <Link
+                                      to={row.href}
+                                      state={{ from: section === "projetos" ? "/projetos" : "/inicio" }}
+                                      title={`Visualizar ${row.title} (somente leitura)`}
+                                      aria-label={`Visualizar ${row.title}`}
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "5px",
+                                        padding: "5px 10px",
+                                        borderRadius: "8px",
+                                        fontSize: "11.5px",
+                                        fontWeight: 600,
+                                        background: "rgba(139, 92, 246, 0.16)",
+                                        border: "1px solid rgba(139, 92, 246, 0.35)",
+                                        color: "#ddd6fe",
+                                        textDecoration: "none",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      <Eye size={13} />
+                                      <span>Visualizar</span>
+                                    </Link>
+                                    <Link
+                                      to={row.downloadHref || row.href}
+                                      state={{ from: section === "projetos" ? "/projetos" : "/inicio" }}
+                                      title={`Baixar ${row.title}`}
+                                      aria-label={`Baixar ${row.title}`}
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "5px",
+                                        padding: "5px 10px",
+                                        borderRadius: "8px",
+                                        fontSize: "11.5px",
+                                        fontWeight: 600,
+                                        background: "rgba(16, 185, 129, 0.15)",
+                                        border: "1px solid rgba(16, 185, 129, 0.35)",
+                                        color: "#6ee7b7",
+                                        textDecoration: "none",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      <Download size={13} />
+                                      <span>Baixar</span>
+                                    </Link>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="studio-row-action studio-row-action--delete"
+                                      title={`Excluir ${row.title}`}
+                                      aria-label={`Excluir ${row.title}`}
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        setProjectToDelete(row);
+                                      }}
+                                    >
+                                      <Trash2 size={15} />
+                                    </button>
+                                    <Link to={row.href} state={{ from: section === "projetos" ? "/projetos" : "/inicio" }} className="studio-row-arrow" aria-label={`Abrir ${row.title}`}>
+                                      <ChevronRight size={17} />
+                                    </Link>
+                                  </>
+                                )}
                               </div>
                             </td>
                           </motion.tr>
@@ -800,7 +1003,7 @@ export function StudioHomeView({
             {isMaster && (
               <div className="studio-ranking-master-toolbar">
                 <span className="studio-ranking-master-badge">👑 PAINEL MASTER INNYX</span>
-                <span>Como Administrador Master, você tem a opção de definir se cada educador da equipe é <strong>Administrador</strong> ou <strong>Professor</strong>.</span>
+                <span>Como Administrador Master, você pode definir se cada educador é <strong>Administrador</strong> ou <strong>Professor</strong>, além de <strong>visualizar</strong> e <strong>baixar</strong> os projetos de qualquer usuário (recriação bloqueada).</span>
               </div>
             )}
 
@@ -834,93 +1037,230 @@ export function StudioHomeView({
                   const initial = (member.name || "E").slice(0, 1).toUpperCase();
                   const isMemberMaster = isMasterUser(member.name, member.email);
                   const memberRole = isMemberMaster ? "master" : (member.role === "admin" ? "admin" : "professor");
+                  const memberProjects = isCurrentUser
+                    ? ownRows
+                    : otherUsersProjects.filter(
+                        p =>
+                          p.userId === member.id ||
+                          (member.email && p.authorEmail && p.authorEmail.toLowerCase() === member.email.toLowerCase())
+                      );
+                  const isExpanded = isMaster && expandedMemberId === member.id;
                   return (
-                    <motion.div
-                      className={`studio-leader-row ${isCurrentUser ? "is-current-user" : ""} ${member.disabled ? "is-disabled" : ""}`}
-                      key={member.id}
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <span className={`leader-position ${index < 3 ? "leader-top" : ""}`}>
-                        {index === 0 ? <Trophy size={20} /> : String(index + 1).padStart(2, "0")}
-                      </span>
-                      <span className="studio-team-avatar">
-                        {member.photoURL ? (
-                          <img
-                            src={member.photoURL}
-                            alt={member.name}
-                            referrerPolicy="no-referrer"
-                            onError={(e) => {
-                              (e.currentTarget as HTMLElement).style.display = "none";
-                              const fallback = e.currentTarget.parentElement?.querySelector(".studio-team-avatar-fallback") as HTMLElement | null;
-                              if (fallback) fallback.style.display = "flex";
-                            }}
-                          />
-                        ) : null}
-                        <span
-                          className="studio-team-avatar-fallback"
-                          style={{ display: member.photoURL ? "none" : "flex" }}
-                        >
-                          {initial}
+                    <div key={member.id} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <motion.div
+                        className={`studio-leader-row ${isCurrentUser ? "is-current-user" : ""} ${member.disabled ? "is-disabled" : ""}`}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <span className={`leader-position ${index < 3 ? "leader-top" : ""}`}>
+                          {index === 0 ? <Trophy size={20} /> : String(index + 1).padStart(2, "0")}
                         </span>
-                      </span>
-                      <div className="studio-leader-info">
-                        <strong>
-                          {member.name}
-                          {isMemberMaster && (
-                            <span className="studio-leader-badge-master" title="Usuário Administrador MASTER">👑 MASTER</span>
+                        <span className="studio-team-avatar">
+                          {member.photoURL ? (
+                            <img
+                              src={member.photoURL}
+                              alt={member.name}
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = "none";
+                                const fallback = e.currentTarget.parentElement?.querySelector(".studio-team-avatar-fallback") as HTMLElement | null;
+                                if (fallback) fallback.style.display = "flex";
+                              }}
+                            />
+                          ) : null}
+                          <span
+                            className="studio-team-avatar-fallback"
+                            style={{ display: member.photoURL ? "none" : "flex" }}
+                          >
+                            {initial}
+                          </span>
+                        </span>
+                        <div className="studio-leader-info">
+                          <strong>
+                            {member.name}
+                            {isMemberMaster && (
+                              <span className="studio-leader-badge-master" title="Usuário Administrador MASTER">👑 MASTER</span>
+                            )}
+                            {!isMemberMaster && memberRole === "admin" && (
+                              <span className="studio-leader-badge-admin" title="Usuário Administrador">🛡️ Administrador</span>
+                            )}
+                            {!isMemberMaster && memberRole === "professor" && (
+                              <span className="studio-leader-badge-professor" title="Professor da Rede">🎓 Professor</span>
+                            )}
+                            {member.disabled && (
+                              <span className="studio-leader-badge-disabled" title="Conta com e-mail institucional inativo. Para reativar, o e-mail precisa ser ativado novamente.">
+                                🚫 Desativado
+                              </span>
+                            )}
+                            {isCurrentUser && <span className="studio-leader-badge-you">Você</span>}
+                          </strong>
+                        </div>
+                        <div className="studio-leader-row-actions">
+                          <span className="studio-leader-project-count">{member.count} {member.count === 1 ? "projeto" : "projetos"}</span>
+                          {isMaster && memberProjects.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedMemberId(isExpanded ? null : member.id)}
+                              title={`Ver projetos de ${member.name}`}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                padding: "5px 11px",
+                                borderRadius: "9px",
+                                fontSize: "11.5px",
+                                fontWeight: 700,
+                                background: isExpanded ? "rgba(139, 92, 246, 0.32)" : "rgba(139, 92, 246, 0.15)",
+                                border: "1px solid rgba(139, 92, 246, 0.4)",
+                                color: "#ddd6fe",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <Eye size={13} />
+                              <span>{isExpanded ? "Ocultar projetos" : "Ver projetos"}</span>
+                            </button>
                           )}
-                          {!isMemberMaster && memberRole === "admin" && (
-                            <span className="studio-leader-badge-admin" title="Usuário Administrador">🛡️ Administrador</span>
+                          {isMaster && !isMemberMaster && onUpdateUserRole && (
+                            <div className="studio-leader-role-picker" title="Como Administrador MASTER, altere a função da pessoa: Administrador ou Professor">
+                              <span className="studio-leader-role-picker-label">Função:</span>
+                              <select
+                                className="studio-leader-role-select"
+                                value={memberRole === "admin" ? "admin" : "professor"}
+                                onChange={(e) => void onUpdateUserRole(member.id, e.target.value as "admin" | "professor")}
+                                aria-label={`Alterar função de ${member.name}`}
+                              >
+                                <option value="professor">🎓 Professor</option>
+                                <option value="admin">🛡️ Administrador</option>
+                              </select>
+                            </div>
                           )}
-                          {!isMemberMaster && memberRole === "professor" && (
-                            <span className="studio-leader-badge-professor" title="Professor da Rede">🎓 Professor</span>
+                          {isAdmin && !isMemberMaster && !member.disabled && onToggleUserDisabled && (
+                            <button
+                              type="button"
+                              className="studio-leader-admin-action"
+                              onClick={() => void onToggleUserDisabled(member.id, true)}
+                              title="Marcar conta como e-mail desativado"
+                            >
+                              Desativar
+                            </button>
                           )}
                           {member.disabled && (
-                            <span className="studio-leader-badge-disabled" title="Conta com e-mail institucional inativo. Para reativar, o e-mail precisa ser ativado novamente.">
-                              🚫 Desativado
+                            <span
+                              className="studio-leader-deactivated-note"
+                              title="Conta inativa. A reativação só ocorre quando o e-mail institucional for ativado novamente."
+                            >
+                              E-mail desativado
                             </span>
                           )}
-                          {isCurrentUser && <span className="studio-leader-badge-you">Você</span>}
-                        </strong>
-                      </div>
-                      <div className="studio-leader-row-actions">
-                        <span className="studio-leader-project-count">{member.count} {member.count === 1 ? "projeto" : "projetos"}</span>
-                        {isMaster && !isMemberMaster && onUpdateUserRole && (
-                          <div className="studio-leader-role-picker" title="Como Administrador MASTER, altere a função da pessoa: Administrador ou Professor">
-                            <span className="studio-leader-role-picker-label">Função:</span>
-                            <select
-                              className="studio-leader-role-select"
-                              value={memberRole === "admin" ? "admin" : "professor"}
-                              onChange={(e) => void onUpdateUserRole(member.id, e.target.value as "admin" | "professor")}
-                              aria-label={`Alterar função de ${member.name}`}
-                            >
-                              <option value="professor">🎓 Professor</option>
-                              <option value="admin">🛡️ Administrador</option>
-                            </select>
+                        </div>
+                      </motion.div>
+
+                      {isExpanded && (
+                        <div
+                          className="studio-leader-projects-drawer"
+                          style={{
+                            margin: "0 0 8px 28px",
+                            padding: "12px 16px",
+                            borderRadius: "12px",
+                            background: "rgba(15, 23, 42, 0.65)",
+                            border: "1px solid rgba(139, 92, 246, 0.28)",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "8px",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: "4px" }}>
+                            <strong style={{ fontSize: "12px", color: "#e2e8f0" }}>
+                              Projetos de {member.name} ({memberProjects.length})
+                            </strong>
+                            {!isCurrentUser && (
+                              <span style={{ fontSize: "11px", color: "#c4b5fd", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <LockKeyhole size={12} /> Visualização e download liberados · Recriação não permitida
+                              </span>
+                            )}
                           </div>
-                        )}
-                        {isAdmin && !isMemberMaster && !member.disabled && onToggleUserDisabled && (
-                          <button
-                            type="button"
-                            className="studio-leader-admin-action"
-                            onClick={() => void onToggleUserDisabled(member.id, true)}
-                            title="Marcar conta como e-mail desativado"
-                          >
-                            Desativar
-                          </button>
-                        )}
-                        {member.disabled && (
-                          <span
-                            className="studio-leader-deactivated-note"
-                            title="Conta inativa. A reativação só ocorre quando o e-mail institucional for ativado novamente."
-                          >
-                            E-mail desativado
-                          </span>
-                        )}
-                      </div>
-                    </motion.div>
+                          {memberProjects.map(proj => (
+                            <div
+                              key={proj.id}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                flexWrap: "wrap",
+                                gap: "10px",
+                                padding: "8px 12px",
+                                borderRadius: "10px",
+                                background: "rgba(30, 41, 59, 0.55)",
+                                border: "1px solid rgba(255, 255, 255, 0.07)",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                                <span className={`project-mini-icon type-${proj.kind}`}>
+                                  {proj.kind === "jogo" ? (
+                                    <Gamepad2 size={15} strokeWidth={1.5} />
+                                  ) : proj.kind === "slides" ? (
+                                    <Presentation size={15} strokeWidth={1.5} />
+                                  ) : proj.kind === "roteiro" ? (
+                                    <Video size={15} strokeWidth={1.5} />
+                                  ) : (
+                                    <Package size={15} strokeWidth={1.5} />
+                                  )}
+                                </span>
+                                <div style={{ minWidth: 0 }}>
+                                  <strong style={{ display: "block", fontSize: "13px", color: "#f8fafc" }}>{proj.title}</strong>
+                                  <small style={{ fontSize: "11px", color: "#94a3b8" }}>
+                                    {proj.detail} · {proj.subject} · {proj.grade} · {proj.updatedAt.getTime() ? proj.updatedAt.toLocaleDateString("pt-BR") : "—"}
+                                  </small>
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <Link
+                                  to={proj.href}
+                                  state={{ from: "/ranking" }}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    padding: "5px 10px",
+                                    borderRadius: "8px",
+                                    fontSize: "11.5px",
+                                    fontWeight: 600,
+                                    background: "rgba(139, 92, 246, 0.2)",
+                                    border: "1px solid rgba(139, 92, 246, 0.4)",
+                                    color: "#ddd6fe",
+                                    textDecoration: "none",
+                                  }}
+                                >
+                                  <Eye size={13} />
+                                  <span>Visualizar</span>
+                                </Link>
+                                <Link
+                                  to={proj.downloadHref || proj.href}
+                                  state={{ from: "/ranking" }}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    padding: "5px 10px",
+                                    borderRadius: "8px",
+                                    fontSize: "11.5px",
+                                    fontWeight: 600,
+                                    background: "rgba(16, 185, 129, 0.16)",
+                                    border: "1px solid rgba(16, 185, 129, 0.38)",
+                                    color: "#6ee7b7",
+                                    textDecoration: "none",
+                                  }}
+                                >
+                                  <Download size={13} />
+                                  <span>Baixar</span>
+                                </Link>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   );
                 })
               ) : (
@@ -940,8 +1280,10 @@ export function StudioHomeView({
 
 export default function StudioHome({ section = "inicio" }: { section?: Section }) {
   const user = auth.currentUser;
+  const userSlug = user?.email?.split("@")[0].replace(/\./g, "-") || "usuario";
   const [games, setGames] = useState<Project[]>([]);
   const [drafts, setDrafts] = useState<StudioProject[]>(() => (user ? getStudioProjects(user.uid) : []));
+  const [otherUsersProjects, setOtherUsersProjects] = useState<RecentProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [team, setTeam] = useState<TeamMember[]>([]);
@@ -950,20 +1292,138 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
 
   useEffect(() => {
     if (!user) return;
+    const isMaster = isMasterUser(user.displayName, user.email);
     const refresh = () => setDrafts(getStudioProjects(user.uid));
     window.addEventListener("mind-canvas:projects-changed", refresh);
     window.addEventListener("storage", refresh);
+
+    const usersCache = new Map<string, { name: string; email: string; photoURL: string | null }>();
+    if (isMaster) {
+      getDocs(collection(db, "users"))
+        .then(snap => {
+          snap.docs.forEach(d => {
+            const uData = d.data();
+            usersCache.set(d.id, {
+              name: String(uData.name || uData.displayName || "Educador(a)"),
+              email: String(uData.email || ""),
+              photoURL: (uData.photoURL || uData.photoUrl || null) as string | null,
+            });
+          });
+        })
+        .catch(() => {});
+    }
+
+    const projectsQuery = isMaster
+      ? collection(db, "projects")
+      : query(collection(db, "projects"), where("userId", "==", user.uid));
+
     const unsubscribe = onSnapshot(
-      query(collection(db, "projects"), where("userId", "==", user.uid)),
+      projectsQuery,
       snapshot => {
         const gamesList: Project[] = [];
+        const othersList: RecentProject[] = [];
+
         snapshot.docs.forEach(docSnap => {
           const data = docSnap.data();
-          if (!data.kind || data.kind === "jogo" || data.formData) {
-            gamesList.push({ ...data, id: docSnap.id } as Project);
+          const ownerId = typeof data.userId === "string" ? data.userId : "";
+
+          if (!ownerId || ownerId === user.uid) {
+            if (!data.kind || data.kind === "jogo" || data.formData) {
+              gamesList.push({ ...data, id: docSnap.id } as Project);
+            }
+          } else if (isMaster) {
+            const cachedAuthor = usersCache.get(ownerId);
+            const authorEmail = String(data.authorEmail || data.userEmail || cachedAuthor?.email || "");
+            const authorName = String(
+              data.authorName ||
+                data.userName ||
+                cachedAuthor?.name ||
+                (authorEmail ? authorEmail.split("@")[0] : "Educador(a)")
+            );
+            const authorPhoto = (data.authorPhoto || data.userPhoto || cachedAuthor?.photoURL || null) as string | null;
+            const isStudio = ["slides", "roteiro", "pacote"].includes(String(data.kind));
+
+            if (isStudio) {
+              const kind = data.kind as ProjectKind;
+              const rawTitle = typeof data.title === "string" ? data.title.trim() : "";
+              const slidesArr = Array.isArray(data.slides) ? (data.slides as { type?: string; title?: string }[]) : [];
+              const title =
+                rawTitle && !/^(Projeto|Rascunho) sem título$/i.test(rawTitle)
+                  ? rawTitle
+                  : slidesArr.find(s => s.type === "capa")?.title?.trim() ||
+                    slidesArr[0]?.title?.trim() ||
+                    "Apresentação sem título";
+              othersList.push({
+                id: `studio-${docSnap.id}`,
+                title,
+                kind,
+                detail: kind === "slides" ? "Slides Canvas" : kind === "roteiro" ? "Roteiro de gravação" : "Pacote de aula",
+                subject: String(data.subject || "—"),
+                grade: String(data.gradeLevel || data.grade || "—")
+                  .replace("Ensino ", "")
+                  .replace("Fundamental ", "Fund. "),
+                updatedAt: parseDate(data.updatedAt || data.createdAt),
+                href: buildEncryptedUrl(`/studio/${kind}`, {
+                  id: docSnap.id,
+                  stage: kind === "slides" ? "result" : "edit",
+                  from: section === "projetos" ? "projetos" : undefined,
+                  view: "1",
+                }),
+                downloadHref: buildEncryptedUrl(`/studio/${kind}`, {
+                  id: docSnap.id,
+                  stage: kind === "slides" ? "result" : "edit",
+                  from: section === "projetos" ? "projetos" : undefined,
+                  view: "1",
+                  download: "1",
+                }),
+                material: typeof data.sourceFileName === "string" && data.sourceFileName
+                  ? data.sourceFileName
+                  : typeof data.sourceContent === "string" && data.sourceContent.trim()
+                  ? "Conteúdo-base do projeto"
+                  : undefined,
+                userId: ownerId,
+                authorName,
+                authorEmail,
+                authorPhoto,
+                isOtherUser: true,
+              });
+            } else {
+              const formData = (data.formData || {}) as { gameType?: string; subject?: string; gradeLevel?: string };
+              othersList.push({
+                id: `game-${docSnap.id}`,
+                title: String(data.title || "Canvas sem título"),
+                kind: "jogo",
+                detail: `Jogo - ${formData.gameType || data.gameType || "Canvas"}`,
+                subject: String(formData.subject || data.subject || "—"),
+                grade: String(formData.gradeLevel || data.grade || "—")
+                  .replace("Ensino ", "")
+                  .replace("Fundamental ", "Fund. "),
+                updatedAt: parseDate(data.updatedAt || data.createdAt),
+                href: buildEncryptedUrl(`/canvas-generator/${userSlug}`, {
+                  id: docSnap.id,
+                  from: section === "projetos" ? "projetos" : undefined,
+                  view: "1",
+                }),
+                downloadHref: buildEncryptedUrl(`/canvas-generator/${userSlug}`, {
+                  id: docSnap.id,
+                  from: section === "projetos" ? "projetos" : undefined,
+                  view: "1",
+                  download: "1",
+                }),
+                material: typeof data.pdfFileName === "string" && data.pdfFileName ? data.pdfFileName : undefined,
+                userId: ownerId,
+                authorName,
+                authorEmail,
+                authorPhoto,
+                isOtherUser: true,
+              });
+            }
           }
         });
+
+        othersList.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
         setGames(gamesList);
+        setOtherUsersProjects(othersList);
         setLoading(false);
         setError("");
       },
@@ -1193,10 +1653,11 @@ export default function StudioHome({ section = "inicio" }: { section?: Section }
       section={section}
       games={games}
       drafts={drafts}
+      otherUsersProjects={otherUsersProjects}
       loading={loading}
       error={error}
       userName={user?.displayName || user?.email?.split("@")[0] || ""}
-      userSlug={user?.email?.split("@")[0].replace(/\./g, "-") || "usuario"}
+      userSlug={userSlug}
       team={team}
       teamLoading={teamLoading}
       teamError={teamError}

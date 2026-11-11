@@ -368,6 +368,9 @@ interface DocumentViewProps {
 
   /** Callback para informar ao pai que uma geração está em andamento */
   onIsGenerating?: (isGenerating: boolean) => void;
+
+  /** Quando true, bloqueia recriação/adição por IA e edição do título (modo visualização de outro usuário) */
+  readOnly?: boolean;
 }
 
 
@@ -396,6 +399,7 @@ export const DocumentView: React.FC<DocumentViewProps> = ({
   pdfFileName = null,
   pdfTextContent = null,
   onIsGenerating,
+  readOnly = false,
 }) => {
 
   // ── Estado local: edição inline do título do canvas ──────────────────────
@@ -640,18 +644,20 @@ Retorne EXATAMENTE ESSE FORMATO JSON (sem markdown, sem explicações):
           ) : (
             /* Modo visualização de título (clicável para editar) */
             <div
-              onClick={startEditTitle}
-              className="w-full group/btn relative flex flex-col items-center cursor-pointer"
+              onClick={readOnly ? undefined : startEditTitle}
+              className={`w-full group/btn relative flex flex-col items-center ${readOnly ? "" : "cursor-pointer"}`}
             >
               <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-slate-900 leading-tight tracking-tight transition-all group-hover/btn:text-violet-700 max-w-3xl">
                 {projectTitle || "DEFINIR TÍTULO"}
               </h1>
-              <div className="mt-2.5 flex items-center justify-center gap-2 text-violet-600 opacity-0 group-hover/btn:opacity-100 transition-all transform translate-y-1 group-hover/btn:translate-y-0 print:hidden">
-                <PencilLine className="w-3.5 h-3.5" />
-                <span className="text-[9.9px] font-black uppercase tracking-[0.2em] bg-violet-50 text-violet-700 px-3 py-1 rounded-full border border-violet-200">
-                  Editar Título
-                </span>
-              </div>
+              {!readOnly && (
+                <div className="mt-2.5 flex items-center justify-center gap-2 text-violet-600 opacity-0 group-hover/btn:opacity-100 transition-all transform translate-y-1 group-hover/btn:translate-y-0 print:hidden">
+                  <PencilLine className="w-3.5 h-3.5" />
+                  <span className="text-[9.9px] font-black uppercase tracking-[0.2em] bg-violet-50 text-violet-700 px-3 py-1 rounded-full border border-violet-200">
+                    Editar Título
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -857,6 +863,7 @@ Retorne EXATAMENTE ESSE FORMATO JSON (sem markdown, sem explicações):
                   pdfFileName={pdfFileName}
                   pdfTextContent={pdfTextContent}
                   onIsGenerating={onIsGenerating}
+                  readOnly={readOnly}
                   onEdit={(f: string, v: unknown) => onEdit("gameLogic", f, v)}
                   onAdd={(path: string, item: unknown) => onAdd("gameLogic", path, item)}
                   onRemove={(path: string, index: number) => onRemove("gameLogic", path, index)}

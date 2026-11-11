@@ -10,6 +10,8 @@ export interface EncryptedRouteData {
   from?: string;
   linha?: string;
   retry?: string;
+  view?: string;
+  download?: string;
   isLegacy?: boolean;
 }
 
@@ -19,6 +21,8 @@ interface CompactRouteData {
   f?: string; // from
   l?: string; // linha
   r?: string; // retry
+  v?: string; // view
+  d?: string; // download
 }
 
 const ROUTE_SECRET = "MindCanvas_Secure_Route_2025_#v1";
@@ -98,6 +102,8 @@ export function encryptRoute(data: EncryptedRouteData): string {
   if (data.from) compact.f = data.from;
   if (data.linha) compact.l = data.linha;
   if (data.retry) compact.r = data.retry;
+  if (data.view) compact.v = data.view;
+  if (data.download) compact.d = data.download;
 
   const json = JSON.stringify(compact);
   const textBytes = new TextEncoder().encode(json);
@@ -150,6 +156,8 @@ export function decryptRoute(token: string): EncryptedRouteData | null {
       from: parsed.f,
       linha: parsed.l,
       retry: parsed.r,
+      view: parsed.v,
+      download: parsed.d,
     };
   } catch {
     return null;
@@ -161,7 +169,7 @@ export function decryptRoute(token: string): EncryptedRouteData | null {
  */
 export function buildEncryptedUrl(basePath: string, data: EncryptedRouteData): string {
   // Se não há dados relevantes para criptografar, retorna o caminho limpo
-  if (!data.id && !data.stage && !data.from && !data.linha && !data.retry) {
+  if (!data.id && !data.stage && !data.from && !data.linha && !data.retry && !data.view && !data.download) {
     return basePath;
   }
   const token = encryptRoute(data);
@@ -188,14 +196,18 @@ export function resolveRouteParams(searchParams: URLSearchParams): EncryptedRout
   const legacyFrom = searchParams.get("from");
   const legacyLinha = searchParams.get("linha");
   const legacyRetry = searchParams.get("retry");
+  const legacyView = searchParams.get("view");
+  const legacyDownload = searchParams.get("download");
 
-  if (legacyId || legacyStage || legacyFrom || legacyLinha || legacyRetry) {
+  if (legacyId || legacyStage || legacyFrom || legacyLinha || legacyRetry || legacyView || legacyDownload) {
     return {
       id: legacyId || undefined,
       stage: legacyStage || undefined,
       from: legacyFrom || undefined,
       linha: legacyLinha || undefined,
       retry: legacyRetry || undefined,
+      view: legacyView || undefined,
+      download: legacyDownload || undefined,
       isLegacy: true,
     };
   }

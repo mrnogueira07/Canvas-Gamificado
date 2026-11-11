@@ -11,6 +11,7 @@ import type { Part } from '@google/generative-ai';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { resolveRouteParams, encryptRoute } from '../lib/routeCrypto';
 import { auth, db, storage } from '../lib/firebase';
+import { isMasterUser, getMasterProjectPermissions } from '../lib/studioNavigation';
 import { ref as storageRef, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import mammoth from 'mammoth';
@@ -600,6 +601,10 @@ const GeneratorPage: React.FC = () => {
     const [savedProjectId, setSavedProjectId] = useState<string | null>(null);
     const [showSavedBanner, setShowSavedBanner] = useState(false);
     const [isViewMode, setIsViewMode] = useState(false);
+    const [isOtherUserProject, setIsOtherUserProject] = useState(false);
+    const isOtherUserProjectRef = useRef(false);
+    const [projectAuthorName, setProjectAuthorName] = useState('');
+    const autoDownloadedRef = useRef(false);
     const [isDirty, setIsDirty] = useState(false);
     const [showUnsavedModal, setShowUnsavedModal] = useState(false);
     const [showRecreateConfirmModal, setShowRecreateConfirmModal] = useState(false);
@@ -732,7 +737,7 @@ const GeneratorPage: React.FC = () => {
         const routeData = resolveRouteParams(searchParams);
         const projectId = routeData.id;
         if (routeData.isLegacy && projectId) {
-            setSearchParams({ p: encryptRoute({ id: projectId, from: routeData.from }) }, { replace: true });
+            setSearchParams({ p: encryptRoute({ id: projectId, from: routeData.from, view: routeData.view, download: routeData.download }) }, { replace: true });
         }
         if (projectId && projectId === savedProjectId) {
             // Already loaded/saved this project, no need to re-fetch
@@ -752,6 +757,10 @@ const GeneratorPage: React.FC = () => {
             setGeneratedContent(null);
             setSavedProjectId(null);
             setIsViewMode(false);
+            setIsOtherUserProject(false);
+            isOtherUserProjectRef.current = false;
+            setProjectAuthorName('');
+            autoDownloadedRef.current = false;
             setProjectTitle('');
             setPdfFileName(null);
             setPdfBase64(null);
@@ -763,6 +772,7 @@ const GeneratorPage: React.FC = () => {
         let cancelled = false;  // Previne race condition: se o usuario mudou algo antes do getDoc terminar, ignora
         projectHasLoadedRef.current = false;
         userHasModifiedRef.current = false;
+        autoDownloadedRef.current = false;
 
         const loadProject = async () => {
             try {
@@ -776,6 +786,25 @@ const GeneratorPage: React.FC = () => {
 
                     if (docSnap.exists()) {
                         const project = docSnap.data();
+                        const currentUser = auth.currentUser;
+                        const isMaster = isMasterUser(currentUser?.displayName, currentUser?.email);
+                        const perms = getMasterProjectPermissions({
+                            isMaster,
+                            projectUserId: typeof project.userId === 'string' ? project.userId : null,
+                            currentUserId: currentUser?.uid || null,
+                        });
+                        if (!perms.canView) {
+                            setErrorMessage('Você não tem permissão para visualizar projetos de outros usuários.');
+                            navigate('/projetos', { replace: true });
+                            return;
+                        }
+                        const readOnlyOther = perms.isReadOnlyOtherUser || routeData.view === '1' && project.userId !== currentUser?.uid;
+                        setIsOtherUserProject(readOnlyOther);
+                        isOtherUserProjectRef.current = readOnlyOther;
+                        setProjectAuthorName(
+                            toStr(project.authorName || project.userName || (project.authorEmail ? String(project.authorEmail).split('@')[0] : 'Educador(a)'))
+                        );
+
                         projectHasLoadedRef.current = true;
                         pendingGameTypeRef.current = project.formData?.gameType || project.gameType || '';
                         setFormData(prev => ({
@@ -796,6 +825,15 @@ const GeneratorPage: React.FC = () => {
                         setPdfBase64(project.pdfBase64 || null);
                         setPdfTextContent(project.pdfTextContent || null);
                         setProjectCreatedAt(project.createdAt || null);
+                        if (readOnlyOther) {
+                            setMobileTab('document');
+                        }
+                        if (routeData.download === '1' && !autoDownloadedRef.current) {
+                            autoDownloadedRef.current = true;
+                            setTimeout(() => {
+                                void handleExportPDF();
+                            }, 350);
+                        }
                         return;
                     }
                 }
@@ -850,6 +888,7 @@ const GeneratorPage: React.FC = () => {
 
     // ─── handleSave: usa generatedContentRef.current que é atualizado de forma síncrona ───
     const handleSave = async () => {
+        if (isOtherUserProjectRef.current) return false;
         // Força o blur no elemento ativo para garantir que campos em edição disparem onChange
         if (document.activeElement instanceof HTMLElement) {
             document.activeElement.blur();
@@ -1185,6 +1224,7 @@ const GeneratorPage: React.FC = () => {
     };
 
     const handleGenerate = async (arg?: unknown) => {
+        if (isOtherUserProjectRef.current) return;
         const previousCurriculumRelation = generatedContentRef.current?.curriculumRelation;
         // SOLUCAO FINAL: Ignora QUALQUER argumento que venha do onClick (SyntheticEvent)
         // e le os valores exclusivamente do Ref, que agora e sincronizado no ato do setFormData.
@@ -1610,6 +1650,7 @@ Retorne APENAS um JSON valido com esta estrutura:
     // Recriar roteiro com os parametros atuais
     // Captura o gameType via ref (sempre live) ANTES de qualquer setState
     const handleRecreate = () => {
+        if (isOtherUserProjectRef.current) return;
         if (isDirty) {
             setShowRecreateConfirmModal(true);
             return;
@@ -1618,6 +1659,7 @@ Retorne APENAS um JSON valido com esta estrutura:
     };
 
     const executeRecreate = () => {
+        if (isOtherUserProjectRef.current) return;
         setShowRecreateConfirmModal(false);
         const gameTypeSnapshot = pendingGameTypeRef.current || formData.gameType;
         setIsViewMode(false);
@@ -1655,6 +1697,7 @@ Retorne APENAS um JSON valido com esta estrutura:
     // Atualiza generatedContentRef SINCRONAMENTE antes de chamar setGeneratedContent,
     // garantindo que handleSave sempre leia o valor mais recente.
     const handleContentUpdate = (section: keyof GeneratedContent, field: string, value: unknown) => {
+        if (isOtherUserProjectRef.current) return;
         if (field === '_projectTitle') {
             // Atualiza título E marca como dirty
             const titleVal = String(value || '');
@@ -1704,6 +1747,7 @@ Retorne APENAS um JSON valido com esta estrutura:
 
     // ─── handleAddItem ───────────────────────────────────────────────────────────
     const handleAddItem = (section: keyof GeneratedContent, path: string, item: unknown) => {
+        if (isOtherUserProjectRef.current) return;
         const prev = generatedContentRef.current;
         if (!prev) return;
         const newState = JSON.parse(JSON.stringify(prev)) as GeneratedContent;
@@ -1726,6 +1770,7 @@ Retorne APENAS um JSON valido com esta estrutura:
 
     // ─── handleRemoveItem ────────────────────────────────────────────────────────
     const handleRemoveItem = (section: keyof GeneratedContent, path: string, index: number) => {
+        if (isOtherUserProjectRef.current) return;
         const prev = generatedContentRef.current;
         if (!prev) return;
         const newState = JSON.parse(JSON.stringify(prev)) as GeneratedContent;
@@ -1769,9 +1814,27 @@ Retorne APENAS um JSON valido com esta estrutura:
                     <span className="generator-brand-name">MIND CANVAS</span>
                     <span className="generator-toolbar-divider" />
                     <span className="generator-product-name"><Gamepad2 size={17} /> Game Canvas</span>
+                    {isOtherUserProject && (
+                        <span
+                            style={{
+                                marginLeft: 8,
+                                padding: '3px 10px',
+                                borderRadius: 999,
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                background: 'rgba(139, 92, 246, 0.18)',
+                                border: '1px solid rgba(139, 92, 246, 0.35)',
+                                color: '#c4b5fd',
+                                whiteSpace: 'nowrap',
+                            }}
+                            title="Modo Visualização Master: permitido visualizar e baixar (recriação bloqueada)"
+                        >
+                            👁️ Projeto de {projectAuthorName || 'Educador(a)'} · Visualização & Download
+                        </span>
+                    )}
                 </div>
                 <ThemeToggle />
-<div className="generator-document-status"><span className={isDirty ? 'is-unsaved' : ''} />{isExtractingPdf ? 'Analisando roteiro' : isGenerating ? 'Criando seu canvas' : isDirty ? 'Alterações não salvas' : generatedContent ? 'Canvas carregado' : 'Novo projeto'}</div>
+<div className="generator-document-status"><span className={isDirty ? 'is-unsaved' : ''} />{isOtherUserProject ? 'Modo Visualização Master' : isExtractingPdf ? 'Analisando roteiro' : isGenerating ? 'Criando seu canvas' : isDirty ? 'Alterações não salvas' : generatedContent ? 'Canvas carregado' : 'Novo projeto'}</div>
             </header>
 
             {/* ── BARRA DE ABAS MOBILE (Apenas em telas < lg para alternar com facilidade) ── */}
@@ -1862,6 +1925,8 @@ Retorne APENAS um JSON valido com esta estrutura:
                         hasSavedProject={!!savedProjectId}
                         hasParamChanges={hasParamChanges}
                         isExtractingBncc={isExtractingPdf}
+                        readOnlyOtherUser={isOtherUserProject}
+                        authorName={projectAuthorName}
                         />
                     </div>
 
@@ -1919,6 +1984,7 @@ Retorne APENAS um JSON valido com esta estrutura:
                                                                 pdfFileName={pdfFileName}
                                                                 pdfTextContent={pdfTextContent}
                                                                 onIsGenerating={setIsGeneratingQuestion}
+                                                                readOnly={isOtherUserProject}
                                                             />
                                                         </DocumentViewErrorBoundary>
                                                     </td>
@@ -1979,26 +2045,28 @@ Retorne APENAS um JSON valido com esta estrutura:
                                     className="py-3 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
                                 >
                                     <FileText className="w-3.5 h-3.5" />
-                                    <span>PDF</span>
+                                    <span>Exportar PDF</span>
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={handleSave}
-                                    disabled={isSaving}
-                                    className="py-3 px-5 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-purple-500/25 cursor-pointer active:scale-95 disabled:opacity-50"
-                                >
-                                    <CheckCircle className="w-3.5 h-3.5" />
-                                    <span>{isSaving ? "Salvando..." : "Salvar"}</span>
-                                </button>
+                                {!isOtherUserProject && (
+                                    <button
+                                        type="button"
+                                        onClick={handleSave}
+                                        disabled={isSaving}
+                                        className="py-3 px-5 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-purple-500/25 cursor-pointer active:scale-95 disabled:opacity-50"
+                                    >
+                                        <CheckCircle className="w-3.5 h-3.5" />
+                                        <span>{isSaving ? "Salvando..." : "Salvar"}</span>
+                                    </button>
+                                )}
                             </div>
                         )}
 
                         {/* Custom Print Footer */}
                         <div className="canvas-print-footer hidden print:flex fixed bottom-0 left-0 w-full justify-center items-center pb-4 text-[11px] text-slate-400 font-medium uppercase tracking-widest bg-white/0 z-[9999]">
                             {projectCreatedAt ? (
-                                <span>CRIADO POR {auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'USUÁRIO'} EM {new Date(projectCreatedAt).toLocaleDateString('pt-BR')} ÀS {new Date(projectCreatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                <span>CRIADO POR {isOtherUserProject && projectAuthorName ? projectAuthorName : (auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'USUÁRIO')} EM {new Date(projectCreatedAt).toLocaleDateString('pt-BR')} ÀS {new Date(projectCreatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                             ) : (
-                                <span>CRIADO POR {auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'USUÁRIO'} EM {new Date().toLocaleDateString('pt-BR')} ÀS {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                <span>CRIADO POR {isOtherUserProject && projectAuthorName ? projectAuthorName : (auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'USUÁRIO')} EM {new Date().toLocaleDateString('pt-BR')} ÀS {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                             )}
                         </div>
                     </main>
