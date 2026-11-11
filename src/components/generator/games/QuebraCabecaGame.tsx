@@ -15,6 +15,7 @@ import type { GeneratedContent } from "../../../types";
 import { Field } from "../shared/Field";
 import { InlineSelect } from "../shared/InlineSelect";
 import { toStr } from "../shared/utils";
+import { resolveCanvasImageUrl } from "../../../lib/imageUrlResolver";
 
 const EXAMPLE_PUZZLE_URL =
   "https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?w=600&q=80";
@@ -170,9 +171,10 @@ const SinglePuzzle: React.FC<SinglePuzzleProps> = ({
           style={{ aspectRatio: "2/1" }}
         >
           <img
-            src={puzzle.imageUrl || EXAMPLE_PUZZLE_URL}
+            src={resolveCanvasImageUrl(puzzle.imageUrl || EXAMPLE_PUZZLE_URL)}
             alt="Background"
-            className="absolute inset-0 w-full h-full object-cover opacity-60 export-full-opacity"
+            referrerPolicy="no-referrer"
+            className="absolute inset-0 print:static w-full h-full object-cover opacity-60 print:opacity-100 export-full-opacity"
             style={{
               objectPosition: "center",
               maxWidth: "none",
@@ -218,8 +220,9 @@ const SinglePuzzle: React.FC<SinglePuzzleProps> = ({
                         }}
                       >
                         <img
-                          src={puzzle.imageUrl || EXAMPLE_PUZZLE_URL}
+                          src={resolveCanvasImageUrl(puzzle.imageUrl || EXAMPLE_PUZZLE_URL)}
                           alt=""
+                          referrerPolicy="no-referrer"
                           className="w-full h-full object-cover"
                           style={{
                             display: "block",

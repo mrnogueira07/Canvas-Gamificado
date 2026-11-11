@@ -12,6 +12,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { resolveRouteParams, encryptRoute } from '../lib/routeCrypto';
 import { auth, db, storage } from '../lib/firebase';
 import { isMasterUser, getMasterProjectPermissions } from '../lib/studioNavigation';
+import { parseReferenceImageEntry } from '../lib/imageUrlResolver';
 import { ref as storageRef, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import mammoth from 'mammoth';
@@ -562,6 +563,20 @@ function sanitizeContent(input: unknown, gameType?: string, gradeLevel?: string,
         }
     }
 
+    // Preserva e normaliza referenceImages de canvas antigos (em gameLogic ou na raiz do content)
+    const rawRefImages = Array.isArray(gl.referenceImages)
+        ? gl.referenceImages
+        : Array.isArray(data.referenceImages)
+            ? data.referenceImages
+            : [];
+    gl.referenceImages = rawRefImages
+        .map((item: unknown) => {
+            const parsed = parseReferenceImageEntry(item);
+            if (!parsed.src && !parsed.description) return null;
+            return JSON.stringify(parsed);
+        })
+        .filter((item): item is string => Boolean(item));
+
     return data;
 }
 // ───────────────────────────────────────────────────────────────────────────
@@ -1015,13 +1030,20 @@ const GeneratorPage: React.FC = () => {
                 if (data.pdfBase64) { data.pdfBase64 = null; cleaned = true; }
                 const content = data.content as Record<string, unknown> | undefined;
                 const gameLogic = content?.gameLogic as Record<string, unknown> | undefined;
-                if (gameLogic) {
+                if (gameLogic && forceAggressive) {
                     const refImages = gameLogic.referenceImages;
                     if (Array.isArray(refImages) && refImages.length > 0) {
-                        gameLogic.referenceImages = [];
-                        cleaned = true;
+                        // Preserva imagens adicionadas por link (http/https), removendo apenas base64 pesados em caso extremo
+                        const preservedLinks = refImages.filter((raw: unknown) => {
+                            const parsed = parseReferenceImageEntry(raw);
+                            return parsed.src.startsWith('http://') || parsed.src.startsWith('https://');
+                        });
+                        if (preservedLinks.length !== refImages.length) {
+                            gameLogic.referenceImages = preservedLinks;
+                            cleaned = true;
+                        }
                     }
-                    if (gameLogic.puzzleImageUrl) {
+                    if (typeof gameLogic.puzzleImageUrl === 'string' && gameLogic.puzzleImageUrl.startsWith('data:')) {
                         gameLogic.puzzleImageUrl = "";
                         cleaned = true;
                     }
@@ -1029,10 +1051,13 @@ const GeneratorPage: React.FC = () => {
                     if (Array.isArray(puzzles) && puzzles.length > 0) {
                         puzzles.forEach((p: unknown) => {
                             if (p && typeof p === 'object') {
-                                (p as Record<string, unknown>).imageUrl = "";
+                                const rec = p as Record<string, unknown>;
+                                if (typeof rec.imageUrl === 'string' && rec.imageUrl.startsWith('data:')) {
+                                    rec.imageUrl = "";
+                                    cleaned = true;
+                                }
                             }
                         });
-                        cleaned = true;
                     }
                 }
 
@@ -1683,14 +1708,36 @@ Retorne APENAS um JSON valido com esta estrutura:
         const newFileName = `CV_${yearFormatted}_${quarterFormatted}_${subjectFormatted}_${themeFormatted}`.toUpperCase();
         
         document.title = newFileName;
-        
-        // Aguarda a sincronização e renderização completa do DOM
+
+        // Aguarda que todas as imagens do canvas terminem de carregar antes de abrir o diálogo de impressão
+        await new Promise((r) => setTimeout(r, 150));
+        const canvasRoot = document.getElementById('canvas-content');
+        if (canvasRoot) {
+            const imgs = Array.from(canvasRoot.querySelectorAll('img'));
+            await Promise.race([
+                Promise.all(
+                    imgs.map((img) => {
+                        if (!img.src || img.style.display === 'none') return Promise.resolve();
+                        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                        return new Promise<void>((resolve) => {
+                            const done = () => {
+                                img.removeEventListener('load', done);
+                                img.removeEventListener('error', done);
+                                resolve();
+                            };
+                            img.addEventListener('load', done, { once: true });
+                            img.addEventListener('error', done, { once: true });
+                        });
+                    })
+                ),
+                new Promise<void>((resolve) => setTimeout(resolve, 3500)),
+            ]);
+        }
+
+        window.print();
         setTimeout(() => {
-            window.print();
-            setTimeout(() => {
-                document.title = originalTitle;
-            }, 1000);
-        }, 150);
+            document.title = originalTitle;
+        }, 1000);
     };
 
     // ─── handleContentUpdate ────────────────────────────────────────────────────

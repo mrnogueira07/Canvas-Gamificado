@@ -12,6 +12,7 @@ import React, { useState } from "react";
 import { Check, Lightbulb, X, XCircle, Image as ImageIcon, Trash2, Upload } from "../../../lib/icons";
 import { Field } from "./Field";
 import { isCorrectAnswer, toStr } from "./utils";
+import { resolveCanvasImageUrl } from "../../../lib/imageUrlResolver";
 
 const processImageFile = (file: File): Promise<string | null> =>
   new Promise((resolve) => {
@@ -268,11 +269,16 @@ export const HouseQuizTargets: React.FC<HouseQuizTargetsProps> = ({
                   <div className="mt-1">
                     {target.image ? (
                       <div className="relative w-full max-w-xs aspect-video bg-slate-50 border border-slate-200 rounded-xl overflow-hidden mt-2 mx-auto group/img">
-                        <img src={target.image} className="w-full h-full object-cover" />
+                        <img
+                          src={resolveCanvasImageUrl(target.image)}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="block w-full h-full object-cover"
+                        />
                         <button
                           type="button"
                           onClick={() => onEdit(`targets[${i}].image`, "")}
-                          className="absolute top-2 right-2 p-1.5 bg-white hover:bg-rose-50 text-rose-500 rounded-lg shadow border border-slate-200 hover:border-rose-200 transition-colors cursor-pointer"
+                          className="print:hidden absolute top-2 right-2 p-1.5 bg-white hover:bg-rose-50 text-rose-500 rounded-lg shadow border border-slate-200 hover:border-rose-200 transition-colors cursor-pointer"
                           title="Remover imagem"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -359,7 +365,12 @@ export const HouseQuizTargets: React.FC<HouseQuizTargetsProps> = ({
                 </p>
                 {isDragDropOrQuiz && target.image && (
                   <div className="w-full max-w-sm aspect-video bg-slate-50 border border-slate-100 rounded-xl overflow-hidden mt-2 mx-auto">
-                    <img src={target.image} className="w-full h-full object-cover" />
+                    <img
+                      src={resolveCanvasImageUrl(target.image)}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      className="block w-full h-full object-cover"
+                    />
                   </div>
                 )}
               </div>

@@ -879,9 +879,10 @@ Retorne EXATAMENTE ESSE FORMATO JSON (sem markdown, sem explicações):
 
 
         {/* ── SEÇÃO 6: Imagens de Referência ──────────────────────────── */}
-        {/* Suporta até 5 imagens base64 enviadas pelo professor */}
+        {/* Suporta até 5 imagens base64 ou links enviados pelo professor */}
         <ReferenceImagesSection
           images={content.gameLogic.referenceImages || []}
+          readOnly={readOnly}
           onUpdate={(newImages: string[]) =>
             onEdit("gameLogic", "referenceImages", newImages)
           }
